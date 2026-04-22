@@ -277,6 +277,34 @@
   .mark-paid-btn { padding:8px 16px; border-radius:999px; background:#fff; border:1.5px solid var(--orange); color:#92400e; font-weight:700; font-size:.82rem; cursor:pointer; transition:all .15s; }
   .mark-paid-btn:hover { background:var(--orange); color:#fff; }
 
+  /* ─── VENDOR LEDGER ─── */
+  .vl-summary { background:linear-gradient(135deg,#1e293b,#334155); border-radius:var(--radius); padding:18px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .vl-summary-item { text-align:center; }
+  .vl-summary-item .vsv { font-size:1.3rem; font-weight:800; color:#fff; }
+  .vl-summary-item .vsl { font-size:.72rem; color:rgba(255,255,255,.6); margin-top:2px; }
+  .vendor-card { background:var(--card); border-radius:var(--radius); border:1.5px solid var(--border); padding:18px 20px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .vendor-card-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .vendor-name { font-size:1rem; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .vendor-stats { display:flex; gap:10px; flex-wrap:wrap; }
+  .vstat { padding:6px 14px; border-radius:999px; font-size:.78rem; font-weight:700; }
+  .vstat-total   { background:#e0f2fe; color:#0369a1; }
+  .vstat-paid    { background:var(--green-soft); color:#065f46; }
+  .vstat-due     { background:var(--orange-soft); color:#92400e; }
+  .vstat-cleared { background:var(--green-soft); color:#065f46; }
+  .vendor-bills  { border-top:1px solid var(--border); padding-top:12px; margin-top:4px; }
+  .vbill-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #f8fafc; font-size:.83rem; flex-wrap:wrap; }
+  .vbill-row:last-child { border-bottom:none; }
+  .vbill-date { color:var(--sub); min-width:80px; }
+  .vbill-item { flex:1; font-weight:600; min-width:120px; }
+  .vbill-amt  { font-weight:700; color:var(--orange); min-width:80px; text-align:right; }
+  .vbill-status-paid { color:var(--green); font-weight:700; font-size:.75rem; }
+  .vbill-status-unpaid { color:var(--orange); font-weight:700; font-size:.75rem; }
+  .pay-vendor-btn { padding:9px 18px; border-radius:999px; background:var(--primary); color:#fff; border:none; font-weight:700; font-size:.83rem; cursor:pointer; transition:filter .15s; white-space:nowrap; }
+  .pay-vendor-btn:hover { filter:brightness(1.1); }
+  .pay-history-wrap { margin-top:10px; border-top:1px solid var(--border); padding-top:10px; }
+  .pay-hist-row { display:flex; justify-content:space-between; align-items:center; font-size:.8rem; padding:4px 0; color:var(--sub); }
+  .pay-hist-row span:last-child { font-weight:700; color:var(--green); }
+
   @media (max-width:640px) {
     .header { padding:18px 18px 64px; }
     .stats-row { grid-template-columns:repeat(2,1fr); margin-top:-42px; padding:0 14px; gap:10px; }
@@ -371,6 +399,7 @@
     <button class="tab active" onclick="switchTab('add',this)">➕ New Purchase</button>
     <button class="tab" onclick="switchTab('list',this)">📋 All Purchases</button>
     <button class="tab" onclick="switchTab('credit',this)">⏳ Credit Outstanding</button>
+    <button class="tab" onclick="switchTab('vendor',this)">🏪 Vendor Ledger</button>
   </div>
 
   <!-- ════════ TAB: ADD PURCHASE ════════ -->
@@ -555,6 +584,11 @@
   <!-- ════════ TAB: CREDIT OUTSTANDING ════════ -->
   <div id="tab-credit" style="display:none">
     <div id="credit-outstanding"></div>
+  </div>
+
+  <!-- ════════ TAB: VENDOR LEDGER ════════ -->
+  <div id="tab-vendor" style="display:none">
+    <div id="vendor-ledger"></div>
   </div>
 
 </div><!-- /content -->
@@ -1228,13 +1262,14 @@ function confirmDelete(){
 //  TABS
 // ══════════════════════════════════════════
 function switchTab(tab, el){
-  ['add','list','credit'].forEach(t=>{
+  ['add','list','credit','vendor'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
   });
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   if(tab==='list')   renderList();
   if(tab==='credit') renderCreditTab();
+  if(tab==='vendor') renderVendorLedger();
 }
 
 // ══════════════════════════════════════════
@@ -1295,9 +1330,218 @@ fcInit(function(){
   loadVendorDropdown();
   addItemRow();
   updateStats();
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDelModal(); closePaidModal(); closeErr(); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDelModal(); closePaidModal(); closeErr(); closeVpModal(); } });
 });
+
+// ══════════════════════════════════════════
+//  VENDOR LEDGER
+// ══════════════════════════════════════════
+const VP_KEY = 'fc_vendor_payments';
+
+function getVendorPayments(){ return JSON.parse(localStorage.getItem(VP_KEY)||'[]'); }
+function saveVendorPayments(arr){ localStorage.setItem(VP_KEY, JSON.stringify(arr)); }
+
+function renderVendorLedger(){
+  const purchases = getPurchases().filter(p => p.type === 'credit' || p.creditAmt > 0);
+  const payments  = getVendorPayments();
+  const div       = document.getElementById('vendor-ledger');
+
+  // Group purchases by vendor
+  const vendors = {};
+  purchases.forEach(p => {
+    const v = p.vendor || 'Unknown';
+    if(!vendors[v]) vendors[v] = { bills:[], totalCredit:0, totalPaid:0 };
+    vendors[v].bills.push(p);
+    vendors[v].totalCredit += (p.total || 0);
+    // outstanding = creditAmt remaining on each bill
+    vendors[v].totalPaid   += (p.total||0) - (p.creditAmt||0);
+  });
+
+  // Add payments history per vendor
+  const payByVendor = {};
+  payments.forEach(pmt => {
+    if(!payByVendor[pmt.vendor]) payByVendor[pmt.vendor] = [];
+    payByVendor[pmt.vendor].push(pmt);
+  });
+
+  const vendorList = Object.keys(vendors).sort();
+  if(!vendorList.length){
+    div.innerHTML = `<div class="empty"><div class="ei">🏪</div><p>No credit purchases recorded yet.</p></div>`;
+    return;
+  }
+
+  const totalOutstanding = vendorList.reduce((s,v) => s + vendors[v].bills.reduce((ss,b)=>ss+(b.creditAmt||0),0), 0);
+  const totalCredit      = vendorList.reduce((s,v) => s + vendors[v].totalCredit, 0);
+  const totalPaid        = totalCredit - totalOutstanding;
+
+  div.innerHTML = `
+    <div class="vl-summary">
+      <div class="vl-summary-item">
+        <div class="vsv">${fmt(totalCredit)}</div>
+        <div class="vsl">Total Credit Purchases</div>
+      </div>
+      <div class="vl-summary-item">
+        <div class="vsv" style="color:#4ade80">${fmt(totalPaid)}</div>
+        <div class="vsl">Total Paid</div>
+      </div>
+      <div class="vl-summary-item">
+        <div class="vsv" style="color:#fb923c">${fmt(totalOutstanding)}</div>
+        <div class="vsl">Total Outstanding</div>
+      </div>
+      <div class="vl-summary-item">
+        <div class="vsv">${vendorList.length}</div>
+        <div class="vsl">Vendors</div>
+      </div>
+    </div>
+    ${vendorList.map(v => {
+      const vd  = vendors[v];
+      const due = vd.bills.reduce((s,b)=>s+(b.creditAmt||0),0);
+      const paid= vd.totalCredit - due;
+      const cleared = due === 0;
+      const pmts = payByVendor[v] || [];
+      return `
+      <div class="vendor-card">
+        <div class="vendor-card-top">
+          <div>
+            <div class="vendor-name">🏪 ${v}</div>
+            <div style="font-size:.75rem;color:var(--sub);margin-top:3px">${vd.bills.length} bill${vd.bills.length!==1?'s':''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+            <div class="vendor-stats">
+              <span class="vstat vstat-total">Total: ${fmt(vd.totalCredit)}</span>
+              <span class="vstat vstat-paid">Paid: ${fmt(paid)}</span>
+              <span class="vstat ${cleared?'vstat-cleared':'vstat-due'}">${cleared?'✅ Cleared':'⏳ Due: '+fmt(due)}</span>
+            </div>
+            ${!cleared ? `<button class="pay-vendor-btn" onclick="openVendorPayment('${v}',${due})">💳 Record Payment</button>` : ''}
+          </div>
+        </div>
+        <div class="vendor-bills">
+          ${vd.bills.sort((a,b)=>a.date.localeCompare(b.date)).map(b=>`
+            <div class="vbill-row">
+              <span class="vbill-date">${b.date}</span>
+              <span class="vbill-item">${b.itemName||'—'}</span>
+              <span class="vbill-amt">${fmt(b.total)}</span>
+              <span class="${b.creditAmt>0?'vbill-status-unpaid':'vbill-status-paid'}">${b.creditAmt>0?'⏳ Due '+fmt(b.creditAmt):'✅ Paid'}</span>
+            </div>`).join('')}
+        </div>
+        ${pmts.length ? `
+        <div class="pay-history-wrap">
+          <div style="font-size:.75rem;font-weight:700;color:var(--sub);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Payment History</div>
+          ${pmts.sort((a,b)=>b.date.localeCompare(a.date)).map(pmt=>`
+            <div class="pay-hist-row">
+              <span>${pmt.date} · ${pmt.method||'cash'}${pmt.note?' · '+pmt.note:''}</span>
+              <span>−${fmt(pmt.amount)}</span>
+            </div>`).join('')}
+        </div>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
+// ── Vendor Payment Modal
+let _vpVendor = null;
+let _vpMethod = 'cash';
+
+function openVendorPayment(vendor, outstanding){
+  _vpVendor = vendor;
+  document.getElementById('vp-vendor-name').textContent = vendor;
+  document.getElementById('vp-outstanding').textContent = fmt(outstanding);
+  document.getElementById('vp-amount').value = '';
+  document.getElementById('vp-date').value   = today();
+  document.getElementById('vp-note').value   = '';
+  setVpMethod('cash');
+  document.getElementById('vp-modal').classList.add('open');
+}
+function closeVpModal(){ document.getElementById('vp-modal').classList.remove('open'); _vpVendor=null; }
+
+function setVpMethod(method){
+  _vpMethod = method;
+  ['cash','online'].forEach(m=>{
+    const el = document.getElementById('vpm-'+m);
+    if(el) el.className = 'type-btn' + (m===method ? ` active-pm-${m}` : '');
+  });
+}
+
+function confirmVendorPayment(){
+  if(!_vpVendor) return;
+  const amount = parseFloat(document.getElementById('vp-amount').value)||0;
+  if(amount <= 0){ alert('Please enter a payment amount.'); return; }
+  const date   = document.getElementById('vp-date').value;
+  const note   = document.getElementById('vp-note').value.trim();
+
+  // Apply to oldest unpaid bills first (FIFO)
+  const arr = getPurchases();
+  let remaining = amount;
+  const unpaidBills = arr
+    .filter(p => p.vendor === _vpVendor && (p.creditAmt||0) > 0)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  unpaidBills.forEach(p => {
+    if(remaining <= 0) return;
+    if(p.creditAmt <= remaining){
+      remaining   -= p.creditAmt;
+      p.creditAmt  = 0;
+      p.paidStatus = 'paid';
+      p.paidDate   = date;
+    } else {
+      p.creditAmt  = Math.round((p.creditAmt - remaining)*100)/100;
+      p.paidStatus = 'partial';
+      remaining    = 0;
+    }
+  });
+  savePurchases(arr);
+
+  // Save payment record
+  const pmts = getVendorPayments();
+  pmts.push({ id: Date.now(), vendor: _vpVendor, amount, date, method: _vpMethod, note });
+  saveVendorPayments(pmts);
+
+  closeVpModal();
+  updateStats();
+  renderVendorLedger();
+  renderCreditTab();
+  toast(`✅ Payment of ${fmt(amount)} recorded for ${_vpVendor}`);
+}
 </script>
+<!-- VENDOR PAYMENT MODAL -->
+<div class="overlay" id="vp-modal" onclick="if(event.target===this)closeVpModal()">
+  <div class="modal">
+    <h3 style="margin-bottom:4px">💳 Record Payment</h3>
+    <p id="vp-vendor-name" style="font-size:.9rem;color:var(--sub);margin-bottom:16px;font-weight:600"></p>
+    <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.82rem;color:var(--sub);font-weight:600">Total Outstanding</span>
+      <span id="vp-outstanding" style="font-size:1.1rem;font-weight:800;color:var(--orange)"></span>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <div class="field">
+        <label>Payment Amount ₹</label>
+        <input type="number" id="vp-amount" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label>Payment Date</label>
+        <input type="date" id="vp-date">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Payment Method</label>
+      <div class="type-toggle" style="margin-top:6px">
+        <div class="type-btn active-pm-cash" id="vpm-cash"   onclick="setVpMethod('cash'  )">💵 Cash</div>
+        <div class="type-btn"                id="vpm-online" onclick="setVpMethod('online')">📱 Online</div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label>Note <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <input type="text" id="vp-note" placeholder="e.g. Paid via UPI">
+    </div>
+    <div style="font-size:.75rem;color:var(--sub);background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:9px 12px;margin-bottom:16px">
+      💡 Payment will be applied to oldest unpaid bills first automatically.
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeVpModal()">Cancel</button>
+      <button class="mbtn mbtn-save"   onclick="confirmVendorPayment()">Confirm Payment</button>
+    </div>
+  </div>
+</div>
+
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
 </body>
 </html>

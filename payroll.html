@@ -308,6 +308,36 @@
   .wage-day-total .val{font-size:1.05rem;font-weight:800;}
 
   @media(min-width:600px){body{max-width:700px;margin:0 auto;}}
+
+  /* ── EMPLOYEE LEDGER ── */
+  .ledger-summary{background:linear-gradient(135deg,#1e293b,#334155);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .ledger-summary-item .lsv{font-size:1.2rem;font-weight:800;color:#fff;}
+  .ledger-summary-item .lsl{font-size:.7rem;color:rgba(255,255,255,.6);margin-top:2px;}
+  .ledger-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);margin-bottom:12px;overflow:hidden;}
+  .ledger-card-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer;}
+  .ledger-card-head:hover{background:#fafbff;}
+  .ledger-emp-name{font-size:.95rem;font-weight:800;}
+  .ledger-emp-sub{font-size:.73rem;color:var(--sub);margin-top:2px;}
+  .ledger-balance{text-align:right;}
+  .ledger-balance .bal-val{font-size:1.1rem;font-weight:800;}
+  .ledger-balance .bal-lbl{font-size:.7rem;color:var(--sub);margin-top:2px;}
+  .bal-positive{color:var(--orange);}
+  .bal-negative{color:var(--green);}
+  .bal-zero{color:var(--sub);}
+  .ledger-body{display:none;border-top:1.5px solid var(--border);padding:14px 16px;}
+  .ledger-body.open{display:block;}
+  .ledger-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:.83rem;}
+  .ledger-row:last-child{border-bottom:none;}
+  .ledger-row .lr-lbl{color:var(--sub);font-weight:500;}
+  .ledger-row .lr-val{font-weight:700;}
+  .ledger-pay-hist{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .ledger-pay-hist-title{font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  .pay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f8fafc;font-size:.8rem;}
+  .pay-row:last-child{border-bottom:none;}
+  .pay-type-badge{padding:2px 9px;border-radius:999px;font-size:.7rem;font-weight:700;}
+  .pt-advance{background:var(--orange-soft);color:#92400e;}
+  .pt-salary{background:var(--green-soft);color:#065f46;}
+  .btn-orange{background:var(--orange);color:#fff;}
 </style>
   <!-- ── Role Guard ── -->
   <script>
@@ -359,6 +389,7 @@
     <button class="tab-btn" onclick="switchTab('attendance')">📅 Attendance</button>
     <button class="tab-btn" onclick="switchTab('helpers')">🔧 Day Helpers</button>
     <button class="tab-btn" onclick="switchTab('salary')">💰 Salary</button>
+    <button class="tab-btn" onclick="switchTab('ledger')">📒 Ledger</button>
   </div>
 </div>
 
@@ -423,6 +454,11 @@
   </div>
 </div>
 
+<!-- ════════════ LEDGER TAB ════════════ -->
+<div class="page" id="page-ledger">
+  <div id="ledger-list"></div>
+</div>
+
 <!-- ════════════ SALARY TAB ════════════ -->
 <div class="page" id="page-salary">
   <div class="month-bar" style="margin:-14px -14px 14px;">
@@ -485,11 +521,18 @@
   </div>
 </div>
 
-<!-- ADD ADVANCE MODAL -->
+<!-- ADD ADVANCE / SALARY MODAL -->
 <div class="modal-overlay" id="adv-modal" onclick="if(event.target===this)closeAdvModal()">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>💸 Record Advance — <span id="adv-emp-name"></span></h3>
+    <h3>💸 Record Payment — <span id="adv-emp-name"></span></h3>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Payment Type</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button id="adv-type-advance" class="btn btn-orange" style="flex:1;font-size:.82rem" onclick="setAdvType('advance')">💸 Advance</button>
+        <button id="adv-type-salary"  class="btn btn-gray"   style="flex:1;font-size:.82rem" onclick="setAdvType('salary')">💰 Salary</button>
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>Amount (₹) *</label>
@@ -594,16 +637,17 @@ function closeConfirm(){ document.getElementById('confirm-modal').classList.remo
 // ══════════════════════════════════════════════════
 function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    const tabs=['employees','attendance','helpers','salary'];
+    const tabs=['employees','attendance','helpers','salary','ledger'];
     b.classList.toggle('active', tabs[i]===tab);
   });
-  ['employees','attendance','helpers','salary'].forEach(t=>{
+  ['employees','attendance','helpers','salary','ledger'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active', t===tab);
   });
   if(tab==='employees') renderEmployees();
   if(tab==='attendance') renderAttendance();
   if(tab==='helpers') renderHelpers();
   if(tab==='salary') renderSalary();
+  if(tab==='ledger') renderLedger();
 }
 
 // ══════════════════════════════════════════════════
@@ -914,6 +958,13 @@ function deleteHelper(id){
 // ══════════════════════════════════════════════════
 //  ADVANCES
 // ══════════════════════════════════════════════════
+let _advType = 'advance';
+function setAdvType(type){
+  _advType = type;
+  document.getElementById('adv-type-advance').className = 'btn ' + (type==='advance' ? 'btn-orange' : 'btn-gray');
+  document.getElementById('adv-type-salary').className  = 'btn ' + (type==='salary'  ? 'btn-green' : 'btn-gray');
+}
+
 function openAdvModal(empId){
   const emp = db.get(K_EMP).find(e=>e.id===empId);
   if(!emp) return;
@@ -922,6 +973,7 @@ function openAdvModal(empId){
   document.getElementById('adv-amount').value   = '';
   document.getElementById('adv-date').value     = today();
   document.getElementById('adv-note').value     = '';
+  setAdvType('advance');
   renderAdvLog(empId);
   document.getElementById('adv-modal').classList.add('open');
 }
@@ -951,23 +1003,134 @@ function saveAdvance(){
   const amount = parseFloat(document.getElementById('adv-amount').value)||0;
   const date   = document.getElementById('adv-date').value || today();
   const note   = document.getElementById('adv-note').value.trim();
-  if(!amount){ toast('⚠ Enter advance amount'); return; }
+  if(!amount){ toast('⚠ Enter amount'); return; }
   const advs = db.get(K_ADV);
-  advs.push({ id:'adv_'+Date.now(), empId, amount, date, note });
+  advs.push({ id:'adv_'+Date.now(), empId, amount, date, note, type: _advType });
   db.set(K_ADV, advs);
   document.getElementById('adv-amount').value='';
   document.getElementById('adv-note').value='';
   renderAdvLog(empId);
   renderSalary();
-  toast('💸 Advance recorded');
+  toast(_advType==='salary' ? '💰 Salary recorded' : '💸 Advance recorded');
 }
 
 function deleteAdvance(id){
   db.set(K_ADV, db.get(K_ADV).filter(a=>a.id!==id));
   const empId = document.getElementById('adv-emp-id').value;
-  renderAdvLog(empId);
+  if(empId) renderAdvLog(empId);
   renderSalary();
-  toast('🗑 Advance deleted');
+  if(document.getElementById('page-ledger').classList.contains('active')) renderLedger();
+  toast('🗑 Deleted');
+}
+
+// ══════════════════════════════════════════════════
+//  EMPLOYEE LEDGER  (all-time running balance)
+// ══════════════════════════════════════════════════
+function renderLedger(){
+  const emps = db.get(K_EMP);
+  const allAtt  = db.get(K_ATT);
+  const allAdvs = db.get(K_ADV);
+  const div = document.getElementById('ledger-list');
+
+  if(!emps.length){
+    div.innerHTML=`<div style="text-align:center;padding:50px 20px;color:var(--sub)"><div style="font-size:2.5rem;margin-bottom:10px">📒</div><p>No employees added yet</p></div>`;
+    return;
+  }
+
+  let totalEarned=0, totalPaid=0;
+
+  const cards = emps.map(e=>{
+    const empAtt  = allAtt.filter(a=>a.empId===e.id);
+    const empAdvs = allAdvs.filter(a=>a.empId===e.id).sort((a,b)=>b.date.localeCompare(a.date));
+
+    // All-time earned (sum of all attendance wages)
+    const earned  = empAtt.reduce((s,a)=>s+(a.wage||0),0);
+    // All-time paid (advances + salary payments)
+    const paid    = empAdvs.reduce((s,a)=>s+Number(a.amount),0);
+    // Balance: positive = hotel owes employee, negative = employee took more than earned
+    const balance = earned - paid;
+
+    totalEarned += earned;
+    totalPaid   += paid;
+
+    // Breakdown by month for attendance
+    const monthMap = {};
+    empAtt.forEach(a=>{
+      const m = a.date.slice(0,7);
+      if(!monthMap[m]) monthMap[m]={earned:0,present:0,half:0,absent:0,extra:0};
+      monthMap[m].earned += (a.wage||0);
+      if(a.status==='present') monthMap[m].present++;
+      else if(a.status==='halfday') monthMap[m].half++;
+      else if(a.status==='absent') monthMap[m].absent++;
+      else if(a.status==='extra') monthMap[m].extra++;
+    });
+    const months = Object.keys(monthMap).sort().reverse();
+
+    const balClass = balance>0?'bal-positive':balance<0?'bal-negative':'bal-zero';
+    const balLabel = balance>0?'Hotel Owes':balance<0?'Advance Given':'Settled';
+
+    return `
+    <div class="ledger-card">
+      <div class="ledger-card-head" onclick="toggleLedger('ldb-${e.id}')">
+        <div>
+          <div class="ledger-emp-name">${e.name}</div>
+          <div class="ledger-emp-sub">${e.role} · ₹${getDailyWage(e).toLocaleString('en-IN')}/day</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="ledger-balance">
+            <div class="bal-val ${balClass}">₹${Math.abs(balance).toLocaleString('en-IN')}</div>
+            <div class="bal-lbl">${balLabel}</div>
+          </div>
+          <button class="btn btn-orange btn-sm" onclick="event.stopPropagation();openAdvModal('${e.id}')">💸 Pay</button>
+        </div>
+      </div>
+      <div class="ledger-body" id="ldb-${e.id}">
+        <div class="ledger-row"><span class="lr-lbl">Total Earned (all time)</span><span class="lr-val" style="color:var(--green)">₹${earned.toLocaleString('en-IN')}</span></div>
+        <div class="ledger-row"><span class="lr-lbl">Total Paid (all time)</span><span class="lr-val" style="color:var(--primary)">₹${paid.toLocaleString('en-IN')}</span></div>
+        <div class="ledger-row" style="background:${balance>0?'var(--orange-soft)':balance<0?'var(--green-soft)':'#f8fafc'};border-radius:8px;padding:8px;margin-top:4px">
+          <span class="lr-lbl" style="font-weight:800;color:var(--text)">${balance>0?'⏳ Balance to Pay':'balance<0?✅ Advance Excess':'✅ Fully Settled'}</span>
+          <span class="lr-val ${balClass}">₹${Math.abs(balance).toLocaleString('en-IN')}</span>
+        </div>
+
+        ${months.length ? `
+        <div style="margin-top:14px;font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Monthly Attendance</div>
+        ${months.map(m=>{
+          const md = monthMap[m];
+          return `<div class="ledger-row">
+            <span class="lr-lbl">${m} · ${md.present}P ${md.half?md.half+'H ':''} ${md.absent?md.absent+'A ':''} ${md.extra?md.extra+'E':''}</span>
+            <span class="lr-val">₹${md.earned.toLocaleString('en-IN')}</span>
+          </div>`;
+        }).join('')}` : ''}
+
+        ${empAdvs.length ? `
+        <div class="ledger-pay-hist">
+          <div class="ledger-pay-hist-title">Payment History</div>
+          ${empAdvs.map(a=>`
+            <div class="pay-row">
+              <span class="pay-type-badge ${a.type==='salary'?'pt-salary':'pt-advance'}">${a.type==='salary'?'💰 Salary':'💸 Advance'}</span>
+              <span style="flex:1;color:var(--sub)">${fmtDate(a.date)}${a.note?' · '+a.note:''}</span>
+              <span style="font-weight:700;color:var(--primary)">₹${Number(a.amount).toLocaleString('en-IN')}</span>
+              <button class="adv-del" onclick="deleteAdvance('${a.id}')">🗑</button>
+            </div>`).join('')}
+        </div>` : '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--sub)">No payments recorded yet</div>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalBalance = totalEarned - totalPaid;
+  div.innerHTML = `
+    <div class="ledger-summary">
+      <div class="ledger-summary-item"><div class="lsv" style="color:#4ade80">₹${totalEarned.toLocaleString('en-IN')}</div><div class="lsl">Total Earned</div></div>
+      <div class="ledger-summary-item"><div class="lsv" style="color:#60a5fa">₹${totalPaid.toLocaleString('en-IN')}</div><div class="lsl">Total Paid</div></div>
+      <div class="ledger-summary-item"><div class="lsv" style="color:#fb923c">₹${Math.abs(totalBalance).toLocaleString('en-IN')}</div><div class="lsl">${totalBalance>=0?'Still to Pay':'Advance Excess'}</div></div>
+    </div>
+    ${cards}`;
+}
+
+function toggleLedger(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('open');
+}
 }
 
 // ══════════════════════════════════════════════════

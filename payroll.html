@@ -1088,7 +1088,7 @@ function renderLedger(){
         <div class="ledger-row"><span class="lr-lbl">Total Earned (all time)</span><span class="lr-val" style="color:var(--green)">₹${earned.toLocaleString('en-IN')}</span></div>
         <div class="ledger-row"><span class="lr-lbl">Total Paid (all time)</span><span class="lr-val" style="color:var(--primary)">₹${paid.toLocaleString('en-IN')}</span></div>
         <div class="ledger-row" style="background:${balance>0?'var(--orange-soft)':balance<0?'var(--green-soft)':'#f8fafc'};border-radius:8px;padding:8px;margin-top:4px">
-          <span class="lr-lbl" style="font-weight:800;color:var(--text)">${balance>0?'⏳ Balance to Pay':'balance<0?✅ Advance Excess':'✅ Fully Settled'}</span>
+          <span class="lr-lbl" style="font-weight:800;color:var(--text)">${balance>0?'⏳ Balance to Pay':balance<0?'✅ Advance Excess':'✅ Fully Settled'}</span>
           <span class="lr-val ${balClass}">₹${Math.abs(balance).toLocaleString('en-IN')}</span>
         </div>
 

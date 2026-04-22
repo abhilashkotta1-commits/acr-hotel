@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Amma Cheti Ruchulu — Role Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb; --green: #10b981; --red: #ef4444;
+      --orange: #f97316; --purple: #8b5cf6; --yellow: #f59e0b;
+      --bg: #f1f5f9; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b; --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 60px; }
+
+    /* ─── HEADER ─── */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white; padding: 18px 18px 18px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    }
+    .header a { color: rgba(255,255,255,.65); text-decoration: none; font-size: 14px; }
+    .header a:hover { color: white; }
+    .header-title { font-size: 17px; font-weight: 800; }
+    .header-sub { font-size: 11px; opacity: .55; margin-top: 2px; }
+
+    .content { padding: 16px; max-width: 620px; margin: 0 auto; }
+
+    /* ─── ADMIN NOTICE ─── */
+    .admin-notice {
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      border-radius: var(--radius); padding: 12px 15px;
+      font-size: 12px; color: #1d4ed8; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px; line-height: 1.4;
+    }
+
+    /* ─── LEGEND ─── */
+    .legend {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .leg-item {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    }
+    .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ─── ROLE BLOCK ─── */
+    .role-block {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    }
+    .role-head {
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 13px;
+    }
+    .role-icon-wrap {
+      width: 46px; height: 46px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .role-title   { font-size: 16px; font-weight: 800; }
+    .role-desc    { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── PIN ROW ─── */
+    .pin-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 18px; background: #f8fafc;
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    }
+    .pin-label { font-size: 13px; font-weight: 600; flex: 1; }
+    .pin-input {
+      width: 110px; padding: 9px 12px; border: 2px solid var(--border);
+      border-radius: 10px; font-size: 18px; letter-spacing: 5px;
+      font-weight: 800; text-align: center; outline: none;
+      font-family: 'Inter', sans-serif; color: var(--text); background: #fff;
+      transition: border .15s;
+    }
+    .pin-input:focus { border-color: var(--primary); }
+    .pin-saved { font-size: 11px; font-weight: 700; color: var(--green); display: none; white-space: nowrap; }
+    .pin-saved.show { display: block; }
+
+    /* ─── MODULE SECTION HEADER ─── */
+    .mod-section-head {
+      padding: 8px 18px; background: #f8fafc;
+      display: grid; grid-template-columns: 1fr auto;
+      align-items: center; border-bottom: 1px solid var(--border);
+    }
+    .mod-section-head span { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .access-legend { display: flex; gap: 12px; }
+    .acc-leg { font-size: 10px; font-weight: 700; color: var(--muted); }
+
+    /* ─── MODULE ROW ─── */
+    .mod-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid #f1f5f9; gap: 10px;
+    }
+    .mod-row:last-child { border-bottom: none; }
+    .mod-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .mod-emoji-wrap {
+      width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; background: var(--bg);
+    }
+    .mod-name  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ════════ 3-POSITION SLIDING TOGGLE ════════ */
+    .tri-toggle {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      width: 126px;
+      height: 46px;
+      border-radius: 13px;
+      border: 2px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+
+    /* Sliding thumb behind segments */
+    .tri-thumb {
+      position: absolute;
+      top: 0; left: 0;
+      width: 33.33%;
+      height: 100%;
+      border-radius: 11px;
+      transition: left .22s cubic-bezier(.34,1.3,.64,1), background .2s;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Each tap segment */
+    .tri-seg {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      gap: 1px;
+      border: none;
+      background: none;
+      font-family: 'Inter', sans-serif;
+      padding: 4px 2px;
+      transition: opacity .15s;
+    }
+    .tri-seg:active { opacity: .7; }
+    .tri-seg-icon { font-size: 15px; line-height: 1; }
+    .tri-seg-lbl {
+      font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--muted); transition: color .15s;
+    }
+
+    /* ── State: NONE (left) ── */
+    .tri-toggle.val-none {
+      border-color: #fca5a5;
+    }
+    .tri-toggle.val-none .tri-thumb {
+      left: 0%;
+      background: #fee2e2;
+      box-shadow: 0 2px 8px rgba(239,68,68,.2);
+    }
+    .tri-toggle.val-none .seg-none .tri-seg-lbl { color: var(--red); font-weight: 800; }
+
+    /* ── State: VIEW (middle) ── */
+    .tri-toggle.val-view {
+      border-color: #93c5fd;
+    }
+    .tri-toggle.val-view .tri-thumb {
+      left: 33.33%;
+      background: #dbeafe;
+      box-shadow: 0 2px 8px rgba(37,99,235,.2);
+    }
+    .tri-toggle.val-view .seg-view .tri-seg-lbl { color: var(--primary); font-weight: 800; }
+
+    /* ── State: EDIT (right) ── */
+    .tri-toggle.val-edit {
+      border-color: #86efac;
+    }
+    .tri-toggle.val-edit .tri-thumb {
+      left: 66.66%;
+      background: #dcfce7;
+      box-shadow: 0 2px 8px rgba(16,185,129,.2);
+    }
+    .tri-toggle.val-edit .seg-edit .tri-seg-lbl { color: var(--green); font-weight: 800; }
+
+    /* ─── SAVE BAR ─── */
+    .save-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--card); border-top: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      z-index: 50; box-shadow: 0 -4px 20px rgba(0,0,0,.07);
+      max-width: 620px; margin: 0 auto;
+    }
+    @media (max-width: 620px) {
+      .save-bar { max-width: 100%; }
+    }
+    .btn-save-all {
+      flex: 1; background: linear-gradient(135deg,#1d4ed8,#2563eb);
+      color: white; border: none; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 800;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      letter-spacing: -.01em; box-shadow: 0 4px 14px rgba(37,99,235,.35);
+      transition: filter .15s;
+    }
+    .btn-save-all:active { filter: brightness(.92); }
+    .save-confirm { font-size: 13px; font-weight: 700; color: var(--green); display: none; white-space: nowrap; }
+    .save-confirm.show { display: block; }
+
+    /* ─── ERROR MODAL ─── */
+    .err-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 999;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .err-overlay.open { display: flex; }
+    .err-box {
+      background: white; border-radius: 18px; padding: 26px 22px;
+      max-width: 300px; width: 100%; text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,.22);
+    }
+    .err-box .ei { font-size: 36px; margin-bottom: 10px; }
+    .err-box p  { font-size: 14px; margin-bottom: 18px; line-height: 1.55; color: var(--muted); }
+    .err-box button {
+      background: var(--primary); color: white; border: none;
+      border-radius: 10px; padding: 11px 28px; font-size: 14px;
+      font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html">←</a>
+  <div style="flex:1">
+    <div class="header-title">⚙️ Manage Roles & Access</div>
+    <div class="header-sub">Admin only · Set PINs and module permissions</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="admin-notice">
+    🔐 Set a PIN for each role and control exactly which modules they can access. Changes take effect on the next login.
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>No Access — module hidden</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#2563eb"></div>View Only — read but no edits</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>Full Edit — can see and change</div>
+  </div>
+
+  <div id="roleBlocks"></div>
+
+</div>
+
+<!-- Fixed save bar -->
+<div class="save-bar">
+  <button class="btn-save-all" onclick="saveAll()">💾 Save All Settings</button>
+  <div class="save-confirm" id="saveConfirm">✅ Saved!</div>
+</div>
+
+<!-- Error modal -->
+<div class="err-overlay" id="errModal">
+  <div class="err-box">
+    <div class="ei">⚠️</div>
+    <p id="errMsg"></p>
+    <button onclick="document.getElementById('errModal').classList.remove('open')">OK</button>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────
+const ROLES = [
+  { id:'manager',     label:'Manager',          desc:'Daily operations & reporting', icon:'👨‍💼', color:'#10b981', bg:'#d1fae5' },
+  { id:'partner',     label:'Sleeping Partner', desc:'Investor view & oversight',    icon:'🤝', color:'#8b5cf6', bg:'#ede9fe' },
+  { id:'storekeeper', label:'Store Keeper',     desc:'Stock & inventory management', icon:'📦', color:'#f97316', bg:'#ffedd5' },
+];
+
+const MODULES = [
+  { id:'revenue',   label:'Daily Revenue',  icon:'💰' },
+  { id:'pnl',       label:'P&L Dashboard',  icon:'📊' },
+  { id:'store',     label:'Inventory',      icon:'📦' },
+  { id:'purchases', label:'Purchases',      icon:'🛒' },
+  { id:'usage',     label:'Daily Usage',    icon:'📋' },
+  { id:'payroll',   label:'Payroll',        icon:'👥' },
+];
+
+const DEFAULT_CONFIG = {
+  manager:     { revenue:'edit', pnl:'edit',  store:'edit', purchases:'edit', usage:'edit', payroll:'edit' },
+  partner:     { revenue:'edit', pnl:'edit',  store:'edit', purchases:'edit', usage:'edit', payroll:'edit' },
+  storekeeper: { revenue:'edit', pnl:'none',  store:'edit', purchases:'none', usage:'none', payroll:'none' },
+};
+
+let config = {};
+let pins   = {};
+
+function loadConfig() {
+  try { config = JSON.parse(localStorage.getItem('fc_role_config')) || JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+  catch(e) { config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+  for (const r of ROLES) {
+    if (!config[r.id]) config[r.id] = JSON.parse(JSON.stringify(DEFAULT_CONFIG[r.id] || {}));
+    for (const m of MODULES) {
+      if (!config[r.id][m.id]) config[r.id][m.id] = 'none';
+    }
+  }
+}
+function loadPins() {
+  try { pins = JSON.parse(localStorage.getItem('fc_role_pins')) || {}; }
+  catch(e) { pins = {}; }
+}
+
+// ── Render ───────────────────────────────────────────────────────────
+function render() {
+  loadConfig();
+  loadPins();
+
+  document.getElementById('roleBlocks').innerHTML = ROLES.map(r => `
+    <div class="role-block">
+
+      <!-- Role header -->
+      <div class="role-head">
+        <div class="role-icon-wrap" style="background:${r.bg}">${r.icon}</div>
+        <div style="flex:1">
+          <div class="role-title">${r.label}</div>
+          <div class="role-desc">${r.desc}</div>
+        </div>
+      </div>
+
+      <!-- PIN row -->
+      <div class="pin-row">
+        <div class="pin-label">🔢 Login PIN</div>
+        <input class="pin-input" type="password" inputmode="numeric"
+               maxlength="4" id="pin-${r.id}"
+               placeholder="••••"
+               value="${pins[r.id] || ''}"
+               oninput="onPinInput(this)">
+        <span class="pin-saved" id="pinsaved-${r.id}">✓ Set</span>
+      </div>
+
+      <!-- Module access toggles -->
+      <div class="mod-section-head">
+        <span>Module</span>
+        <div class="access-legend">
+          <span class="acc-leg" style="color:#ef4444">🚫 None</span>
+          <span class="acc-leg" style="color:#2563eb">👁 View</span>
+          <span class="acc-leg" style="color:#10b981">✏️ Edit</span>
+        </div>
+      </div>
+
+      ${MODULES.map(m => {
+        const val = config[r.id][m.id] || 'none';
+        return `
+        <div class="mod-row">
+          <div class="mod-info">
+            <div class="mod-emoji-wrap">${m.icon}</div>
+            <span class="mod-name">${m.label}</span>
+          </div>
+
+          <div class="tri-toggle val-${val}" id="tgl-${r.id}-${m.id}">
+            <div class="tri-thumb"></div>
+            <button class="tri-seg seg-none" onclick="setAccess('${r.id}','${m.id}','none')">
+              <span class="tri-seg-icon">🚫</span>
+              <span class="tri-seg-lbl">None</span>
+            </button>
+            <button class="tri-seg seg-view" onclick="setAccess('${r.id}','${m.id}','view')">
+              <span class="tri-seg-icon">👁</span>
+              <span class="tri-seg-lbl">View</span>
+            </button>
+            <button class="tri-seg seg-edit" onclick="setAccess('${r.id}','${m.id}','edit')">
+              <span class="tri-seg-icon">✏️</span>
+              <span class="tri-seg-lbl">Edit</span>
+            </button>
+          </div>
+        </div>`;
+      }).join('')}
+
+    </div>
+  `).join('');
+
+  // Show "Set" label for already-saved PINs
+  for (const r of ROLES) {
+    if (pins[r.id]) document.getElementById('pinsaved-'+r.id)?.classList.add('show');
+  }
+}
+
+// ── Toggle tap ───────────────────────────────────────────────────────
+function setAccess(roleId, modId, level) {
+  if (!config[roleId]) config[roleId] = {};
+  config[roleId][modId] = level;
+
+  const tgl = document.getElementById(`tgl-${roleId}-${modId}`);
+  if (!tgl) return;
+  tgl.className = `tri-toggle val-${level}`;
+}
+
+// ── PIN input ────────────────────────────────────────────────────────
+function onPinInput(inp) {
+  inp.value = inp.value.replace(/\D/g,'').substring(0, 4);
+  const rid = inp.id.replace('pin-','');
+  document.getElementById('pinsaved-'+rid)?.classList.remove('show');
+}
+
+// ── Save ─────────────────────────────────────────────────────────────
+function saveAll() {
+  for (const r of ROLES) {
+    const pinVal = (document.getElementById('pin-'+r.id)?.value || '').trim();
+    if (pinVal && pinVal.length !== 4) {
+      showErr(`PIN for ${r.label} must be exactly 4 digits (you entered ${pinVal.length}).`);
+      return;
+    }
+    if (pinVal) {
+      pins[r.id] = pinVal;
+      document.getElementById('pinsaved-'+r.id)?.classList.add('show');
+    }
+  }
+
+  localStorage.setItem('fc_role_config', JSON.stringify(config));
+  localStorage.setItem('fc_role_pins',   JSON.stringify(pins));
+
+  const conf = document.getElementById('saveConfirm');
+  conf.classList.add('show');
+  setTimeout(() => conf.classList.remove('show'), 2500);
+}
+
+function showErr(msg) {
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('errModal').classList.add('open');
+}
+
+// ── Guard: admin only ────────────────────────────────────────────────
+const _role = sessionStorage.getItem('fc_role');
+if (_role && _role !== 'admin') {
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                height:100vh;font-family:Inter,sans-serif;text-align:center;padding:20px">
+      <div style="font-size:52px;margin-bottom:16px">🔐</div>
+      <div style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:8px">Admin Only</div>
+      <div style="font-size:14px;color:#64748b;margin-bottom:28px;max-width:260px;line-height:1.5">
+        Role settings can only be changed by the Admin.
+      </div>
+      <a href="index.html" style="background:#2563eb;color:white;padding:13px 28px;
+         border-radius:12px;text-decoration:none;font-weight:700;font-size:14px">
+        ← Back to Home
+      </a>
+    </div>`;
+} else {
+  fcInit(function(){ render(); });
+}
+</script>
+</body>
+</html>

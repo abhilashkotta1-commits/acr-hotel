@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+  <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ACR Hotel">
+  <meta name="theme-color" content="#1e293b">
+  <title>Amma Cheti Ruchulu — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb; --green: #10b981; --red: #ef4444;
+      --orange: #f97316; --yellow: #f59e0b; --purple: #8b5cf6;
+      --pink: #ec4899; --sky: #0ea5e9;
+      --bg: #f1f5f9; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b; --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 32px; }
+
+    /* ════════════════════════════════════════════
+       LOGIN OVERLAY
+    ════════════════════════════════════════════ */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start;
+      padding: 0 16px 32px; overflow-y: auto;
+      transition: opacity .35s;
+    }
+    .login-overlay.fade-out { opacity: 0; pointer-events: none; }
+    .login-overlay.hidden   { display: none; }
+
+    .login-logo {
+      text-align: center; padding: 36px 0 28px;
+    }
+    .login-logo .ll-te {
+      font-family: 'Noto Sans Telugu', sans-serif;
+      font-size: 22px; font-weight: 700; color: white; margin-bottom: 4px;
+    }
+    .login-logo .ll-en { font-size: 13px; color: rgba(255,255,255,.45); }
+
+    /* Phase labels */
+    .phase-title {
+      font-size: 14px; font-weight: 600; color: rgba(255,255,255,.7);
+      text-align: center; margin-bottom: 18px;
+    }
+
+    /* Role cards grid */
+    .role-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; width: 100%; max-width: 380px;
+    }
+    .role-card {
+      background: rgba(255,255,255,.07);
+      border: 1.5px solid rgba(255,255,255,.12);
+      border-radius: 16px; padding: 18px 14px;
+      text-align: center; cursor: pointer;
+      transition: background .15s, border-color .15s, transform .12s;
+    }
+    .role-card:hover  { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.25); }
+    .role-card:active { transform: scale(.97); }
+    .rc-icon { font-size: 28px; margin-bottom: 8px; }
+    .rc-name { font-size: 13px; font-weight: 700; color: white; }
+
+    /* PIN entry phase */
+    .pin-phase { width: 100%; max-width: 320px; }
+    .pin-role-badge {
+      display: flex; align-items: center; gap: 10px; justify-content: center;
+      margin-bottom: 22px;
+    }
+    .prb-icon { font-size: 24px; }
+    .prb-name { font-size: 16px; font-weight: 700; color: white; }
+
+    .pin-dots {
+      display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;
+    }
+    .pin-dot {
+      width: 48px; height: 56px;
+      background: rgba(255,255,255,.08);
+      border: 2px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 800; color: white;
+      transition: border-color .15s, background .15s;
+    }
+    .pin-dot.filled {
+      background: rgba(255,255,255,.15);
+      border-color: rgba(255,255,255,.4);
+    }
+    .pin-dot.active { border-color: #60a5fa; }
+
+    /* Numpad */
+    .numpad {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; margin-bottom: 14px;
+    }
+    .np-btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; padding: 16px 8px;
+      font-size: 20px; font-weight: 700; color: white;
+      cursor: pointer; text-align: center;
+      transition: background .12s;
+      font-family: 'Inter', sans-serif;
+    }
+    .np-btn:hover  { background: rgba(255,255,255,.15); }
+    .np-btn:active { background: rgba(255,255,255,.22); }
+    .np-btn.del    { font-size: 18px; }
+    .np-btn.empty  { background: transparent; border-color: transparent; cursor: default; }
+    .np-btn.enter  { background: var(--primary); border-color: var(--primary); font-size: 15px; }
+    .np-btn.enter:hover { background: #1d4ed8; }
+
+    .pin-error {
+      text-align: center; font-size: 13px; color: #f87171;
+      min-height: 20px; margin-bottom: 10px;
+      animation: shake .3s;
+    }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+    .pin-no-pin-note {
+      text-align: center; font-size: 12px; color: rgba(255,255,255,.4);
+      margin-bottom: 14px;
+    }
+
+    .btn-back-login {
+      width: 100%; padding: 12px; border-radius: 10px;
+      background: transparent; border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.6); font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+    .btn-back-login:hover { background: rgba(255,255,255,.07); }
+
+    /* ════════════════════════════════════════════
+       HOME PAGE
+    ════════════════════════════════════════════ */
+    .home-page { display: none; }
+    .home-page.show { display: block; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%);
+      padding: 16px 16px 22px; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(37,99,235,.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 14px; position: relative;
+    }
+    .brand-name { font-size: 19px; font-weight: 800; color: white; letter-spacing: -.3px; }
+    .brand-sub  { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; }
+
+    .hero-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .date-chip {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.75); font-size: 11px; font-weight: 500;
+      padding: 4px 9px; border-radius: 20px;
+    }
+    .role-chip {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 20px; padding: 4px 9px;
+      font-size: 11px; color: rgba(255,255,255,.7); cursor: pointer;
+    }
+    .role-chip:hover { background: rgba(255,255,255,.15); }
+    .role-chip .rc-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+    .today-revenue {
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--radius); padding: 13px 15px; position: relative;
+    }
+    .rev-label  { font-size: 10px; color: rgba(255,255,255,.45); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .rev-amount { font-size: 30px; font-weight: 800; color: #4ade80; line-height: 1; }
+    .rev-amount.zero { color: rgba(255,255,255,.25); }
+    .rev-sub    { font-size: 11px; color: rgba(255,255,255,.35); margin-top: 4px; }
+    .rev-sections { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
+    .rev-sec-pill {
+      background: rgba(255,255,255,.07); border-radius: 6px; padding: 3px 7px;
+      font-size: 10px; color: rgba(255,255,255,.6);
+    }
+    .rev-sec-pill span { font-weight: 700; }
+
+    /* Content */
+    .content { padding: 14px; max-width: 600px; margin: 0 auto; }
+
+    .alerts { margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .alert {
+      border-radius: 10px; padding: 9px 13px; font-size: 12px; font-weight: 500;
+      display: flex; align-items: center; gap: 8px; border: 1px solid transparent;
+    }
+    .alert-warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .alert-info { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .alert-ok   { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+    .alert a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+    .section-label {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .6px;
+      margin-bottom: 10px; margin-top: 4px;
+    }
+
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .stat-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 11px 10px; text-align: center;
+    }
+    .stat-val { font-size: 20px; font-weight: 800; }
+    .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+
+    .module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .module-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 13px;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: 7px;
+      transition: transform .15s, box-shadow .15s; cursor: pointer;
+    }
+    .module-card:hover  { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .module-card:active { transform: translateY(0); }
+    .mod-icon-row { display: flex; justify-content: space-between; align-items: flex-start; }
+    .mod-icon { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+    .mod-badge { font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 20px; white-space: nowrap; }
+    .mod-name  { font-size: 13px; font-weight: 700; color: var(--text); }
+    .mod-meta  { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .mod-view-tag { font-size: 10px; color: var(--primary); font-weight: 600; }
+
+    .pnl-snap {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: var(--radius); padding: 15px;
+      margin-bottom: 14px; text-decoration: none; display: block;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .pnl-snap:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.15); }
+    .pnl-snap-label { font-size: 10px; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; margin-bottom: 9px; }
+    .pnl-row { display: flex; justify-content: space-between; gap: 10px; }
+    .pnl-item { flex: 1; }
+    .pnl-item-label { font-size: 10px; color: rgba(255,255,255,.4); font-weight: 500; margin-bottom: 2px; }
+    .pnl-item-val   { font-size: 15px; font-weight: 800; }
+    .pnl-item-val.green  { color: #4ade80; }
+    .pnl-item-val.red    { color: #f87171; }
+    .pnl-item-val.yellow { color: #fbbf24; }
+    .pnl-item-val.white  { color: white; }
+    .pnl-arrow { align-self: center; color: rgba(255,255,255,.3); font-size: 12px; }
+
+    /* Admin tools row */
+    .admin-row {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .admin-btn {
+      flex: 1; background: white; border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 11px; font-size: 12px; font-weight: 600;
+      color: var(--text); cursor: pointer; text-align: center;
+      text-decoration: none; display: block; font-family: 'Inter', sans-serif;
+      transition: background .15s;
+    }
+    .admin-btn:hover { background: #f8fafc; }
+
+    .footer { text-align: center; padding: 18px 16px 0; font-size: 11px; color: var(--muted); }
+    .footer strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     LOGIN OVERLAY
+══════════════════════════════════════════════ -->
+<div class="login-overlay" id="loginOverlay">
+
+  <div class="login-logo">
+    <div class="ll-te">🏨 అమ్మ చేతి రుచులు</div>
+    <div class="ll-en">Amma Cheti Ruchulu · Food Court</div>
+  </div>
+
+  <!-- Phase 1: Role selection -->
+  <div id="phaseRoles" style="width:100%;max-width:380px">
+    <div class="phase-title">Select your role to continue</div>
+    <div class="role-grid">
+      <div class="role-card" onclick="selectRole('admin')">
+        <div class="rc-icon">👑</div>
+        <div class="rc-name">Admin</div>
+      </div>
+      <div class="role-card" onclick="selectRole('manager')">
+        <div class="rc-icon">👨‍💼</div>
+        <div class="rc-name">Manager</div>
+      </div>
+      <div class="role-card" onclick="selectRole('partner')">
+        <div class="rc-icon">🤝</div>
+        <div class="rc-name">Partner</div>
+      </div>
+      <div class="role-card" onclick="selectRole('storekeeper')">
+        <div class="rc-icon">📦</div>
+        <div class="rc-name">Store Keeper</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2: PIN entry -->
+  <div id="phasePin" class="pin-phase" style="display:none">
+    <div class="pin-role-badge">
+      <span class="prb-icon" id="pinRoleIcon">👑</span>
+      <span class="prb-name" id="pinRoleName">Admin</span>
+    </div>
+
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0">—</div>
+      <div class="pin-dot" id="pd1">—</div>
+      <div class="pin-dot" id="pd2">—</div>
+      <div class="pin-dot" id="pd3">—</div>
+    </div>
+
+    <div class="pin-no-pin-note" id="noPinNote" style="display:none">
+      No PIN set — tap ✓ to enter
+    </div>
+
+    <div class="pin-error" id="pinError"></div>
+
+    <div class="numpad">
+      <button class="np-btn" onclick="npPress('1')">1</button>
+      <button class="np-btn" onclick="npPress('2')">2</button>
+      <button class="np-btn" onclick="npPress('3')">3</button>
+      <button class="np-btn" onclick="npPress('4')">4</button>
+      <button class="np-btn" onclick="npPress('5')">5</button>
+      <button class="np-btn" onclick="npPress('6')">6</button>
+      <button class="np-btn" onclick="npPress('7')">7</button>
+      <button class="np-btn" onclick="npPress('8')">8</button>
+      <button class="np-btn" onclick="npPress('9')">9</button>
+      <button class="np-btn empty"></button>
+      <button class="np-btn" onclick="npPress('0')">0</button>
+      <button class="np-btn del" onclick="npDel()">⌫</button>
+    </div>
+
+    <button class="np-btn enter" style="width:100%;margin-bottom:12px;border-radius:12px;padding:14px" onclick="npEnter()">✓ Enter</button>
+    <button class="btn-back-login" onclick="backToRoles()">← Choose different role</button>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     HOME PAGE
+══════════════════════════════════════════════ -->
+<div class="home-page" id="homePage">
+
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="brand-name" style="font-family:'Noto Sans Telugu',sans-serif">🏨 అమ్మ చేతి రుచులు</div>
+        <div class="brand-sub">Amma Cheti Ruchulu — Food Court</div>
+      </div>
+      <div class="hero-right">
+        <div class="date-chip" id="dateChip">—</div>
+        <div class="role-chip" onclick="switchRole()" title="Switch role">
+          <div class="rc-dot" id="roleChipDot" style="background:#4ade80"></div>
+          <span id="roleChipLabel">Admin</span>
+          <span style="opacity:.5">⇄</span>
+        </div>
+      </div>
+    </div>
+    <div class="today-revenue">
+      <div class="rev-label">Today's Revenue</div>
+      <div class="rev-amount" id="todayRevAmt">—</div>
+      <div class="rev-sub" id="todayRevSub">Loading…</div>
+      <div class="rev-sections" id="todaySecPills"></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="alerts" id="alertsBox"></div>
+
+    <div class="section-label">At a Glance</div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-items" style="color:var(--primary)">—</div>
+        <div class="stat-lbl">Items in Stock</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-lowstock" style="color:var(--red)">—</div>
+        <div class="stat-lbl">Low Stock</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-employees" style="color:var(--purple)">—</div>
+        <div class="stat-lbl">Employees</div>
+      </div>
+    </div>
+
+    <div id="pnlSnapWrap">
+      <div class="section-label">This Month's P&L</div>
+      <a class="pnl-snap" href="pnl.html">
+        <div class="pnl-snap-label">📊 Profit &amp; Loss — tap to open full dashboard</div>
+        <div class="pnl-row">
+          <div class="pnl-item">
+            <div class="pnl-item-label">Revenue</div>
+            <div class="pnl-item-val green" id="pnl-rev">—</div>
+          </div>
+          <div class="pnl-arrow">→</div>
+          <div class="pnl-item">
+            <div class="pnl-item-label">Expenses</div>
+            <div class="pnl-item-val yellow" id="pnl-exp">—</div>
+          </div>
+          <div class="pnl-arrow">→</div>
+          <div class="pnl-item">
+            <div class="pnl-item-label">Net Profit</div>
+            <div class="pnl-item-val" id="pnl-net">—</div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Admin tools -->
+    <div class="admin-row" id="adminRow" style="display:none">
+      <a class="admin-btn" href="roles.html">⚙️ Manage Roles &amp; PINs</a>
+      <a class="admin-btn" href="org_chart.html">🏢 Org Chart</a>
+    </div>
+
+    <div class="section-label">Modules</div>
+    <div class="module-grid" id="moduleGrid"></div>
+
+    <div class="footer">
+      <strong style="font-family:'Noto Sans Telugu',sans-serif">అమ్మ చేతి రుచులు</strong>
+      &nbsp;·&nbsp; All data stored on this device
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────
+const ROLE_META = {
+  admin:       { name:'Admin',        icon:'👑', color:'#4ade80' },
+  manager:     { name:'Manager',      icon:'👨‍💼', color:'#34d399' },
+  partner:     { name:'Partner',      icon:'🤝', color:'#a78bfa' },
+  storekeeper: { name:'Store Keeper', icon:'📦', color:'#fb923c' },
+};
+
+const SECTIONS = [
+  { id:'tiffin',  label:'Tiffins',      icon:'🍳', color:'#f97316' },
+  { id:'meals',   label:'Meals',        icon:'🍽️', color:'#10b981' },
+  { id:'chat',    label:'Chat',         icon:'🥙', color:'#ec4899' },
+  { id:'catreen', label:'Catreen',      icon:'🥘', color:'#8b5cf6' },
+  { id:'water',   label:'Water Bottle', icon:'💧', color:'#0ea5e9' },
+];
+
+const MODULES = [
+  { cfgId:'revenue',   file:'revenue.html',    icon:'💰', iconBg:'#dcfce7', name:'Daily Revenue',
+    metaFn:()=>{ const r=getRevEntry(todayStr()); return r?`Today: ${fmt(r.grandTotal)}`:'⚠️ Not entered today'; },
+    badgeFn:()=>{ const r=getRevEntry(todayStr()); return r?{text:'✓ Done',bg:'#dcfce7',color:'#15803d'}:{text:'Pending',bg:'#fef9c3',color:'#854d0e'}; }
+  },
+  { cfgId:'pnl',       file:'pnl.html',        icon:'📊', iconBg:'#dbeafe', name:'P&L Dashboard',
+    metaFn:()=>{ const p=monthPnl(); return p.revenue>0?`This month: ${fmt(p.netProfit)} net`:'No data this month'; },
+    badgeFn:()=>{ const p=monthPnl(); if(!p.revenue)return{text:'—',bg:'#f1f5f9',color:'#64748b'}; return p.netProfit>=0?{text:'Profit',bg:'#dcfce7',color:'#15803d'}:{text:'Loss',bg:'#fee2e2',color:'#dc2626'}; }
+  },
+  { cfgId:'store',     file:'store_data.html', icon:'📦', iconBg:'#fef3c7', name:'Inventory',
+    metaFn:()=>{ const items=getItems(); const low=items.filter(isLowStock).length; return `${items.length} items · ${low>0?low+' low stock':'Stock OK'}`; },
+    badgeFn:()=>{ const low=getItems().filter(isLowStock).length; return low>0?{text:low+' Low',bg:'#fee2e2',color:'#dc2626'}:{text:'Stock OK',bg:'#dcfce7',color:'#15803d'}; }
+  },
+  { cfgId:'purchases', file:'purchases.html',  icon:'🛒', iconBg:'#f3e8ff', name:'Purchases',
+    metaFn:()=>{ const all=getPurchases(); if(!all.length)return'No purchases yet'; const last=all[all.length-1]; return`Last: ${fmtDateShort(last.date||'—')}`; },
+    badgeFn:()=>({text:'Kirana',bg:'#f3e8ff',color:'#7c3aed'})
+  },
+  { cfgId:'usage',     file:'daily_usage.html',icon:'📋', iconBg:'#fff7ed', name:'Daily Usage',
+    metaFn:()=>{ const u=getDailyUsage().filter(x=>x.date===todayStr()); return u.length?`${u.length} batch${u.length>1?'es':''} today`:'No usage today'; },
+    badgeFn:()=>{ const u=getDailyUsage().filter(x=>x.date===todayStr()); return u.length?{text:'✓ Entered',bg:'#dcfce7',color:'#15803d'}:{text:'Pending',bg:'#fef9c3',color:'#854d0e'}; }
+  },
+  { cfgId:'payroll',   file:'payroll.html',    icon:'👥', iconBg:'#fce7f3', name:'Payroll',
+    metaFn:()=>{ const e=getEmployees(); return e.length?`${e.length} employee${e.length>1?'s':''} on payroll`:'No employees added'; },
+    badgeFn:()=>{ const e=getEmployees(); return{text:e.length+' Staff',bg:'#fce7f3',color:'#be185d'}; }
+  },
+];
+
+const DEFAULT_CONFIG = {
+  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit' },
+  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit' },
+  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none' },
+};
+
+// ── Helpers ───────────────────────────────────────────────────────
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function currentMonthStr() { return todayStr().substring(0,7); }
+function daysInMonth(ym) { const[y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function fmt(n) { return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function fmtDateShort(d) { try{return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'});}catch{return d||'—';} }
+
+function ls(k) { try{return JSON.parse(localStorage.getItem(k))||[];}catch{return[];} }
+function getItems()      { return ls('fc_items_v2'); }
+function getRevenue()    { return ls('fc_revenue_v2'); }
+function getDailyUsage() { return ls('fc_daily_usage'); }
+function getPurchases()  { return ls('fc_purchases'); }
+function getEmployees()  { return ls('fc_employees'); }
+function getAttendance() { return ls('fc_attendance'); }
+function getFixedCosts() { return ls('fc_fixed_costs'); }
+function getRevEntry(d)  { return getRevenue().find(r=>r.date===d)||null; }
+function isLowStock(it)  { return it.reorder>0 && (it.qty||0)<=it.reorder; }
+function getRoleConfig()  { try{return JSON.parse(localStorage.getItem('fc_role_config'))||DEFAULT_CONFIG;}catch{return DEFAULT_CONFIG;} }
+function getRolePins()    { try{return JSON.parse(localStorage.getItem('fc_role_pins'))||{};}catch{return {};} }
+
+// ── Monthly P&L ───────────────────────────────────────────────────
+function monthPnl() {
+  const ym=currentMonthStr(), dim=daysInMonth(ym);
+  const dates=Array.from({length:dim},(_,i)=>`${ym}-${String(i+1).padStart(2,'0')}`);
+  const revAll=getRevenue(), usageAll=getDailyUsage();
+  const itemMap={}; for(const it of getItems()) itemMap[it.id]=it;
+  const helpers=ls('fc_day_helpers'), emps=getEmployees(), attAll=getAttendance();
+  const fixedMonthly=getFixedCosts().reduce((s,c)=>s+(c.amount||0),0);
+  let revenue=0,matCost=0,helperWages=0,salary=0;
+  for(const date of dates){
+    const r=revAll.find(e=>e.date===date); if(r) revenue+=r.grandTotal||0;
+    for(const b of usageAll.filter(u=>u.date===date))
+      for(const used of(b.items||[])){const it=itemMap[used.itemId||used.id];matCost+=(used.qty||0)*(it?.price||0);}
+    for(const h of helpers.filter(h=>h.date===date)) helperWages+=h.wage||0;
+    for(const emp of emps){
+      const perDay=(emp.salary||0)/dim;
+      const rec=attAll.find(a=>a.empId===emp.id&&a.month===ym);
+      if(!rec?.days) continue;
+      const st=rec.days[date]; salary+=perDay*(st==='present'?1:st==='half'?.5:0);
+    }
+  }
+  const totalExpenses=matCost+helperWages+salary+fixedMonthly;
+  return{revenue,totalExpenses,netProfit:revenue-totalExpenses};
+}
+
+// ═══════════════════════════════════════════════
+//  LOGIN LOGIC
+// ═══════════════════════════════════════════════
+let pendingRole = null;
+let pinBuffer   = [];
+
+function selectRole(roleId) {
+  pendingRole = roleId;
+  const meta = ROLE_META[roleId];
+  const pins = getRolePins();
+  const hasPin = !!pins[roleId];
+
+  document.getElementById('pinRoleIcon').textContent = meta.icon;
+  document.getElementById('pinRoleName').textContent = meta.name;
+  document.getElementById('noPinNote').style.display = hasPin ? 'none' : 'block';
+  document.getElementById('pinError').textContent = '';
+  pinBuffer = [];
+  updatePinDots();
+
+  document.getElementById('phaseRoles').style.display = 'none';
+  document.getElementById('phasePin').style.display   = 'block';
+}
+
+function backToRoles() {
+  pendingRole = null; pinBuffer = [];
+  document.getElementById('phasePin').style.display   = 'none';
+  document.getElementById('phaseRoles').style.display = 'block';
+}
+
+function npPress(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer.push(digit);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+  if (pinBuffer.length === 4) npEnter();
+}
+
+function npDel() {
+  pinBuffer.pop(); updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i=0; i<4; i++) {
+    const el = document.getElementById('pd'+i);
+    if (pinBuffer[i] !== undefined) {
+      el.textContent = '●'; el.classList.add('filled'); el.classList.remove('active');
+    } else {
+      el.textContent = '—'; el.classList.remove('filled');
+      el.classList.toggle('active', i === pinBuffer.length);
+    }
+  }
+}
+
+function npEnter() {
+  const pins   = getRolePins();
+  const stored = pins[pendingRole] || '';
+  const entered = pinBuffer.join('');
+
+  if (!stored) {
+    // No PIN set — allow anyone in
+    doLogin(pendingRole);
+    return;
+  }
+  if (entered === stored) {
+    doLogin(pendingRole);
+  } else {
+    document.getElementById('pinError').textContent = '❌ Wrong PIN. Try again.';
+    pinBuffer = []; updatePinDots();
+    // Re-animate error
+    const el = document.getElementById('pinError');
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.style.animation = '';
+  }
+}
+
+function doLogin(roleId) {
+  sessionStorage.setItem('fc_role', roleId);
+  const overlay = document.getElementById('loginOverlay');
+  overlay.classList.add('fade-out');
+  setTimeout(() => {
+    overlay.classList.add('hidden');
+    showHome();
+  }, 350);
+}
+
+function switchRole() {
+  sessionStorage.removeItem('fc_role');
+  const overlay = document.getElementById('loginOverlay');
+  overlay.classList.remove('hidden', 'fade-out');
+  document.getElementById('homePage').classList.remove('show');
+  // Reset to role selection
+  backToRoles();
+}
+
+// ═══════════════════════════════════════════════
+//  HOME PAGE RENDER
+// ═══════════════════════════════════════════════
+function showHome() {
+  document.getElementById('homePage').classList.add('show');
+  renderHome();
+}
+
+function renderHome() {
+  const role = sessionStorage.getItem('fc_role') || 'admin';
+  const meta = ROLE_META[role];
+
+  // Role chip
+  document.getElementById('roleChipLabel').textContent = meta.name;
+  document.getElementById('roleChipDot').style.background = meta.color;
+
+  // Date
+  document.getElementById('dateChip').textContent =
+    new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+  // Admin row
+  document.getElementById('adminRow').style.display = role === 'admin' ? 'flex' : 'none';
+
+  // Revenue hero
+  const todayRev = getRevEntry(todayStr());
+  const revAmtEl = document.getElementById('todayRevAmt');
+  const revSubEl = document.getElementById('todayRevSub');
+  if (todayRev) {
+    revAmtEl.textContent = fmt(todayRev.grandTotal);
+    revAmtEl.className   = 'rev-amount';
+    revSubEl.textContent = 'Recorded today · tap Revenue to edit';
+    document.getElementById('todaySecPills').innerHTML = SECTIONS.map(s=>{
+      const amt=todayRev.sections?.[s.id]?.total||0;
+      if(!amt)return'';
+      return`<div class="rev-sec-pill">${s.icon} <span>${fmt(amt)}</span></div>`;
+    }).join('');
+  } else {
+    revAmtEl.textContent='₹0'; revAmtEl.className='rev-amount zero';
+    revSubEl.textContent='Not entered yet for today';
+    document.getElementById('todaySecPills').innerHTML='';
+  }
+
+  // Alerts
+  const alerts=[];
+  if(!todayRev) alerts.push({type:'warn',msg:'⚠️ Today\'s revenue not entered. <a href="revenue.html">Enter now →</a>'});
+  const low=getItems().filter(isLowStock);
+  if(low.length) alerts.push({type:'warn',msg:`⚠️ ${low.length} item${low.length>1?'s are':' is'} low on stock. <a href="store_data.html">View →</a>`});
+  if(!getDailyUsage().filter(u=>u.date===todayStr()).length)
+    alerts.push({type:'info',msg:'ℹ️ Daily usage not recorded yet. <a href="daily_usage.html">Record →</a>'});
+  if(!alerts.length) alerts.push({type:'ok',msg:'✅ All clear — revenue and usage entered for today.'});
+  document.getElementById('alertsBox').innerHTML=alerts.map(a=>`<div class="alert alert-${a.type}">${a.msg}</div>`).join('');
+
+  // Stats
+  const allItems=getItems();
+  document.getElementById('stat-items').textContent    =allItems.length;
+  document.getElementById('stat-lowstock').textContent =allItems.filter(isLowStock).length;
+  document.getElementById('stat-employees').textContent=getEmployees().length;
+
+  // P&L snap
+  const p=monthPnl();
+  document.getElementById('pnl-rev').textContent=fmt(p.revenue);
+  document.getElementById('pnl-exp').textContent=fmt(p.totalExpenses);
+  const netEl=document.getElementById('pnl-net');
+  netEl.textContent=fmt(p.netProfit);
+  netEl.className='pnl-item-val '+(p.revenue===0?'white':p.netProfit>=0?'green':'red');
+
+  // Role config for modules
+  const cfg = role==='admin' ? null : (getRoleConfig()[role] || DEFAULT_CONFIG[role] || {});
+
+  const visibleModules = MODULES.filter(m => {
+    if (!cfg) return true;                          // admin sees all
+    return (cfg[m.cfgId] || 'none') !== 'none';
+  });
+
+  document.getElementById('moduleGrid').innerHTML = visibleModules.map(m => {
+    const access = cfg ? (cfg[m.cfgId]||'none') : 'edit';
+    const badge  = m.badgeFn();
+    const href   = access === 'view' ? `${m.file}?readonly=1` : m.file;
+    return `
+      <a class="module-card" href="${href}">
+        <div class="mod-icon-row">
+          <div class="mod-icon" style="background:${m.iconBg}">${m.icon}</div>
+          <div class="mod-badge" style="background:${badge.bg};color:${badge.color}">${badge.text}</div>
+        </div>
+        <div class="mod-name">${m.name}</div>
+        <div class="mod-meta">${m.metaFn()}</div>
+        ${access==='view'?'<div class="mod-view-tag">👁 View only</div>':''}
+      </a>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+fcInit(function(){
+  const savedRole = sessionStorage.getItem('fc_role');
+  if (savedRole) {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    showHome();
+  } else {
+    updatePinDots();
+  }
+});
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

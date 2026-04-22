@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Tiffin Menu Items</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --orange:  #f97316;
+      --bg:      #f8fafc;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --radius:  12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .header {
+      background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+      color: white; padding: 16px 18px;
+    }
+    .header h1 { font-size: 17px; font-weight: 700; }
+    .header p  { font-size: 12px; opacity: .75; margin-top: 3px; }
+
+    .content { padding: 16px; max-width: 580px; margin: 0 auto; }
+
+    .status-box {
+      border-radius: var(--radius); padding: 13px 15px;
+      margin-bottom: 14px; font-size: 13px; font-weight: 500;
+      display: flex; align-items: flex-start; gap: 8px; line-height: 1.5;
+    }
+    .status-box.info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .status-box.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .status-box.warn    { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+    .btn-import {
+      background: var(--orange); color: white; border: none;
+      border-radius: var(--radius); padding: 14px; font-size: 15px;
+      font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+      width: 100%; margin-bottom: 14px;
+    }
+    .btn-import:hover    { background: #ea6c00; }
+    .btn-import:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+    .summary-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .sum-card {
+      flex: 1; background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 11px; text-align: center;
+    }
+    .sum-card .sv { font-size: 21px; font-weight: 700; color: var(--orange); }
+    .sum-card .sl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* Category groups */
+    .group { background: white; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; }
+    .group-head {
+      padding: 10px 14px; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .group-count { font-size: 11px; font-weight: 500; opacity: .7; }
+
+    .item-row {
+      display: flex; align-items: center;
+      padding: 8px 14px; border-top: 1px solid #f8fafc; font-size: 13px;
+    }
+    .item-code  { color: var(--muted); font-size: 10px; min-width: 34px; }
+    .item-name  { flex: 1; font-weight: 500; padding: 0 8px; }
+    .item-price { font-weight: 700; color: var(--green); min-width: 48px; text-align: right; }
+    .item-row.imported .item-name::after { content: ' ✓'; color: var(--green); font-size: 11px; }
+    .item-row.zero-price .item-price { color: var(--muted); }
+
+    /* Done box */
+    .done-box {
+      display: none; text-align: center;
+      background: white; border: 2px solid var(--green);
+      border-radius: var(--radius); padding: 22px 18px; margin-bottom: 14px;
+    }
+    .done-box.show { display: block; }
+    .done-box .di  { font-size: 42px; margin-bottom: 8px; }
+    .done-box h2   { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+    .done-box p    { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .nav-links { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .nav-link {
+      display: block; padding: 11px; border-radius: 9px;
+      font-size: 13px; font-weight: 600; text-decoration: none; text-align: center;
+      border: 1.5px solid var(--border); color: var(--text);
+    }
+    .nav-link.primary { background: var(--orange); color: white; border-color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🍳 Tiffins Menu — Bulk Import</h1>
+  <p>80 items across 7 categories ready to load</p>
+</div>
+
+<div class="content">
+
+  <div class="status-box info" id="statusBox">
+    ℹ️ Review the list below then tap Import. Items already in your menu will be skipped automatically.
+  </div>
+
+  <div class="summary-row">
+    <div class="sum-card"><div class="sv">80</div><div class="sl">Items</div></div>
+    <div class="sum-card"><div class="sv">Tiffin</div><div class="sl">Section</div></div>
+    <div class="sum-card"><div class="sv">₹10–160</div><div class="sl">Price Range</div></div>
+  </div>
+
+  <button class="btn-import" id="importBtn" onclick="doImport()">
+    ⬇️ Import All 80 Items into Revenue Module
+  </button>
+
+  <div class="done-box" id="doneBox">
+    <div class="di">✅</div>
+    <h2>Import Complete!</h2>
+    <p>All Tiffin items are now in your menu.<br>Open <strong>revenue.html → Menu Setup</strong> to review.</p>
+    <div class="nav-links">
+      <a class="nav-link primary" href="revenue.html">Open Revenue Module →</a>
+      <a class="nav-link" href="pnl.html">Open P&amp;L Dashboard →</a>
+    </div>
+  </div>
+
+  <div id="itemList"></div>
+
+</div>
+
+<script>
+const GROUPS = [
+  {
+    label: '🥣 Basic Items', color: '#f97316', bgColor: '#fff7ed',
+    items: [
+      { code:  1, name: 'Idly',           price: 40 },
+      { code:  2, name: '2 Idly 1 Vada',  price: 50 },
+      { code:  3, name: 'Vada',            price: 50 },
+      { code:  4, name: 'Bonda',           price: 40 },
+      { code:  5, name: 'Masala Dosa',     price: 60 },
+      { code:  6, name: 'Plain Dosa',      price: 40 },
+      { code:  7, name: 'Onion Dosa',      price: 50 },
+      { code:  8, name: 'Uttappam',        price: 80 },
+      { code:  9, name: 'Poori',           price: 50 },
+    ]
+  },
+  {
+    label: '🧈 Butter Items', color: '#f59e0b', bgColor: '#fffbeb',
+    items: [
+      { code: 10, name: 'Butter Masala Dosa',          price: 80  },
+      { code: 11, name: 'Butter Paneer Dosa',          price: 90  },
+      { code: 12, name: 'Butter Paneer Cheese Dosa',   price: 110 },
+      { code: 13, name: 'Butter Cheese Dosa',          price: 110 },
+      { code: 14, name: 'Butter Karam Dosa',           price: 80  },
+      { code: 15, name: 'Butter Plain Dosa',           price: 60  },
+      { code: 16, name: 'Butter Double Cheese Dosa',   price: 110 },
+      { code: 17, name: 'Butter Idly',                 price: 70  },
+      { code: 18, name: 'Butter Karam Idly',           price: 70  },
+      { code: 19, name: 'Butter Kaju Paneer Dosa',     price: 110 },
+      { code: 20, name: 'Butter Paneer Kaju Cheese',   price: 140 },
+      { code: 21, name: 'Butter Onion Cheese Dosa',    price: 90  },
+    ]
+  },
+  {
+    label: '🍽️ Tava Items', color: '#10b981', bgColor: '#f0fdf4',
+    items: [
+      { code: 22, name: 'Tava Idly',        price: 80  },
+      { code: 23, name: 'Tava Paneer Idly', price: 90  },
+      { code: 24, name: 'Tava Ghee Idly',   price: 80  },
+      { code: 25, name: 'Tava Bonda',       price: 100 },
+      { code: 26, name: 'Tava Bonda Spl',   price: 120 },
+      { code: 27, name: 'Tava Vada',        price: 80  },
+      { code: 28, name: 'Tava Vada Spl',    price: 100 },
+    ]
+  },
+  {
+    label: '✨ Ghee Items', color: '#8b5cf6', bgColor: '#f5f3ff',
+    items: [
+      { code: 32, name: 'Ghee Idly',               price: 80  },
+      { code: 33, name: 'Ghee Karam Idly',          price: 100 },
+      { code: 34, name: 'Ghee Karam Dosa',          price: 90  },
+      { code: 35, name: 'Ghee Karam Masala',        price: 90  },
+      { code: 36, name: 'Ghee Paneer Dosa',         price: 100 },
+      { code: 37, name: 'Ghee Cheese Dosa',         price: 100 },
+      { code: 38, name: 'Ghee Paneer Cheese Dosa',  price: 100 },
+      { code: 39, name: 'Ghee Kaju Dosa',           price: 100 },
+      { code: 40, name: 'Ghee Schezwan Kaju Dosa',  price: 120 },
+      { code: 41, name: 'Ghee Corn Dosa',           price: 100 },
+      { code: 42, name: 'Ghee Corn Cheese',         price: 120 },
+    ]
+  },
+  {
+    label: '🌶️ Schezwan Items', color: '#ec4899', bgColor: '#fdf2f8',
+    items: [
+      { code: 43, name: 'Schezwan Butter Dosa',          price: 80  },
+      { code: 44, name: 'Schezwan Paneer Dosa',          price: 100 },
+      { code: 45, name: 'Schezwan Paneer Cheese',        price: 100 },
+      { code: 46, name: 'Schezwan Kaju',                 price: 120 },
+      { code: 47, name: 'Schezwan Paneer Kaju',          price: 140 },
+      { code: 48, name: 'Schezwan Paneer Kaju Cheese',   price: 0   },
+      { code: 49, name: 'Schezwan Corn',                 price: 90  },
+      { code: 50, name: 'Schezwan Corn Paneer',          price: 100 },
+      { code: 51, name: 'Schezwan Corn Paneer Cheese',   price: 120 },
+    ]
+  },
+  {
+    label: '🍕 Pizza / Burger / Corn', color: '#ef4444', bgColor: '#fef2f2',
+    items: [
+      { code: 52, name: 'Pizza Dosa',                price: 130 },
+      { code: 53, name: 'Pizza Double Cheese Dosa',  price: 150 },
+      { code: 54, name: 'Pizza Kaju Dosa',           price: 160 },
+      { code: 55, name: 'Burger Dosa',               price: 120 },
+      { code: 56, name: 'Teen Maar Dosa',            price: 110 },
+      { code: 58, name: 'Corn Spl Dosa',             price: 100 },
+      { code: 59, name: 'Corn Cheese Dosa',          price: 70  },
+      { code: 60, name: 'Corn Paneer Dosa',          price: 80  },
+      { code: 61, name: 'Corn Cheese Paneer',        price: 100 },
+      { code: 62, name: 'Corn Kaju Paneer',          price: 100 },
+      { code: 63, name: 'Corn Kaju Paneer Cheese',   price: 120 },
+    ]
+  },
+  {
+    label: '🥣 Misc / Other', color: '#64748b', bgColor: '#f8fafc',
+    items: [
+      { code: 110, name: 'Sambar Idly',             price: 50  },
+      { code: 111, name: '1 Idly 1 Vada',           price: 40  },
+      { code: 112, name: '1 Vada',                  price: 30  },
+      { code: 113, name: '2 Pcs Poori',             price: 40  },
+      { code: 210, name: 'Sambar Vada',             price: 60  },
+      { code: 220, name: 'Bonda 2 Pcs',             price: 30  },
+      { code: 222, name: '1 Vada Parsal',           price: 30  },
+      { code: 223, name: 'Ragi Idly',               price: 50  },
+      { code: 224, name: 'Rava Dosa',               price: 80  },
+      { code: 230, name: 'Idly 2 Pcs',              price: 30  },
+      { code: 231, name: '1 Poori',                 price: 20  },
+      { code: 232, name: 'Sira',                    price: 30  },
+      { code: 243, name: 'Paneer Dosa',             price: 70  },
+      { code: 250, name: 'Upma',                    price: 30  },
+      { code: 251, name: 'Sheera',                  price: 30  },
+      { code: 252, name: 'Dgrani',                  price: 40  },
+      { code: 258, name: 'Combo Pack',              price: 100 },
+      { code: 259, name: 'Combo Pack Parcel',       price: 120 },
+      { code: 261, name: 'Fry Idly',                price: 80  },
+      { code: 262, name: '2 Bonda 1 Vada',          price: 50  },
+      { code: 264, name: 'Chatni',                  price: 10  },
+      { code: 267, name: 'Dahi Vada',               price: 50  },
+      { code: 268, name: 'Punugulu',                price: 40  },
+      { code: 269, name: 'Masala Vada',             price: 40  },
+      { code: 270, name: 'Sambar Idly 2 Pcs',       price: 30  },
+      { code: 271, name: '1 Vada 1 Idly 1 Sambar',  price: 50  },
+      { code: 272, name: '1 Vada 2 Idly Sambar',    price: 70  },
+      { code: 274, name: 'Onion Bonda',             price: 50  },
+      { code: 275, name: '2 Parota',                price: 50  },
+      { code: 276, name: '1 Parota',                price: 30  },
+      { code: 280, name: 'Set Dosa',                price: 60  },
+      { code: 285, name: '2 Idly 2 Bonda',          price: 40  },
+      { code: 287, name: 'Pesarattu',               price: 60  },
+      { code: 288, name: 'Pesarattu Butter',        price: 80  },
+      { code: 289, name: 'Pesarattu Paneer Butter', price: 90  },
+    ]
+  },
+];
+
+// Flatten all items for import
+const ALL_ITEMS = GROUPS.flatMap(g => g.items);
+
+function renderList(importedCodes = []) {
+  const el = document.getElementById('itemList');
+  el.innerHTML = GROUPS.map(g => {
+    const rows = g.items.map(it => `
+      <div class="item-row ${importedCodes.includes(it.code) ? 'imported' : ''} ${it.price === 0 ? 'zero-price' : ''}">
+        <span class="item-code">${it.code}</span>
+        <span class="item-name">${it.name}</span>
+        <span class="item-price">${it.price === 0 ? '—' : '₹' + it.price}</span>
+      </div>`).join('');
+
+    return `
+      <div class="group">
+        <div class="group-head" style="background:${g.bgColor};color:${g.color}">
+          <span>${g.label}</span>
+          <span class="group-count">${g.items.length} items</span>
+        </div>
+        ${rows}
+      </div>`;
+  }).join('');
+}
+
+function doImport() {
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+
+  try {
+    let existing = [];
+    try { existing = JSON.parse(localStorage.getItem('fc_menu_items')) || []; }
+    catch { existing = []; }
+
+    const existingNames = new Set(existing.map(i => i.name.toLowerCase().trim()));
+    const importedCodes = [];
+    let added = 0;
+
+    for (const it of ALL_ITEMS) {
+      if (existingNames.has(it.name.toLowerCase().trim())) {
+        importedCodes.push(it.code);
+        continue;
+      }
+      existing.push({
+        id:      'mi_' + Date.now() + '_' + it.code,
+        name:    it.name,
+        section: 'tiffin',
+        price:   it.price,
+        unit:    'plate',
+      });
+      importedCodes.push(it.code);
+      added++;
+      existingNames.add(it.name.toLowerCase().trim());
+    }
+
+    localStorage.setItem('fc_menu_items', JSON.stringify(existing));
+
+    const status = document.getElementById('statusBox');
+    if (added === 0) {
+      status.className = 'status-box warn';
+      status.textContent = '⚠️ All items were already in your menu — nothing new added.';
+    } else {
+      status.className = 'status-box success';
+      status.textContent = `✅ Successfully imported ${added} new item${added > 1 ? 's' : ''} into the Tiffin menu.`;
+    }
+
+    renderList(importedCodes);
+    document.getElementById('doneBox').classList.add('show');
+    btn.textContent = '✓ Import Done';
+
+  } catch (e) {
+    document.getElementById('statusBox').className = 'status-box warn';
+    document.getElementById('statusBox').textContent = '❌ Error: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = '⬇️ Import All 80 Items';
+  }
+}
+
+renderList();
+</script>
+</body>
+</html>

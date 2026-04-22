@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACR Hotel">
+<meta name="theme-color" content="#1e293b">
+<title>Amma Cheti Ruchulu — Purchases</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --primary: #0ea5e9;
+    --primary-dark: #0284c7;
+    --primary-soft: #e0f2fe;
+    --green: #10b981;
+    --green-soft: #d1fae5;
+    --red: #ef4444;
+    --red-soft: #fee2e2;
+    --orange: #f59e0b;
+    --orange-soft: #fef3c7;
+    --purple: #8b5cf6;
+    --purple-soft: #ede9fe;
+    --text: #0f172a;
+    --sub: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 60%, #06b6d4 100%);
+    padding: 22px 24px 70px; position: relative; overflow: hidden;
+  }
+  .header::before { content:''; position:absolute; width:280px; height:280px; background:rgba(255,255,255,.06); border-radius:50%; top:-100px; right:-50px; }
+  .header::after  { content:''; position:absolute; width:180px; height:180px; background:rgba(255,255,255,.04); border-radius:50%; bottom:-70px; left:40px; }
+  .header-inner { display:flex; align-items:flex-start; justify-content:space-between; position:relative; z-index:1; max-width:980px; margin:0 auto; }
+  .header h1 { font-size:1.35rem; font-weight:800; color:#fff; letter-spacing:-.02em; }
+  .header p  { font-size:.8rem; color:rgba(255,255,255,.75); margin-top:4px; }
+  .hbtn { padding:8px 16px; border-radius:999px; font-size:.8rem; font-weight:600; cursor:pointer; border:none; display:flex; align-items:center; gap:5px; transition:all .15s; }
+  .hbtn:active { transform:scale(.96); }
+  .hbtn-white { background:#fff; color:var(--primary-dark); }
+  .hbtn-ghost { background:rgba(255,255,255,.18); color:#fff; backdrop-filter:blur(8px); }
+
+  /* ─── STATS ─── */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; max-width:980px; margin:-46px auto 0; padding:0 20px; position:relative; z-index:10; }
+  .stat { background:var(--card); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:12px; }
+  .stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; }
+  .ic-blue   { background:var(--primary-soft); }
+  .ic-green  { background:var(--green-soft); }
+  .ic-orange { background:var(--orange-soft); }
+  .ic-purple { background:var(--purple-soft); }
+  .stat-val  { font-size:1.3rem; font-weight:800; line-height:1; color:var(--text); }
+  .stat-lbl  { font-size:.7rem; color:var(--sub); margin-top:3px; font-weight:500; }
+
+  /* ─── CONTENT ─── */
+  .content { max-width:980px; margin:28px auto 0; padding:0 20px 40px; }
+
+  /* ─── TABS ─── */
+  .tab-bar { display:flex; gap:4px; background:var(--card); border-radius:var(--radius); padding:6px; box-shadow:var(--shadow); margin-bottom:20px; }
+  .tab { flex:1; padding:10px; border-radius:10px; font-size:.85rem; font-weight:600; text-align:center; cursor:pointer; border:none; background:none; color:var(--sub); transition:all .18s; }
+  .tab.active { background:var(--primary); color:#fff; box-shadow:0 2px 8px rgba(14,165,233,.35); }
+
+  /* ─── FORM CARD ─── */
+  .form-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; margin-bottom:20px; border:1px solid var(--border); }
+  .form-card h3 { font-size:1rem; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+
+  .row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+  .field { display:flex; flex-direction:column; gap:5px; flex:1; min-width:140px; }
+  .field label { font-size:.74rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  .field input, .field select, .field textarea {
+    padding:10px 13px; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    font-size:.9rem; font-family:inherit; background:#f8fafc; outline:none; color:var(--text); transition:border .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--primary); background:#fff; }
+  .field .hint { font-size:.72rem; color:var(--sub); margin-top:3px; }
+
+  /* ─── PURCHASE TYPE TOGGLE ─── */
+  .type-toggle { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .type-btn {
+    flex:1; min-width:100px; padding:12px 10px; border-radius:10px; font-size:.85rem; font-weight:700;
+    text-align:center; cursor:pointer; border:2px solid var(--border); background:var(--bg);
+    color:var(--sub); transition:all .18s;
+  }
+  .type-btn.active-cash    { background:var(--green-soft);  color:#065f46; border-color:var(--green); }
+  .type-btn.active-credit  { background:var(--orange-soft); color:#92400e; border-color:var(--orange); }
+  .type-btn.active-pm-cash   { background:#dcfce7; color:#166534; border-color:#16a34a; }
+  .type-btn.active-pm-online { background:#dbeafe; color:#1e40af; border-color:#3b82f6; }
+  .type-btn.active-pm-mixed  { background:#f3e8ff; color:#6b21a8; border-color:#a855f7; }
+  .pm-badge-cash   { background:#dcfce7; color:#166534; }
+  .pm-badge-online { background:#dbeafe; color:#1e40af; }
+  .pm-badge-mixed  { background:#f3e8ff; color:#6b21a8; }
+  .type-btn.active-mixed           { background:var(--purple-soft); color:#5b21b6; border-color:var(--purple); }
+  .type-btn.active-opening_balance { background:#f0fdf4; color:#15803d; border-color:#86efac; }
+  .btn-ob { background:linear-gradient(135deg,#15803d,#22c55e); }
+
+  /* ─── VENDOR SELECTOR ─── */
+  .vendor-wrap { position:relative; }
+  .vendor-select {
+    width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    font-size:.9rem; font-family:inherit; background:#f8fafc; outline:none; color:var(--text);
+    cursor:pointer; transition:border .15s; appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 13px center; padding-right:34px;
+  }
+  .vendor-select:focus { border-color:var(--primary); background-color:#fff; }
+  .new-vendor-panel {
+    background:#eff6ff; border:1.5px solid #93c5fd; border-radius:var(--radius-sm);
+    padding:12px 14px; margin-top:8px; display:none; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .new-vendor-panel.open { display:flex; }
+  .new-vendor-panel input {
+    flex:1; min-width:160px; padding:8px 12px; border:1.5px solid #93c5fd; border-radius:8px;
+    font-size:.9rem; font-family:inherit; background:#fff; outline:none; color:var(--text);
+  }
+  .new-vendor-panel input:focus { border-color:var(--primary); }
+  .nvp-save { padding:8px 14px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-size:.82rem; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .nvp-cancel { padding:8px 10px; background:none; border:none; color:var(--sub); font-size:.82rem; font-weight:600; cursor:pointer; font-family:inherit; }
+
+  /* ─── MULTI-ITEM TABLE ─── */
+  .items-section { margin-bottom:16px; }
+  .items-section-head {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+  }
+  .items-section-head span { font-size:.74rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  .add-item-btn {
+    padding:6px 14px; background:var(--primary-soft); color:var(--primary-dark); border:1.5px solid var(--primary);
+    border-radius:999px; font-size:.78rem; font-weight:700; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; gap:5px; transition:all .15s;
+  }
+  .add-item-btn:hover { background:var(--primary); color:#fff; }
+  .item-row {
+    display:grid; grid-template-columns:1fr 70px 90px 110px 90px 28px;
+    gap:8px; align-items:center; margin-bottom:8px;
+    background:#f8fafc; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px;
+    transition:border .15s;
+  }
+  .item-row:focus-within { border-color:var(--primary); background:#fff; }
+  .item-row select, .item-row input {
+    padding:7px 10px; border:1.5px solid var(--border); border-radius:8px;
+    font-size:.85rem; font-family:inherit; background:#fff; outline:none; color:var(--text);
+    transition:border .15s; width:100%;
+  }
+  .item-row select:focus, .item-row input:focus { border-color:var(--primary); }
+  .item-row .ir-unit { font-size:.75rem; color:var(--sub); font-weight:600; text-align:center; padding:0 4px; white-space:nowrap; }
+  .item-row .ir-total { font-size:.88rem; font-weight:800; color:var(--primary-dark); text-align:right; white-space:nowrap; }
+  .item-row .ir-del { background:var(--red-soft); color:var(--red); border:none; border-radius:6px; width:26px; height:26px; font-size:.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .item-row-labels {
+    display:grid; grid-template-columns:1fr 70px 90px 110px 90px 28px;
+    gap:8px; padding:0 12px; margin-bottom:5px;
+  }
+  .item-row-labels span { font-size:.66rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  .items-total-bar {
+    background:var(--primary-soft); border:1.5px solid var(--primary); border-radius:var(--radius-sm);
+    padding:11px 14px; display:flex; align-items:center; justify-content:space-between; margin-top:10px;
+  }
+  .items-total-bar .itb-left { font-size:.82rem; color:var(--primary-dark); font-weight:600; }
+  .items-total-bar .itb-right { font-size:1rem; font-weight:800; color:var(--primary-dark); }
+  @media(max-width:640px){
+    .item-row { grid-template-columns:1fr 60px; gap:6px; }
+    .item-row .ir-full { grid-column:1/-1; }
+    .item-row-labels { display:none; }
+    .item-row-mobile { display:contents; }
+  }
+
+  /* ─── MIXED PAYMENT SPLIT ─── */
+  .split-row { display:flex; gap:12px; background:#f8fafc; border-radius:10px; padding:14px; border:1.5px dashed var(--border); margin-bottom:14px; flex-wrap:wrap; }
+  .split-item { flex:1; min-width:120px; }
+  .split-item label { font-size:.74rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; display:block; margin-bottom:5px; }
+  .split-item input { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:.92rem; font-weight:700; font-family:inherit; outline:none; background:#fff; }
+  .split-item input:focus { border-color:var(--primary); }
+  .split-total { font-size:.78rem; color:var(--sub); display:flex; align-items:center; padding-top:22px; flex-shrink:0; white-space:nowrap; }
+
+  /* ─── CREDIT INFO ─── */
+  .credit-info { background:var(--orange-soft); border-radius:10px; padding:14px; border:1.5px dashed var(--orange); margin-bottom:14px; display:flex; gap:14px; flex-wrap:wrap; }
+  .credit-info .field label { color:#92400e; }
+
+
+  /* ─── SUBMIT BTN ─── */
+  .submit-btn {
+    width:100%; padding:14px; border-radius:var(--radius-sm); font-size:.95rem; font-weight:700;
+    cursor:pointer; border:none; font-family:inherit; color:#fff; transition:filter .15s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .submit-btn:active { filter:brightness(.9); }
+  .btn-cash   { background:linear-gradient(135deg,#059669,#10b981); }
+  .btn-credit { background:linear-gradient(135deg,#d97706,#f59e0b); }
+  .btn-mixed  { background:linear-gradient(135deg,#7c3aed,#8b5cf6); }
+
+  /* ─── FILTER BAR ─── */
+  .filter-bar { background:var(--card); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; border:1px solid var(--border); }
+  .search-box { flex:1; min-width:180px; display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:var(--radius-sm); padding:0 12px; border:1.5px solid var(--border); transition:border .15s; }
+  .search-box:focus-within { border-color:var(--primary); background:#fff; }
+  .search-box input { flex:1; padding:9px 0; border:none; background:none; font-size:.9rem; font-family:inherit; outline:none; color:var(--text); }
+  .fsel { padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:.83rem; font-family:inherit; background:var(--bg); outline:none; cursor:pointer; color:var(--text); font-weight:500; }
+  .fsel:focus { border-color:var(--primary); }
+
+  /* ─── TABLE ─── */
+  .table-wrap { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; }
+  thead { background:var(--bg); border-bottom:1.5px solid var(--border); }
+  th { padding:11px 15px; text-align:left; font-size:.71rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sub); white-space:nowrap; }
+  td { padding:13px 15px; border-bottom:1px solid #f1f5f9; vertical-align:middle; font-size:.88rem; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:hover td { background:#f8fcff; }
+
+  /* ─── MOBILE CARDS ─── */
+  .m-cards { display:none; gap:12px; flex-direction:column; }
+  .m-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; border:1px solid var(--border); }
+  .m-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px; }
+  .m-name { font-size:1rem; font-weight:800; color:var(--text); flex:1; }
+  .m-date { font-size:.75rem; color:var(--sub); font-weight:500; }
+  .m-row  { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; align-items:center; }
+  .m-amount { font-size:1.1rem; font-weight:800; margin-top:10px; }
+
+  /* ─── BADGES ─── */
+  .tag { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:.73rem; font-weight:600; white-space:nowrap; }
+  .t-cash   { background:var(--green-soft);  color:#065f46; }
+  .t-credit { background:var(--orange-soft); color:#92400e; }
+  .t-mixed  { background:var(--purple-soft); color:#5b21b6; }
+  .t-item   { background:var(--primary-soft); color:var(--primary-dark); }
+  .t-gray   { background:#f1f5f9; color:#475569; }
+  .t-paid   { background:var(--green-soft); color:#065f46; }
+  .t-due    { background:var(--red-soft); color:#991b1b; }
+
+  /* ─── ACTION BTN ─── */
+  .act-btn { width:28px; height:28px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:.78rem; cursor:pointer; border:none; background:none; color:#cbd5e1; opacity:.55; transition:all .18s; }
+  .act-btn:hover { opacity:1; background:#f1f5f9; color:var(--sub); }
+
+  /* ─── EMPTY ─── */
+  .empty { text-align:center; padding:52px 20px; color:var(--sub); }
+  .empty .ei { font-size:3rem; margin-bottom:12px; }
+
+  /* ─── MODAL ─── */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(4px); z-index:200; align-items:center; justify-content:center; padding:16px; }
+  .overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:20px; padding:26px; width:100%; max-width:400px; box-shadow:0 24px 80px rgba(0,0,0,.2); animation:pop .22s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes pop { from{transform:scale(.85);opacity:0} to{transform:scale(1);opacity:1} }
+  .modal h3 { font-size:1.05rem; font-weight:800; margin-bottom:18px; }
+  .mbtn { flex:1; padding:12px; border-radius:var(--radius-sm); font-size:.9rem; font-weight:700; cursor:pointer; border:none; font-family:inherit; transition:filter .15s; }
+  .mbtn:active { filter:brightness(.9); }
+  .mbtn-cancel { background:var(--bg); color:var(--sub); }
+  .mbtn-del    { background:var(--red); color:#fff; }
+  .modal-btns  { display:flex; gap:10px; margin-top:20px; }
+
+  /* ─── TOAST ─── */
+  .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:12px 22px; border-radius:999px; font-size:.85rem; font-weight:600; z-index:999; opacity:0; transition:all .3s; pointer-events:none; white-space:nowrap; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ─── SUMMARY SECTION ─── */
+  .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
+  .sum-card { background:var(--card); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); border:1px solid var(--border); border-top:4px solid transparent; }
+  .sum-card.cash-c   { border-top-color:var(--green); }
+  .sum-card.credit-c { border-top-color:var(--orange); }
+  .sum-card.mixed-c  { border-top-color:var(--purple); }
+  .sum-card .sv { font-size:1.4rem; font-weight:800; margin-bottom:4px; }
+  .sum-card .sl { font-size:.75rem; color:var(--sub); font-weight:500; }
+  .sum-card .sc { font-size:.78rem; margin-top:6px; }
+
+  /* ─── CREDIT OUTSTANDING ─── */
+  .outstanding-card { background:var(--orange-soft); border-radius:var(--radius); padding:18px 20px; margin-bottom:20px; border:1.5px solid var(--orange); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .outstanding-card .ov { font-size:1.5rem; font-weight:800; color:#92400e; }
+  .outstanding-card .ol { font-size:.82rem; color:#b45309; }
+  .mark-paid-btn { padding:8px 16px; border-radius:999px; background:#fff; border:1.5px solid var(--orange); color:#92400e; font-weight:700; font-size:.82rem; cursor:pointer; transition:all .15s; }
+  .mark-paid-btn:hover { background:var(--orange); color:#fff; }
+
+  @media (max-width:640px) {
+    .header { padding:18px 18px 64px; }
+    .stats-row { grid-template-columns:repeat(2,1fr); margin-top:-42px; padding:0 14px; gap:10px; }
+    .content { padding:0 14px 40px; }
+    .summary-grid { grid-template-columns:1fr 1fr; }
+    .table-wrap { display:none; }
+    .m-cards { display:flex; }
+    .hbtn span { display:none; }
+    .hbtn { padding:8px 10px; }
+  }
+  @media (min-width:641px) {
+    .table-wrap { display:block; }
+    .m-cards { display:none; }
+  }
+</style>
+  <!-- ── Role Guard ── -->
+  <script>
+  (function(){
+    var role=sessionStorage.getItem('fc_role');
+    if(!role){window.location.href='index.html';return;}
+    if(role==='admin')return;
+    var mid='purchases';
+    var cfg={};
+    try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit'};
+    var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
+    if(access==='none'){window.location.href='index.html';return;}
+    if(access==='view'){
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add('fc-readonly');
+      });
+    }
+  })();
+  </script>
+  <style>
+  /* ── Read-only mode ── */
+  .fc-readonly .btn-save,.fc-readonly .btn-del-entry,.fc-readonly .btn-settings,
+  .fc-readonly .btn-add,.fc-readonly .btn-primary,.fc-readonly .btn-green,
+  .fc-readonly .btn-orange,.fc-readonly .icon-btn-del,.fc-readonly .hbtn-white,
+  .fc-readonly .mbtn-save,.fc-readonly .mbtn-del,.fc-readonly .submit-btn,
+  .fc-readonly .new-entry-btn,.fc-readonly .hist-del-btn,.fc-readonly .del-confirm,
+  .fc-readonly .exp-add-btn,.fc-readonly .exp-remove-btn{display:none!important;}
+  #fc-readonly-banner{display:none;background:#eff6ff;border-bottom:2px solid #bfdbfe;
+    padding:9px 16px;font-size:12px;color:#1d4ed8;text-align:center;font-weight:600;}
+  .fc-readonly #fc-readonly-banner{display:block!important;}
+  </style>
+</head>
+<body>
+<div id="fc-readonly-banner">👁 View-only mode — you can browse data but cannot make changes</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="index.html" style="color:rgba(255,255,255,.75);font-size:18px;text-decoration:none;line-height:1" title="Home">←</a>
+      <div>
+        <h1>🛒 Purchases</h1>
+        <p>Kirana Wing · Stock procurement records</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="hbtn hbtn-ghost" onclick="exportCSV()">⬇ <span>Export</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat">
+    <div class="stat-icon ic-blue">🛒</div>
+    <div><div class="stat-val" id="st-count">—</div><div class="stat-lbl">Total Purchases</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon ic-green">💵</div>
+    <div><div class="stat-val" id="st-cash">—</div><div class="stat-lbl">Cash Paid</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon ic-orange">📋</div>
+    <div><div class="stat-val" id="st-credit">—</div><div class="stat-lbl">Credit Due</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon ic-purple">🔀</div>
+    <div><div class="stat-val" id="st-total">—</div><div class="stat-lbl">Total Value</div></div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content" style="margin-top:28px">
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('add',this)">➕ New Purchase</button>
+    <button class="tab" onclick="switchTab('list',this)">📋 All Purchases</button>
+    <button class="tab" onclick="switchTab('credit',this)">⏳ Credit Outstanding</button>
+  </div>
+
+  <!-- ════════ TAB: ADD PURCHASE ════════ -->
+  <div id="tab-add">
+    <div class="form-card">
+      <h3>🛒 Record New Purchase</h3>
+
+      <!-- ROW 1: Date + Vendor + Bill -->
+      <div class="row">
+        <div class="field" style="max-width:160px">
+          <label>Date</label>
+          <input type="date" id="p-date">
+        </div>
+        <div class="field">
+          <label>Vendor / Supplier</label>
+          <div class="vendor-wrap">
+            <select class="vendor-select" id="p-vendor-sel" onchange="onVendorSelect()">
+              <option value="">— Select Vendor —</option>
+              <option value="__new__">➕ Add New Vendor…</option>
+            </select>
+          </div>
+          <!-- Inline new-vendor input -->
+          <div class="new-vendor-panel" id="new-vendor-panel">
+            <input type="text" id="new-vendor-input" placeholder="e.g. Vicky Traders"
+              onkeydown="if(event.key==='Enter')confirmNewVendor()">
+            <button class="nvp-save" onclick="confirmNewVendor()">✅ Add</button>
+            <button class="nvp-cancel" onclick="cancelNewVendor()">✕ Cancel</button>
+          </div>
+        </div>
+        <div class="field" style="max-width:160px">
+          <label>Bill / Invoice No. <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <input type="text" id="p-bill" placeholder="e.g. INV-001">
+        </div>
+      </div>
+
+      <!-- ITEMS SECTION -->
+      <div class="items-section">
+        <div class="items-section-head">
+          <span>📦 Items</span>
+          <button class="add-item-btn" onclick="addItemRow()">➕ Add Item</button>
+        </div>
+        <!-- Column labels (desktop) -->
+        <div class="item-row-labels">
+          <span>Item</span>
+          <span>Unit</span>
+          <span>Qty</span>
+          <span>Rate (₹)</span>
+          <span style="text-align:right">Total</span>
+          <span></span>
+        </div>
+        <!-- Dynamic item rows go here -->
+        <div id="items-container"></div>
+        <!-- Running total -->
+        <div class="items-total-bar" id="items-total-bar" style="display:none">
+          <span class="itb-left" id="itb-count">0 items</span>
+          <span class="itb-right" id="itb-total">₹0.00</span>
+        </div>
+      </div>
+
+      <!-- PURCHASE TYPE -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:.74rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Payment Type</div>
+        <div class="type-toggle">
+          <div class="type-btn active-cash" id="tb-cash" onclick="setType('cash')">💵 Cash<br><span style="font-size:.72rem;font-weight:500">Paid fully in cash</span></div>
+          <div class="type-btn" id="tb-credit" onclick="setType('credit')">📋 Credit<br><span style="font-size:.72rem;font-weight:500">Pay later to vendor</span></div>
+          <div class="type-btn" id="tb-mixed" onclick="setType('mixed')">🔀 Mixed<br><span style="font-size:.72rem;font-weight:500">Part cash + part credit</span></div>
+          <div class="type-btn" id="tb-opening_balance" onclick="setType('opening_balance')">📦 Opening Bal<br><span style="font-size:.72rem;font-weight:500">Month-end stock</span></div>
+        </div>
+      </div>
+
+      <!-- OPENING BALANCE INFO -->
+      <div id="ob-section" style="display:none;margin-bottom:14px">
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;font-size:.82rem;color:#15803d;line-height:1.5">
+          📦 <strong>Opening Balance Entry</strong> — Records existing stock before the system started. Enter the <strong>original vendor price</strong>. Will <strong>not</strong> show as a P&amp;L expense but FIFO transfer price will be used for future daily usage costs.
+        </div>
+      </div>
+
+      <!-- PAYMENT METHOD -->
+      <div id="paymethod-section" style="margin-bottom:12px">
+        <div style="font-size:.74rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Paid By</div>
+        <div class="type-toggle" style="grid-template-columns:1fr 1fr">
+          <div class="type-btn active-pm-cash" id="pm-cash" onclick="setPayMethod('cash')">💵 Physical Cash<br><span style="font-size:.72rem;font-weight:500">Real cash payment</span></div>
+          <div class="type-btn" id="pm-online" onclick="setPayMethod('online')">📱 Online<br><span style="font-size:.72rem;font-weight:500">UPI / Bank transfer</span></div>
+        </div>
+      </div>
+
+      <!-- MIXED SPLIT -->
+      <div id="mixed-section" style="display:none">
+        <div class="split-row">
+          <div class="split-item">
+            <label>Cash Paid (₹)</label>
+            <input type="number" id="p-cash-paid" min="0" step="0.01" placeholder="0.00" oninput="calcCredit()">
+          </div>
+          <div class="split-item">
+            <label>Credit Amount (₹)</label>
+            <input type="number" id="p-credit-amt" min="0" step="0.01" placeholder="0.00" readonly style="background:#f8fafc;color:var(--orange);font-weight:700">
+          </div>
+          <div class="split-total" id="mixed-check"></div>
+        </div>
+      </div>
+
+      <!-- CREDIT DUE DATE -->
+      <div id="credit-section" style="display:none">
+        <div class="credit-info">
+          <div class="field">
+            <label>Due Date <span style="font-weight:400;opacity:.7">(optional)</span></label>
+            <input type="date" id="p-due" style="background:#fff">
+          </div>
+          <div class="field">
+            <label>Credit Notes</label>
+            <input type="text" id="p-cnote" placeholder="e.g. To be paid by month end" style="background:#fff">
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label>Transport Cost ₹ <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <input type="number" id="p-transport" min="0" step="0.01" placeholder="0.00">
+          <span style="font-size:.7rem;color:var(--sub);margin-top:3px;display:block">Goes to P&L as-is, no markup</span>
+        </div>
+        <div class="field">
+          <label>Notes <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <input type="text" id="p-note" placeholder="Any additional notes">
+        </div>
+      </div>
+
+      <button class="submit-btn btn-cash" id="submit-btn" onclick="savePurchase()">
+        ✅ Record Cash Purchase
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════ TAB: ALL PURCHASES ════════ -->
+  <div id="tab-list" style="display:none">
+
+    <!-- SUMMARY CARDS -->
+    <div class="summary-grid" id="summary-cards"></div>
+
+    <!-- FILTER -->
+    <div class="filter-bar">
+      <div class="search-box">
+        <span style="color:var(--sub)">🔍</span>
+        <input type="text" id="lq" placeholder="Search item or vendor…" oninput="renderList()">
+      </div>
+      <select class="fsel" id="ltype" onchange="renderList()">
+        <option value="">All Types</option>
+        <option value="cash">Cash</option>
+        <option value="credit">Credit</option>
+        <option value="mixed">Mixed</option>
+      </select>
+      <input type="month" class="fsel" id="lmonth" onchange="renderList()">
+    </div>
+
+    <!-- DESKTOP TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Rate (₹)</th>
+            <th>Total (₹)</th>
+            <th>Vendor</th>
+            <th>Type</th>
+            <th>Cash Paid</th>
+            <th>Credit</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="list-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- MOBILE CARDS -->
+    <div class="m-cards" id="list-cards"></div>
+  </div>
+
+  <!-- ════════ TAB: CREDIT OUTSTANDING ════════ -->
+  <div id="tab-credit" style="display:none">
+    <div id="credit-outstanding"></div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- DELETE MODAL -->
+<div class="overlay" id="del-modal" onclick="if(event.target===this)closeDelModal()">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:10px">🗑️</div>
+    <h3>Delete Purchase?</h3>
+    <p id="del-msg" style="color:var(--sub);font-size:.88rem;margin-top:8px;line-height:1.5"></p>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeDelModal()">Cancel</button>
+      <button class="mbtn mbtn-del" onclick="confirmDelete()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARK PAID MODAL -->
+<div class="overlay" id="paid-modal" onclick="if(event.target===this)closePaidModal()">
+  <div class="modal">
+    <h3>💵 Mark as Paid</h3>
+    <p id="paid-msg" style="color:var(--sub);font-size:.88rem;margin-bottom:16px;line-height:1.5"></p>
+
+    <!-- Payment method selection -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.74rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Paid By</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="type-btn active-pm-cash" id="ppd-cash" onclick="setPaidMethod('cash')" style="padding:10px 6px;font-size:.8rem;text-align:center">💵 Cash</div>
+        <div class="type-btn" id="ppd-online" onclick="setPaidMethod('online')" style="padding:10px 6px;font-size:.8rem;text-align:center">📱 Online</div>
+        <div class="type-btn" id="ppd-mixed" onclick="setPaidMethod('mixed')" style="padding:10px 6px;font-size:.8rem;text-align:center">🔀 Mixed</div>
+      </div>
+    </div>
+
+    <!-- Mixed split (shown only when Mixed is selected) -->
+    <div id="paid-split" style="display:none;background:#f8fafc;border-radius:10px;padding:12px;border:1.5px dashed var(--border);margin-bottom:14px">
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">💵 Cash (₹)</label>
+          <input type="number" id="paid-cash-amt" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;background:#fff">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">📱 Online (₹)</label>
+          <input type="number" id="paid-online-amt" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;background:#fff">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Payment Date</label>
+      <input type="date" id="paid-date">
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label>Note</label>
+      <input type="text" id="paid-note" placeholder="e.g. Paid via UPI">
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closePaidModal()">Cancel</button>
+      <button class="mbtn" style="background:var(--green);color:#fff" onclick="confirmPaid()">✅ Confirm Payment</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ERROR MODAL -->
+<div class="overlay" id="err-modal" onclick="if(event.target===this)closeErr()">
+  <div class="modal" style="max-width:340px;text-align:center">
+    <div style="font-size:2.2rem;margin-bottom:8px">⚠️</div>
+    <h3 style="margin-bottom:8px">Missing Info</h3>
+    <p id="err-msg" style="color:var(--sub);font-size:.9rem;line-height:1.6;margin-bottom:20px"></p>
+    <button class="mbtn mbtn-save" style="width:100%" onclick="closeErr()">Got it</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════
+const ITEMS_KEY   = 'fc_items_v2';
+const PUR_KEY     = 'fc_purchases';
+const VENDORS_KEY = 'fc_vendors';
+
+function getStoreItems(){ return JSON.parse(localStorage.getItem(ITEMS_KEY)||'[]'); }
+function getPurchases()  { return JSON.parse(localStorage.getItem(PUR_KEY)||'[]'); }
+function savePurchases(arr){ localStorage.setItem(PUR_KEY, JSON.stringify(arr)); }
+function getVendors()    { return JSON.parse(localStorage.getItem(VENDORS_KEY)||'[]'); }
+function saveVendors(arr){ localStorage.setItem(VENDORS_KEY, JSON.stringify(arr)); }
+
+function fmt(n){ return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+
+// ══════════════════════════════════════════
+//  VENDOR DROPDOWN
+// ══════════════════════════════════════════
+function loadVendorDropdown(selectVal){
+  const vendors = getVendors();
+  const sel = document.getElementById('p-vendor-sel');
+  sel.innerHTML =
+    '<option value="">— Select Vendor —</option>' +
+    vendors.map(v=>`<option value="${v.name}">${v.name}</option>`).join('') +
+    '<option value="__new__">➕ Add New Vendor…</option>';
+  if(selectVal) sel.value = selectVal;
+}
+
+function onVendorSelect(){
+  const val = document.getElementById('p-vendor-sel').value;
+  if(val === '__new__'){
+    document.getElementById('new-vendor-panel').classList.add('open');
+    setTimeout(()=>document.getElementById('new-vendor-input').focus(), 50);
+    document.getElementById('p-vendor-sel').value = '';
+  } else {
+    document.getElementById('new-vendor-panel').classList.remove('open');
+  }
+}
+
+function confirmNewVendor(){
+  const name = document.getElementById('new-vendor-input').value.trim();
+  if(!name){ toast('⚠ Enter vendor name'); return; }
+
+  const vendors = getVendors();
+  if(!vendors.find(v=>v.name.toLowerCase()===name.toLowerCase())){
+    vendors.push({ id:'vnd_'+Date.now(), name, createdAt: today() });
+    saveVendors(vendors);
+  }
+  loadVendorDropdown(name);
+  document.getElementById('new-vendor-panel').classList.remove('open');
+  document.getElementById('new-vendor-input').value = '';
+  toast(`✅ Vendor "${name}" saved`);
+}
+
+function cancelNewVendor(){
+  document.getElementById('new-vendor-panel').classList.remove('open');
+  document.getElementById('new-vendor-input').value = '';
+  document.getElementById('p-vendor-sel').value = '';
+}
+
+// ══════════════════════════════════════════
+//  MULTI-ITEM ROWS
+// ══════════════════════════════════════════
+let _rowCounter = 0;
+
+function buildItemOptions(){
+  const items = getStoreItems();
+  if(!items.length) return '<option value="">⚠ No items found — open Store Data</option>';
+  return '<option value="">— Select Item —</option>' +
+    items.map(i=>`<option value="${i.id}" data-unit="${i.unit||'KG'}" data-markup="${i.markup||0}">${i.name} (${i.unit||'KG'})</option>`).join('');
+}
+
+function addItemRow(){
+  const id  = ++_rowCounter;
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = 'ir-'+id;
+  div.innerHTML = `
+    <select onchange="onRowItemChange(${id})" id="ir-item-${id}">
+      ${buildItemOptions()}
+    </select>
+    <div class="ir-unit" id="ir-unit-${id}">—</div>
+    <input type="number" id="ir-qty-${id}"    min="0" step="0.01" placeholder="0"    oninput="calcRowTotal(${id})">
+    <input type="number" id="ir-rate-${id}"   min="0" step="0.01" placeholder="0.00" oninput="calcRowTotal(${id})">
+    <input type="hidden"  id="ir-mkup-${id}" value="0">
+    <div class="ir-total" id="ir-total-${id}">—</div>
+    <button class="ir-del" onclick="removeItemRow(${id})" title="Remove">✕</button>`;
+  document.getElementById('items-container').appendChild(div);
+  updateItemsTotal();
+  // Focus the item select
+  setTimeout(()=>div.querySelector('select').focus(), 30);
+}
+
+function removeItemRow(id){
+  const el = document.getElementById('ir-'+id);
+  if(el) el.remove();
+  updateItemsTotal();
+}
+
+function onRowItemChange(id){
+  const sel    = document.getElementById('ir-item-'+id);
+  const opt    = sel.options[sel.selectedIndex];
+  const unit   = opt?.dataset?.unit || '—';
+  const markup = opt?.dataset?.markup || '0';
+  document.getElementById('ir-unit-'+id).textContent = unit;
+  document.getElementById('ir-mkup-'+id).value = markup;
+  calcRowTotal(id);
+}
+
+function calcRowTotal(id){
+  const qty      = parseFloat(document.getElementById('ir-qty-'+id)?.value)  || 0;
+  const rate     = parseFloat(document.getElementById('ir-rate-'+id)?.value) || 0;
+  const mkup     = parseFloat(document.getElementById('ir-mkup-'+id)?.value) || 0;
+  const transfer = qty * rate * (1 + mkup/100);
+  const el       = document.getElementById('ir-total-'+id);
+  if(el) el.textContent = transfer > 0 ? fmt(transfer) : '—';
+  updateItemsTotal();
+  if(currentType==='mixed') calcCredit();
+}
+
+function updateItemsTotal(){
+  const rows = document.querySelectorAll('#items-container .item-row');
+  let total = 0, count = 0;
+  rows.forEach(row=>{
+    const id = row.id.replace('ir-','');
+    const qty  = parseFloat(document.getElementById('ir-qty-'+id)?.value)  || 0;
+    const rate = parseFloat(document.getElementById('ir-rate-'+id)?.value) || 0;
+    const mkup = parseFloat(document.getElementById('ir-mkup-'+id)?.value) || 0;
+    const t    = qty * rate * (1 + mkup/100);
+    if(t > 0){ total += t; count++; }
+  });
+  const bar = document.getElementById('items-total-bar');
+  if(rows.length > 0){
+    bar.style.display = 'flex';
+    document.getElementById('itb-count').textContent = `${rows.length} item${rows.length!==1?'s':''} · ${count} with values`;
+    document.getElementById('itb-total').textContent = fmt(total);
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function getItemsVendorTotal(){
+  // Returns the sum of vendor totals (before markup) for mixed/credit calc
+  const rows = document.querySelectorAll('#items-container .item-row');
+  let total = 0;
+  rows.forEach(row=>{
+    const id   = row.id.replace('ir-','');
+    const qty  = parseFloat(document.getElementById('ir-qty-'+id)?.value)  || 0;
+    const rate = parseFloat(document.getElementById('ir-rate-'+id)?.value) || 0;
+    total += qty * rate;
+  });
+  return total;
+}
+
+function calcCredit(){
+  const vendorTotal = getItemsVendorTotal();
+  const cashPaid    = parseFloat(document.getElementById('p-cash-paid').value)||0;
+  const credit      = Math.max(0, vendorTotal - cashPaid);
+  document.getElementById('p-credit-amt').value = credit.toFixed(2);
+  const check = document.getElementById('mixed-check');
+  if(cashPaid > vendorTotal){
+    check.textContent = '⚠ Cash exceeds vendor total';
+    check.style.color = 'var(--red)';
+  } else {
+    check.textContent = `Vendor total ${fmt(vendorTotal)} ✓`;
+    check.style.color = 'var(--green)';
+  }
+}
+
+// ══════════════════════════════════════════
+//  PURCHASE TYPE
+// ══════════════════════════════════════════
+let currentType      = 'cash';
+let currentPayMethod = 'cash';
+
+function setPayMethod(method){
+  currentPayMethod = method;
+  document.getElementById('pm-cash').className   = 'type-btn' + (method==='cash'   ? ' active-pm-cash'   : '');
+  document.getElementById('pm-online').className = 'type-btn' + (method==='online' ? ' active-pm-online' : '');
+}
+
+function setType(type){
+  currentType = type;
+  ['cash','credit','mixed','opening_balance'].forEach(t=>{
+    const btn = document.getElementById('tb-'+t);
+    if(btn) btn.className = 'type-btn' + (t===type ? ` active-${t}` : '');
+  });
+  const isOB = type === 'opening_balance';
+  document.getElementById('mixed-section').style.display     = type==='mixed'                      ? 'block' : 'none';
+  document.getElementById('credit-section').style.display    = (type==='credit'||type==='mixed')   ? 'block' : 'none';
+  document.getElementById('paymethod-section').style.display = (type==='credit'||isOB)             ? 'none'  : 'block';
+  document.getElementById('ob-section').style.display        = isOB ? 'block' : 'none';
+  updateSubmitBtn();
+}
+
+function updateSubmitBtn(){
+  const btn = document.getElementById('submit-btn');
+  const labels  = { cash:'💵 Record Cash Purchase', credit:'📋 Record Credit Purchase', mixed:'🔀 Record Mixed Purchase', opening_balance:'📦 Save Opening Balance' };
+  const classes = { cash:'btn-cash', credit:'btn-credit', mixed:'btn-mixed', opening_balance:'btn-ob' };
+  btn.className   = 'submit-btn ' + (classes[currentType]||'btn-cash');
+  btn.textContent = labels[currentType]||'✅ Save';
+}
+
+// ══════════════════════════════════════════
+//  SAVE PURCHASE (multi-item)
+// ══════════════════════════════════════════
+function savePurchase(){
+  const date   = document.getElementById('p-date').value;
+  const vendor = document.getElementById('p-vendor-sel').value;
+  const bill   = document.getElementById('p-bill').value.trim();
+  const note   = document.getElementById('p-note').value.trim();
+
+  if(!date)  { showErr('Please select a date.'); return; }
+  if(currentType !== 'opening_balance' && !vendor){ showErr('Please select or add a vendor.'); return; }
+
+  // Collect all item rows
+  const rows = document.querySelectorAll('#items-container .item-row');
+  if(!rows.length){ showErr('Please add at least one item.'); return; }
+
+  const storeItems  = getStoreItems();
+  const batchId     = 'batch_' + Date.now();
+  const itemEntries = [];
+
+  for(const row of rows){
+    const rowId  = row.id.replace('ir-','');
+    const itemSel= document.getElementById('ir-item-'+rowId);
+    const itemId = itemSel ? parseInt(itemSel.value) : 0;
+    const qty    = parseFloat(document.getElementById('ir-qty-'+rowId)?.value) || 0;
+    const rate   = parseFloat(document.getElementById('ir-rate-'+rowId)?.value)|| 0;
+    const mkup   = parseFloat(document.getElementById('ir-mkup-'+rowId)?.value)|| 0;
+    const unit   = document.getElementById('ir-unit-'+rowId)?.textContent || '';
+    const item   = storeItems.find(i=>i.id===itemId);
+
+    if(!itemId) { showErr(`Row has no item selected — please select an item or remove the row.`); return; }
+    if(qty<=0)  { showErr(`"${item?.name||'Item'}" — enter a valid quantity (> 0).`); return; }
+    if(rate<=0) { showErr(`"${item?.name||'Item'}" — enter the cost price.`); return; }
+
+    itemEntries.push({ itemId, itemName: item?.name||'—', unit, qty, rate, mkup });
+  }
+
+  // Transport cost (optional, stored once per batch on first item)
+  const transportCost = parseFloat(document.getElementById('p-transport').value) || 0;
+
+  // Calculate payment split
+  const totalVendorAmt = itemEntries.reduce((s,e) => s + e.qty*e.rate, 0);
+  let dueDate='', creditNote='';
+  let cashPaid=0, creditAmt=0, paidStatus='paid';
+
+  if(currentType==='opening_balance'){
+    cashPaid=0; creditAmt=0; paidStatus='paid';
+  } else if(currentType==='credit'){
+    cashPaid=0; creditAmt=totalVendorAmt;
+    dueDate    = document.getElementById('p-due').value;
+    creditNote = document.getElementById('p-cnote').value.trim();
+    paidStatus = 'unpaid';
+  } else if(currentType==='mixed'){
+    cashPaid  = parseFloat(document.getElementById('p-cash-paid').value)||0;
+    creditAmt = Math.max(0, totalVendorAmt - cashPaid);
+    if(cashPaid > totalVendorAmt){ showErr('Cash paid amount cannot exceed the vendor total.'); return; }
+    dueDate    = document.getElementById('p-due').value;
+    creditNote = document.getElementById('p-cnote').value.trim();
+    paidStatus = creditAmt>0 ? 'partial' : 'paid';
+  } else { // cash
+    cashPaid = totalVendorAmt; creditAmt=0; paidStatus='paid';
+  }
+
+  // For mixed/credit: distribute cash/credit proportionally across items
+  const arr = getPurchases();
+  const now = Date.now();
+
+  itemEntries.forEach((e, idx) => {
+    const transferRate  = e.rate * (1 + e.mkup/100);
+    const vendorTotal   = Math.round(e.qty * e.rate * 100)/100;
+    const total         = Math.round(e.qty * transferRate * 100)/100;
+    const frac          = totalVendorAmt > 0 ? vendorTotal / totalVendorAmt : 1/itemEntries.length;
+
+    let itemCash=0, itemCredit=0;
+    if(currentType==='cash'||currentType==='opening_balance'){
+      itemCash   = currentType==='opening_balance' ? 0 : vendorTotal;
+      itemCredit = 0;
+    } else if(currentType==='credit'){
+      itemCash=0; itemCredit=vendorTotal;
+    } else {
+      itemCash   = Math.round(cashPaid  * frac * 100)/100;
+      itemCredit = Math.round(creditAmt * frac * 100)/100;
+    }
+
+    const rec = {
+      id: now + idx,
+      batchId,
+      date, itemId:e.itemId, itemName:e.itemName, unit:e.unit,
+      qty:e.qty, rate:e.rate,
+      markupPct:e.mkup, transferRate, vendorTotal, total,
+      remainingQty: e.qty,
+      vendor, bill, note,
+      transportCost: idx === 0 ? transportCost : 0,  // stored once on first item to avoid double-counting
+      type: currentType,
+      payMethod: currentType!=='credit' ? currentPayMethod : null,
+      cashPaid:itemCash, creditAmt:itemCredit, dueDate, creditNote,
+      paidStatus,
+      paidDate: currentType==='cash' ? date : null,
+      paidNote:'', paidMethod:null, paidCashAmt:0, paidOnlineAmt:0
+    };
+    arr.push(rec);
+
+    // Update stock qty
+    const si = storeItems.find(i=>i.id===e.itemId);
+    if(si) si.qty = (si.qty||0) + e.qty;
+  });
+
+  savePurchases(arr);
+  localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
+
+  // Auto-save vendor if new
+  if(vendor && vendor !== '__new__'){
+    const vendors = getVendors();
+    if(!vendors.find(v=>v.name===vendor)){
+      vendors.push({ id:'vnd_'+Date.now(), name:vendor, createdAt:date });
+      saveVendors(vendors);
+      loadVendorDropdown(vendor);
+    }
+  }
+
+  // Reset form (keep date, vendor, payment type for quick re-entry)
+  document.getElementById('items-container').innerHTML = '';
+  _rowCounter = 0;
+  document.getElementById('p-bill').value = '';
+  document.getElementById('p-note').value = '';
+  document.getElementById('p-transport').value = '';
+  document.getElementById('p-cash-paid').value = '';
+  document.getElementById('p-credit-amt').value = '';
+  document.getElementById('p-due').value = '';
+  document.getElementById('p-cnote').value = '';
+  updateItemsTotal();
+  updateStats();
+
+  const names = itemEntries.map(e=>e.itemName).join(', ');
+  toast(`✅ ${itemEntries.length} item${itemEntries.length>1?'s':''} saved — ${vendor||'Opening Balance'}`);
+}
+
+// ══════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════
+function updateStats(){
+  const arr     = getPurchases();
+  const real    = arr.filter(p=>p.type!=='opening_balance'); // exclude opening balance from financial stats
+  const totalVal  = real.reduce((s,p)=>s+p.total,0);
+  const cashTotal = real.reduce((s,p)=>s+p.cashPaid,0);
+  const creditOut = real.filter(p=>p.paidStatus!=='paid').reduce((s,p)=>s+p.creditAmt,0);
+  document.getElementById('st-count').textContent  = arr.length;
+  document.getElementById('st-cash').textContent   = fmt(cashTotal);
+  document.getElementById('st-credit').textContent = fmt(creditOut);
+  document.getElementById('st-total').textContent  = fmt(totalVal);
+}
+
+// ══════════════════════════════════════════
+//  LIST
+// ══════════════════════════════════════════
+// Returns a small badge showing how an entry was / will be paid
+function pmBadge(p){
+  // For credit entries that haven't been paid yet — no badge
+  const method = (p.paidStatus==='paid' && p.paidMethod) ? p.paidMethod : p.payMethod;
+  if(!method) return '';
+  const icons  = { cash:'💵', online:'📱', mixed:'🔀' };
+  const labels = { cash:'Cash', online:'Online', mixed:'Mixed' };
+  const cls    = { cash:'pm-badge-cash', online:'pm-badge-online', mixed:'pm-badge-mixed' };
+  return `<span class="tag ${cls[method]||'t-gray'}" style="font-size:.67rem;padding:2px 8px">${icons[method]||''} ${labels[method]||method}</span>`;
+}
+
+function renderList(){
+  const q     = document.getElementById('lq').value.toLowerCase();
+  const type  = document.getElementById('ltype').value;
+  const month = document.getElementById('lmonth').value;
+  const arr   = getPurchases().filter(p=>{
+    if(q && !p.itemName.toLowerCase().includes(q) && !p.vendor.toLowerCase().includes(q)) return false;
+    if(type && p.type!==type) return false;
+    if(month && !p.date.startsWith(month)) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  renderSummaryCards(arr);
+
+  const typeTags = {
+    cash:            '<span class="tag t-cash">💵 Cash</span>',
+    credit:          '<span class="tag t-credit">📋 Credit</span>',
+    mixed:           '<span class="tag t-mixed">🔀 Mixed</span>',
+    opening_balance: '<span class="tag" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac">📦 Opening Bal</span>'
+  };
+  const statusTag = p =>
+    p.paidStatus==='paid'    ? '<span class="tag t-paid">✅ Paid</span>' :
+    p.paidStatus==='partial' ? '<span class="tag t-mixed">🔀 Partial</span>' :
+                               '<span class="tag t-due">⏳ Unpaid</span>';
+
+  // Desktop table
+  const tbody = document.getElementById('list-tbody');
+  tbody.innerHTML = arr.length ? arr.map((p,i)=>`<tr>
+    <td><span class="tag t-gray">${i+1}</span></td>
+    <td style="font-weight:600;white-space:nowrap">${p.date}</td>
+    <td style="font-weight:800;color:var(--text)">${p.itemName}</td>
+    <td>${p.qty} <span style="color:var(--sub);font-size:.8rem">${p.unit}</span></td>
+    <td>${fmt(p.rate)}</td>
+    <td>
+      <div style="font-weight:700;color:var(--primary-dark)">${fmt(p.total)}</div>
+      ${(p.markupPct||0)>0?`<div style="font-size:.71rem;color:var(--sub);margin-top:1px">vendor: ${fmt(p.vendorTotal||p.total)} <span style="background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:999px;font-weight:700">+${p.markupPct}%</span></div>`:''}
+    </td>
+    <td style="color:var(--sub)">${p.vendor||'—'}</td>
+    <td>${typeTags[p.type]||''} ${pmBadge(p)}</td>
+    <td style="color:var(--green);font-weight:600">${fmt(p.cashPaid)}</td>
+    <td style="color:var(--orange);font-weight:600">${p.creditAmt>0?fmt(p.creditAmt):'—'}</td>
+    <td>${statusTag(p)}${p.creditAmt>0&&p.paidStatus!=='paid'?`<button class="mark-paid-btn" style="margin-left:6px;padding:3px 10px;font-size:.72rem" onclick="openPaid(${p.id})">Pay</button>`:''}</td>
+    <td><button class="act-btn" onclick="deletePurchase(${p.id})" title="Delete">🗑</button></td>
+  </tr>`).join('') : `<tr><td colspan="12"><div class="empty"><div class="ei">🛒</div><p>No purchases found.</p></div></td></tr>`;
+
+  // Mobile cards
+  const cards = document.getElementById('list-cards');
+  cards.innerHTML = arr.length ? arr.map(p=>`
+    <div class="m-card">
+      <div class="m-top">
+        <div class="m-name">${p.itemName}</div>
+        <span style="font-size:.8rem;color:var(--sub);font-weight:600">${p.date}</span>
+      </div>
+      <div class="m-row">
+        ${typeTags[p.type]||''}
+        ${pmBadge(p)}
+        <span class="tag t-gray">${p.qty} ${p.unit}</span>
+        ${statusTag(p)}
+      </div>
+      <div style="color:var(--sub);font-size:.82rem;margin-bottom:6px">📦 ${p.vendor||'—'} ${p.bill?'· #'+p.bill:''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <div>
+          <div style="font-size:1.2rem;font-weight:800;color:var(--primary-dark)">${fmt(p.total)}</div>
+          ${(p.markupPct||0)>0?`<div style="font-size:.72rem;margin-top:1px;color:var(--sub)">Vendor: ${fmt(p.vendorTotal||p.total)} <span style="background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:999px;font-weight:700">+${p.markupPct}%</span></div>`:''}
+          ${p.creditAmt>0?`<div style="font-size:.78rem;color:var(--orange);font-weight:600;margin-top:2px">Credit: ${fmt(p.creditAmt)}</div>`:''}
+          ${(p.transportCost||0)>0?`<div style="font-size:.78rem;color:#0891b2;font-weight:600;margin-top:2px">🚛 Transport: ${fmt(p.transportCost)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${p.creditAmt>0&&p.paidStatus!=='paid'?`<button class="mark-paid-btn" onclick="openPaid(${p.id})">💵 Pay</button>`:''}
+          <button class="act-btn" onclick="deletePurchase(${p.id})">🗑</button>
+        </div>
+      </div>
+    </div>
+  `).join('') : `<div class="empty"><div class="ei">🛒</div><p>No purchases found.</p></div>`;
+}
+
+function renderSummaryCards(arr){
+  const cash   = arr.filter(p=>p.type==='cash');
+  const credit = arr.filter(p=>p.type==='credit');
+  const mixed  = arr.filter(p=>p.type==='mixed');
+  const ob     = arr.filter(p=>p.type==='opening_balance');
+  const sum    = a => a.reduce((s,p)=>s+p.total,0);
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="sum-card cash-c">
+      <div class="sv" style="color:var(--green)">${fmt(sum(cash))}</div>
+      <div class="sl">Cash Purchases</div>
+      <div class="sc" style="color:var(--sub)">${cash.length} transaction${cash.length!==1?'s':''}</div>
+    </div>
+    <div class="sum-card credit-c">
+      <div class="sv" style="color:var(--orange)">${fmt(sum(credit))}</div>
+      <div class="sl">Credit Purchases</div>
+      <div class="sc" style="color:var(--sub)">${credit.length} transaction${credit.length!==1?'s':''}</div>
+    </div>
+    <div class="sum-card mixed-c">
+      <div class="sv" style="color:var(--purple)">${fmt(sum(mixed))}</div>
+      <div class="sl">Mixed Purchases</div>
+      <div class="sc" style="color:var(--sub)">${mixed.length} transaction${mixed.length!==1?'s':''}</div>
+    </div>
+    ${ob.length ? `
+    <div class="sum-card" style="background:#f0fdf4;border-color:#86efac">
+      <div class="sv" style="color:#15803d">${fmt(sum(ob))}</div>
+      <div class="sl">Opening Balance Stock</div>
+      <div class="sc" style="color:var(--sub)">${ob.length} item${ob.length!==1?'s':''} · not a P&amp;L expense</div>
+    </div>` : ''}`;
+}
+
+// ══════════════════════════════════════════
+//  CREDIT OUTSTANDING TAB
+// ══════════════════════════════════════════
+function renderCreditTab(){
+  const arr = getPurchases().filter(p=>p.paidStatus!=='paid' && p.creditAmt>0)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const totalDue = arr.reduce((s,p)=>s+p.creditAmt,0);
+  const div = document.getElementById('credit-outstanding');
+
+  if(!arr.length){
+    div.innerHTML = `<div class="empty"><div class="ei">✅</div><p>No outstanding credit. All paid up!</p></div>`;
+    return;
+  }
+
+  div.innerHTML = `
+    <div class="outstanding-card">
+      <div>
+        <div class="ov">${fmt(totalDue)}</div>
+        <div class="ol">Total credit outstanding across ${arr.length} purchase${arr.length!==1?'s':''}</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Date</th><th>Item</th><th>Vendor</th><th>Total</th><th>Credit Due</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>${arr.map((p,i)=>`<tr>
+          <td><span class="tag t-gray">${i+1}</span></td>
+          <td style="font-weight:600">${p.date}</td>
+          <td style="font-weight:800">${p.itemName}</td>
+          <td style="color:var(--sub)">${p.vendor}</td>
+          <td>${fmt(p.total)}</td>
+          <td style="font-weight:700;color:var(--orange)">${fmt(p.creditAmt)}</td>
+          <td>${p.dueDate||'—'}</td>
+          <td>${p.paidStatus==='partial'?'<span class="tag t-mixed">🔀 Partial</span>':'<span class="tag t-due">⏳ Unpaid</span>'}</td>
+          <td><button class="mark-paid-btn" onclick="openPaid(${p.id})">💵 Mark Paid</button></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div class="m-cards" style="display:flex;margin-top:0">
+      ${arr.map(p=>`<div class="m-card">
+        <div class="m-top"><div class="m-name">${p.itemName}</div><span style="font-size:.8rem;color:var(--sub)">${p.date}</span></div>
+        <div style="color:var(--sub);font-size:.83rem;margin:6px 0">${p.vendor} ${p.dueDate?'· Due: '+p.dueDate:''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:1.1rem;font-weight:800;color:var(--orange)">${fmt(p.creditAmt)} due</div>
+          <button class="mark-paid-btn" onclick="openPaid(${p.id})">💵 Mark Paid</button>
+        </div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+//  MARK AS PAID
+// ══════════════════════════════════════════
+let _paidId = null;
+let currentPaidMethod = 'cash';
+
+function setPaidMethod(method){
+  currentPaidMethod = method;
+  ['cash','online','mixed'].forEach(m=>{
+    const el = document.getElementById('ppd-'+m);
+    if(el) el.className = 'type-btn' + (m===method ? ` active-pm-${m}` : '');
+  });
+  document.getElementById('paid-split').style.display = method==='mixed' ? 'block' : 'none';
+}
+
+function openPaid(id){
+  const p = getPurchases().find(p=>p.id===id); if(!p) return;
+  _paidId = id;
+  document.getElementById('paid-msg').textContent = `${p.itemName} — ${p.vendor} · Credit amount: ${fmt(p.creditAmt)}`;
+  document.getElementById('paid-date').value = today();
+  document.getElementById('paid-note').value = '';
+  document.getElementById('paid-cash-amt').value = '';
+  document.getElementById('paid-online-amt').value = '';
+  setPaidMethod('cash');
+  document.getElementById('paid-modal').classList.add('open');
+}
+function closePaidModal(){ document.getElementById('paid-modal').classList.remove('open'); _paidId=null; }
+function confirmPaid(){
+  if(!_paidId) return;
+  const arr = getPurchases();
+  const p   = arr.find(p=>p.id===_paidId);
+  if(p){
+    p.paidStatus    = 'paid';
+    p.cashPaid      = p.total;
+    p.creditAmt     = 0;
+    p.paidDate      = document.getElementById('paid-date').value;
+    p.paidNote      = document.getElementById('paid-note').value;
+    p.paidMethod    = currentPaidMethod;
+    p.paidCashAmt   = currentPaidMethod==='mixed' ? (parseFloat(document.getElementById('paid-cash-amt').value)||0) : 0;
+    p.paidOnlineAmt = currentPaidMethod==='mixed' ? (parseFloat(document.getElementById('paid-online-amt').value)||0) : 0;
+  }
+  savePurchases(arr);
+  closePaidModal();
+  updateStats();
+  renderList();
+  renderCreditTab();
+  toast(`✅ Payment marked — ${p?.itemName}`);
+}
+
+// ══════════════════════════════════════════
+//  DELETE
+// ══════════════════════════════════════════
+let _delId = null;
+function deletePurchase(id){
+  const p = getPurchases().find(p=>p.id===id); if(!p) return;
+  _delId = id;
+  document.getElementById('del-msg').textContent = `${p.itemName} — ${fmt(p.total)} on ${p.date}. Stock will NOT be auto-reversed.`;
+  document.getElementById('del-modal').classList.add('open');
+}
+function closeDelModal(){ document.getElementById('del-modal').classList.remove('open'); _delId=null; }
+function confirmDelete(){
+  if(!_delId) return;
+  const arr = getPurchases();
+  const p   = arr.find(p=>p.id===_delId);
+  savePurchases(arr.filter(p=>p.id!==_delId));
+  closeDelModal();
+  updateStats(); renderList(); renderCreditTab();
+  toast(`🗑 Purchase deleted`);
+}
+
+// ══════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════
+function switchTab(tab, el){
+  ['add','list','credit'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='list')   renderList();
+  if(tab==='credit') renderCreditTab();
+}
+
+// ══════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════
+function exportCSV(){
+  const arr = getPurchases();
+  const rows = [['Date','Item','Qty','Unit','Purchase Rate','Markup %','Transfer Rate','Vendor Total','Transfer Total (P&L)','Vendor','Bill No','Type','Cash Paid','Credit','Status']];
+  arr.forEach(p=>rows.push([p.date,p.itemName,p.qty,p.unit,p.rate,p.markupPct||0,p.transferRate||p.rate,p.vendorTotal||p.total,p.total,p.vendor,p.bill||'',p.type,p.cashPaid,p.creditAmt,p.paidStatus]));
+  const csv = rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'purchases.csv'; a.click();
+  toast('📥 Exported to CSV');
+}
+
+// ══════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════
+let _t; function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2800); }
+function showErr(msg){ document.getElementById('err-msg').textContent=msg; document.getElementById('err-modal').classList.add('open'); }
+function closeErr(){ document.getElementById('err-modal').classList.remove('open'); }
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+fcInit(function(){
+  // Seed default vendors if none exist yet
+  (function(){
+    const existing = getVendors();
+    if(existing.length === 0){
+      const defaults = [
+        'Kishore mbnr',
+        'Vikky traders',
+        'Mahalaxmi traders',
+        'Shashi',
+        'Km narsimulu'
+      ];
+      const seeded = defaults.map((name, i) => ({
+        id: 'vnd_seed_' + i,
+        name,
+        createdAt: '2026-01-01'
+      }));
+      saveVendors(seeded);
+    }
+  })();
+
+  // Migrate existing purchases: add remainingQty if missing
+  (function(){
+    const arr = getPurchases();
+    let changed = false;
+    arr.forEach(p => { if(p.remainingQty === undefined){ p.remainingQty = p.qty; changed = true; } });
+    if(changed) savePurchases(arr);
+  })();
+
+  document.getElementById('p-date').value = today();
+  document.getElementById('lmonth').value = today().slice(0,7);
+  loadVendorDropdown();
+  addItemRow();
+  updateStats();
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDelModal(); closePaidModal(); closeErr(); } });
+});
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

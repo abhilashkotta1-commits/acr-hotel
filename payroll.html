@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACR Hotel">
+<meta name="theme-color" content="#1e293b">
+<title>Amma Cheti Ruchulu — Payroll</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600&display=swap');
+
+  :root {
+    --bg:#f0f4ff; --card:#fff; --primary:#4f46e5; --primary-soft:#eef2ff;
+    --green:#10b981; --green-soft:#d1fae5;
+    --red:#ef4444;   --red-soft:#fee2e2;
+    --orange:#f59e0b;--orange-soft:#fef3c7;
+    --blue:#0ea5e9;  --blue-soft:#e0f2fe;
+    --purple:#8b5cf6;--purple-soft:#f5f3ff;
+    --text:#0f172a;  --sub:#64748b; --border:#e2e8f0;
+    --shadow:0 2px 8px rgba(0,0,0,.08);
+    --shadow-lg:0 8px 24px rgba(0,0,0,.14);
+    --radius:16px; --radius-sm:10px;
+    --tiffin:#f97316; --meals:#10b981; --chat:#8b5cf6; --water:#0ea5e9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:20px;}
+
+  /* ── HEADER ── */
+  .header{background:var(--primary);padding:14px 18px 0;box-shadow:0 2px 12px rgba(79,70,229,.3);}
+  .header-top{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;}
+  .header-top h1{font-size:1.05rem;font-weight:800;color:#fff;}
+  .header-top p{font-size:.72rem;color:rgba(255,255,255,.7);margin-top:2px;}
+
+  /* ── TAB BAR ── */
+  .tab-bar{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;}
+  .tab-bar::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    flex-shrink:0;padding:10px 14px;font-size:.8rem;font-weight:700;
+    color:rgba(255,255,255,.6);background:none;border:none;cursor:pointer;
+    border-bottom:3px solid transparent;font-family:inherit;white-space:nowrap;
+    transition:all .15s;
+  }
+  .tab-btn.active{color:#fff;border-bottom-color:#fff;}
+
+  /* ── DATE BAR ── */
+  .date-bar{
+    background:var(--card);padding:10px 16px;
+    display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .date-bar label{font-size:.8rem;font-weight:700;color:var(--sub);white-space:nowrap;}
+  .date-bar input[type=date]{
+    flex:1;padding:7px 14px;border-radius:999px;
+    border:1.5px solid var(--border);background:var(--bg);
+    font-size:.9rem;font-weight:700;font-family:inherit;
+    cursor:pointer;outline:none;color:var(--text);
+  }
+  .date-bar input[type=date]:focus{border-color:var(--primary);}
+
+  /* ── PAGE SECTIONS ── */
+  .page{display:none;padding:14px;}
+  .page.active{display:block;}
+
+  /* ── CARDS ── */
+  .card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);overflow:hidden;margin-bottom:12px;}
+  .card-head{padding:12px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .card-head-title{font-size:.9rem;font-weight:800;}
+  .card-body{padding:14px;}
+
+  /* ── FORM ELEMENTS ── */
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+  .form-group input,.form-group select{
+    width:100%;padding:10px 14px;border-radius:var(--radius-sm);
+    border:1.5px solid var(--border);background:#fff;
+    font-size:.95rem;font-family:inherit;color:var(--text);outline:none;
+  }
+  .form-group input:focus,.form-group select:focus{border-color:var(--primary);}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* ── BUTTONS ── */
+  .btn{padding:11px 18px;border-radius:var(--radius-sm);border:none;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:filter .15s;display:inline-flex;align-items:center;gap:6px;}
+  .btn:active{filter:brightness(.9);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-red{background:var(--red-soft);color:var(--red);}
+  .btn-gray{background:var(--bg);color:var(--sub);border:1.5px solid var(--border);}
+  .btn-full{width:100%;justify-content:center;}
+  .btn-sm{padding:7px 12px;font-size:.78rem;}
+
+  /* ── EMPLOYEE LIST ── */
+  .emp-card{
+    background:var(--card);border-radius:var(--radius);
+    border:1.5px solid var(--border);padding:14px;
+    display:flex;align-items:flex-start;gap:12px;
+    margin-bottom:10px;
+  }
+  .emp-avatar{
+    width:44px;height:44px;border-radius:50%;
+    background:var(--primary-soft);color:var(--primary);
+    font-size:1.1rem;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .emp-info{flex:1;min-width:0;}
+  .emp-name{font-size:.95rem;font-weight:800;color:var(--text);}
+  .emp-meta{font-size:.76rem;color:var(--sub);margin-top:3px;}
+  .emp-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+  .tag{padding:2px 9px;border-radius:999px;font-size:.7rem;font-weight:700;}
+  .tag-role{background:var(--primary-soft);color:var(--primary);}
+  .tag-section{background:var(--green-soft);color:var(--green);}
+  .tag-wage{background:var(--orange-soft);color:var(--orange);}
+  .emp-actions{display:flex;gap:6px;flex-shrink:0;}
+  .icon-btn{
+    width:34px;height:34px;border-radius:8px;border:none;
+    font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:filter .15s;
+  }
+  .icon-btn:active{filter:brightness(.9);}
+  .icon-btn-edit{background:var(--primary-soft);color:var(--primary);}
+  .icon-btn-del{background:var(--red-soft);color:var(--red);}
+
+  /* ── ATTENDANCE ── */
+  .att-wrap{margin-bottom:8px;}
+  .att-card{
+    background:var(--card);border-radius:var(--radius);
+    border:1.5px solid var(--border);padding:12px 14px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .att-wrap .att-card{border-radius:var(--radius) var(--radius) 0 0;}
+  .att-wrap .att-card.no-extra{border-radius:var(--radius);}
+  .att-avatar{
+    width:40px;height:40px;border-radius:50%;
+    background:var(--primary-soft);color:var(--primary);
+    font-size:.95rem;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .att-info{flex:1;min-width:0;}
+  .att-name{font-size:.9rem;font-weight:800;}
+  .att-sub{font-size:.73rem;color:var(--sub);margin-top:2px;}
+  .att-wage-badge{font-size:.73rem;font-weight:700;color:var(--green);margin-top:3px;}
+  .att-btns{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+  .att-btn{
+    padding:6px 9px;border-radius:8px;border:1.5px solid var(--border);
+    font-size:.7rem;font-weight:700;cursor:pointer;background:#fff;
+    color:var(--sub);font-family:inherit;transition:all .15s;white-space:nowrap;
+  }
+  .att-btn.present {background:var(--green-soft);color:var(--green);border-color:var(--green);}
+  .att-btn.halfday {background:var(--orange-soft);color:var(--orange);border-color:var(--orange);}
+  .att-btn.absent  {background:var(--red-soft);color:var(--red);border-color:var(--red);}
+  .att-btn.extra   {background:var(--purple-soft);color:var(--purple);border-color:var(--purple);}
+
+  /* ── EXTRA AMOUNT INPUT PANEL ── */
+  .extra-panel{
+    background:var(--purple-soft);border:1.5px solid var(--purple);
+    border-top:none;border-radius:0 0 var(--radius) var(--radius);
+    padding:10px 14px;display:none;
+    align-items:center;gap:10px;
+  }
+  .extra-panel.open{display:flex;}
+  .extra-panel label{font-size:.78rem;font-weight:700;color:var(--purple);white-space:nowrap;}
+  .extra-panel input{
+    flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--purple);
+    background:#fff;font-size:.95rem;font-family:inherit;color:var(--text);outline:none;
+    min-width:0;
+  }
+  .extra-panel .btn-save-extra{
+    padding:8px 14px;background:var(--purple);color:#fff;border:none;
+    border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;
+    font-family:inherit;white-space:nowrap;flex-shrink:0;
+  }
+
+  /* ── DAY HELPER ── */
+  .section-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .schip{
+    padding:7px 13px;border-radius:999px;font-size:.78rem;font-weight:700;
+    border:1.5px solid var(--border);background:#fff;color:var(--sub);
+    cursor:pointer;transition:all .15s;
+  }
+  .schip.active-tiffin{background:#fff7ed;color:var(--tiffin);border-color:var(--tiffin);}
+  .schip.active-meals {background:#f0fdf4;color:var(--meals);border-color:var(--meals);}
+  .schip.active-chat  {background:#f5f3ff;color:var(--chat);border-color:var(--chat);}
+  .schip.active-water {background:#f0f9ff;color:var(--water);border-color:var(--water);}
+  .schip.active-mixed {background:var(--primary-soft);color:var(--primary);border-color:var(--primary);}
+
+  .helper-row{
+    background:var(--card);border-radius:var(--radius-sm);
+    border:1.5px solid var(--border);padding:11px 14px;
+    display:flex;align-items:center;gap:10px;margin-bottom:8px;
+  }
+  .helper-icon{font-size:1.4rem;flex-shrink:0;}
+  .helper-info{flex:1;min-width:0;}
+  .helper-sec{font-size:.8rem;font-weight:700;}
+  .helper-note{font-size:.73rem;color:var(--sub);margin-top:2px;}
+  .helper-wage{font-size:.95rem;font-weight:800;color:var(--green);white-space:nowrap;}
+  .helper-del{background:none;border:none;color:var(--red);font-size:1rem;cursor:pointer;padding:4px;}
+
+  /* ── SALARY SUMMARY ── */
+  .month-bar{
+    display:flex;align-items:center;gap:10px;
+    background:var(--card);padding:10px 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .month-bar label{font-size:.8rem;font-weight:700;color:var(--sub);white-space:nowrap;}
+  .month-bar input[type=month]{
+    flex:1;padding:7px 14px;border-radius:999px;
+    border:1.5px solid var(--border);background:var(--bg);
+    font-size:.9rem;font-weight:700;font-family:inherit;
+    cursor:pointer;outline:none;color:var(--text);
+  }
+  .month-bar input:focus{border-color:var(--primary);}
+  .sal-card{
+    background:var(--card);border-radius:var(--radius);
+    border:1.5px solid var(--border);overflow:hidden;margin-bottom:10px;
+  }
+  .sal-head{
+    padding:12px 14px;display:flex;align-items:center;
+    justify-content:space-between;border-bottom:1px solid var(--border);
+    background:var(--bg);
+  }
+  .sal-name{font-size:.92rem;font-weight:800;}
+  .sal-net{font-size:1rem;font-weight:800;color:var(--green);}
+  .sal-rows{padding:0;}
+  .sal-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:9px 14px;border-bottom:1px solid var(--border);font-size:.84rem;
+  }
+  .sal-row:last-child{border-bottom:none;}
+  .sal-row .lbl{color:var(--sub);}
+  .sal-row .val{font-weight:700;color:var(--text);}
+  .sal-row .val.red{color:var(--red);}
+  .sal-row .val.green{color:var(--green);}
+  .sal-total-bar{
+    background:var(--primary);border-radius:var(--radius);
+    padding:14px 18px;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .sal-total-bar .lbl{font-size:.85rem;color:rgba(255,255,255,.8);font-weight:600;}
+  .sal-total-bar .val{font-size:1.1rem;font-weight:800;color:#fff;}
+  .adv-btn{font-size:.72rem;background:var(--orange-soft);color:var(--orange);border:none;padding:4px 9px;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;}
+
+  /* ── MODAL ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#fff;border-radius:20px 20px 0 0;
+    width:100%;max-width:600px;
+    padding:20px 18px 30px;max-height:90vh;overflow-y:auto;
+    animation:slideUp .25s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-handle{width:40px;height:4px;background:#e2e8f0;border-radius:999px;margin:0 auto 16px;}
+  .modal h3{font-size:1.05rem;font-weight:800;margin-bottom:16px;}
+  .modal-btns{display:flex;gap:8px;margin-top:6px;}
+
+  /* ── CONFIRM MODAL ── */
+  .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center;padding:20px;}
+  .confirm-overlay.open{display:flex;}
+  .confirm-box{background:#fff;border-radius:var(--radius);padding:22px;max-width:320px;width:100%;box-shadow:var(--shadow-lg);}
+  .confirm-box h3{font-size:1rem;font-weight:800;margin-bottom:8px;}
+  .confirm-box p{font-size:.86rem;color:var(--sub);margin-bottom:18px;line-height:1.5;}
+  .confirm-btns{display:flex;gap:8px;}
+  .confirm-cancel{flex:1;padding:11px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:#fff;color:var(--sub);font-weight:700;cursor:pointer;font-family:inherit;}
+  .confirm-ok{flex:1;padding:11px;border-radius:var(--radius-sm);border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;}
+
+  /* ── ADVANCE LOG ── */
+  .adv-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:.84rem;}
+  .adv-row:last-child{border-bottom:none;}
+  .adv-date{color:var(--sub);font-size:.75rem;}
+  .adv-amt{font-weight:800;color:var(--orange);}
+  .adv-del{background:none;border:none;color:var(--red);font-size:.85rem;cursor:pointer;padding:2px 6px;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 20px;border-radius:999px;font-size:.85rem;font-weight:600;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── EMPTY STATE ── */
+  .empty{text-align:center;padding:40px 20px;color:var(--sub);}
+  .empty .ei{font-size:3rem;margin-bottom:10px;}
+
+  /* ── STAT CHIPS ── */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .stat-chip{background:var(--card);border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:10px 6px;text-align:center;}
+  .stat-chip .snum{font-size:1.2rem;font-weight:800;}
+  .stat-chip .slbl{font-size:.65rem;color:var(--sub);font-weight:600;margin-top:2px;}
+  .stat-chip.green{background:var(--green-soft);border-color:var(--green);}
+  .stat-chip.green .snum{color:var(--green);}
+  .stat-chip.orange{background:var(--orange-soft);border-color:var(--orange);}
+  .stat-chip.orange .snum{color:var(--orange);}
+  .stat-chip.red{background:var(--red-soft);border-color:var(--red);}
+  .stat-chip.red .snum{color:var(--red);}
+  .stat-chip.purple{background:var(--purple-soft);border-color:var(--purple);}
+  .stat-chip.purple .snum{color:var(--purple);}
+
+  /* ── DAILY WAGE TOTAL BANNER ── */
+  .wage-day-total{
+    background:var(--green);border-radius:var(--radius-sm);
+    padding:11px 16px;margin-bottom:12px;
+    display:flex;align-items:center;justify-content:space-between;color:#fff;
+  }
+  .wage-day-total .lbl{font-size:.82rem;font-weight:600;opacity:.9;}
+  .wage-day-total .val{font-size:1.05rem;font-weight:800;}
+
+  @media(min-width:600px){body{max-width:700px;margin:0 auto;}}
+</style>
+  <!-- ── Role Guard ── -->
+  <script>
+  (function(){
+    var role=sessionStorage.getItem('fc_role');
+    if(!role){window.location.href='index.html';return;}
+    if(role==='admin')return;
+    var mid='payroll';
+    var cfg={};
+    try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit'};
+    var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
+    if(access==='none'){window.location.href='index.html';return;}
+    if(access==='view'){
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add('fc-readonly');
+      });
+    }
+  })();
+  </script>
+  <style>
+  .fc-readonly .btn-save,.fc-readonly .btn-del-entry,.fc-readonly .btn-settings,
+  .fc-readonly .btn-add,.fc-readonly .btn-primary,.fc-readonly .btn-green,
+  .fc-readonly .btn-orange,.fc-readonly .icon-btn-del,.fc-readonly .hbtn-white,
+  .fc-readonly .mbtn-save,.fc-readonly .mbtn-del,.fc-readonly .submit-btn,
+  .fc-readonly .new-entry-btn,.fc-readonly .hist-del-btn,.fc-readonly .del-confirm,
+  .fc-readonly .exp-add-btn,.fc-readonly .exp-remove-btn{display:none!important;}
+  #fc-readonly-banner{display:none;background:#eff6ff;border-bottom:2px solid #bfdbfe;
+    padding:9px 16px;font-size:12px;color:#1d4ed8;text-align:center;font-weight:600;}
+  .fc-readonly #fc-readonly-banner{display:block!important;}
+  </style>
+</head>
+<body>
+<div id="fc-readonly-banner">👁 View-only mode — you can browse data but cannot make changes</div>
+
+<!-- HEADER + TABS -->
+<div class="header">
+  <div class="header-top">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="index.html" style="color:rgba(255,255,255,.75);font-size:18px;text-decoration:none;line-height:1" title="Home">←</a>
+      <div>
+        <h1>👥 Payroll</h1>
+        <p>Employees · Attendance · Salary</p>
+      </div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('employees')">👤 Employees</button>
+    <button class="tab-btn" onclick="switchTab('attendance')">📅 Attendance</button>
+    <button class="tab-btn" onclick="switchTab('helpers')">🔧 Day Helpers</button>
+    <button class="tab-btn" onclick="switchTab('salary')">💰 Salary</button>
+  </div>
+</div>
+
+<!-- ════════════ EMPLOYEES TAB ════════════ -->
+<div class="page active" id="page-employees">
+  <div style="margin-bottom:12px;">
+    <button class="btn btn-primary btn-full" onclick="openEmpModal()">➕ Add New Employee</button>
+  </div>
+  <div id="emp-list"></div>
+</div>
+
+<!-- ════════════ ATTENDANCE TAB ════════════ -->
+<div class="page" id="page-attendance">
+  <div class="date-bar" style="margin:-14px -14px 14px;">
+    <label for="att-date">📅 Date</label>
+    <input type="date" id="att-date" onchange="renderAttendance()">
+  </div>
+  <div id="att-stats" class="stat-row"></div>
+  <div id="att-wage-total"></div>
+  <div id="att-list"></div>
+</div>
+
+<!-- ════════════ DAY HELPERS TAB ════════════ -->
+<div class="page" id="page-helpers">
+  <div class="card" style="margin-bottom:12px;">
+    <div class="card-head"><span class="card-head-title">➕ Add Day Helper</span></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label>📅 Date</label>
+        <input type="date" id="h-date">
+      </div>
+      <div class="form-group">
+        <label>📍 Section</label>
+        <div class="section-chips" id="h-section-chips">
+          <div class="schip" onclick="selectHelperSec(this,'tiffin')">🍳 Tiffin</div>
+          <div class="schip" onclick="selectHelperSec(this,'meals')">🍽️ Meals</div>
+          <div class="schip" onclick="selectHelperSec(this,'chat')">🥘 Chat</div>
+          <div class="schip" onclick="selectHelperSec(this,'water')">💧 Water</div>
+          <div class="schip" onclick="selectHelperSec(this,'mixed')">🔀 Mixed</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>💵 Wage (₹)</label>
+          <input type="number" id="h-wage" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label>📝 Note (optional)</label>
+          <input type="text" id="h-note" placeholder="e.g. Extra hand">
+        </div>
+      </div>
+      <button class="btn btn-green btn-full" onclick="addHelper()">✅ Add Helper</button>
+    </div>
+  </div>
+  <div id="helper-list-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:.8rem;font-weight:700;color:var(--sub);text-transform:uppercase;">Today's Helpers</span>
+      <input type="date" id="h-filter-date" onchange="renderHelpers()" style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:.8rem;font-family:inherit;cursor:pointer;">
+    </div>
+    <div id="helper-list"></div>
+    <div id="helper-total" style="background:var(--green-soft);border-radius:var(--radius-sm);padding:10px 14px;text-align:right;font-weight:800;color:var(--green);font-size:.95rem;display:none;"></div>
+  </div>
+</div>
+
+<!-- ════════════ SALARY TAB ════════════ -->
+<div class="page" id="page-salary">
+  <div class="month-bar" style="margin:-14px -14px 14px;">
+    <label for="sal-month">📆 Month</label>
+    <input type="month" id="sal-month" onchange="renderSalary()">
+  </div>
+  <div id="sal-total-bar"></div>
+  <div id="sal-list"></div>
+</div>
+
+<!-- ════════════ MODALS ════════════ -->
+
+<!-- ADD/EDIT EMPLOYEE MODAL -->
+<div class="modal-overlay" id="emp-modal" onclick="if(event.target===this)closeEmpModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="emp-modal-title">👤 Add Employee</h3>
+    <div class="form-group">
+      <label>Full Name *</label>
+      <input type="text" id="em-name" placeholder="e.g. Raju">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Role *</label>
+        <select id="em-role">
+          <option value="">Select role</option>
+          <option>Cook / Chef</option>
+          <option>Helper / Assistant</option>
+          <option>Cashier</option>
+          <option>Cleaner / Sweeper</option>
+          <option>Manager</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Section *</label>
+        <select id="em-section">
+          <option value="">Select section</option>
+          <option value="tiffin">🍳 Tiffin</option>
+          <option value="meals">🍽️ Meals</option>
+          <option value="chat">🥘 Chat</option>
+          <option value="water">💧 Water</option>
+          <option value="all">🏢 All Sections</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Daily Wage (₹) *</label>
+      <input type="number" id="em-salary" placeholder="e.g. 500" min="0">
+    </div>
+    <div class="form-group">
+      <label>Join Date</label>
+      <input type="date" id="em-join">
+    </div>
+    <input type="hidden" id="em-id">
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeEmpModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveEmployee()" style="flex:1;">✅ Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD ADVANCE MODAL -->
+<div class="modal-overlay" id="adv-modal" onclick="if(event.target===this)closeAdvModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>💸 Record Advance — <span id="adv-emp-name"></span></h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Amount (₹) *</label>
+        <input type="number" id="adv-amount" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="adv-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Note (optional)</label>
+      <input type="text" id="adv-note" placeholder="e.g. Festival advance">
+    </div>
+    <input type="hidden" id="adv-emp-id">
+    <div id="adv-log-wrap" style="margin-bottom:14px;display:none;">
+      <div style="font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:6px;text-transform:uppercase;">Past Advances</div>
+      <div id="adv-log"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeAdvModal()">Close</button>
+      <button class="btn" style="flex:1;background:var(--orange);color:#fff;" onclick="saveAdvance()">💸 Save Advance</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirm-modal">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg"></p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  STORAGE KEYS
+// ══════════════════════════════════════════════════
+const K_EMP  = 'fc_employees';
+const K_ATT  = 'fc_attendance';
+const K_ADV  = 'fc_advances';
+const K_HELP = 'fc_day_helpers';
+
+const db = {
+  get: k => JSON.parse(localStorage.getItem(k)||'[]'),
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v))
+};
+
+// ══════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════
+function today(){ return new Date().toISOString().split('T')[0]; }
+function thisMonth(){ return today().slice(0,7); }
+function daysInMonth(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+function fmtDate(d){
+  if(!d) return '—';
+  return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+function initials(name){ return name ? name.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
+function sectionLabel(s){
+  return {tiffin:'🍳 Tiffin',meals:'🍽️ Meals',chat:'🥘 Chat',water:'💧 Water',all:'🏢 All',mixed:'🔀 Mixed'}[s]||s;
+}
+
+// Get daily wage — handles old records that stored monthly salary
+function getDailyWage(emp) {
+  if (emp.dailyWage) return Number(emp.dailyWage);
+  // migration: old monthly salary ÷ 26 working days
+  if (emp.salary) return Math.round(Number(emp.salary) / 26);
+  return 0;
+}
+
+// toast
+let _t;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// confirm
+let _confirmCb=null;
+function showConfirm(title,msg,cb){
+  _confirmCb=cb;
+  document.getElementById('confirm-title').textContent=title;
+  document.getElementById('confirm-msg').textContent=msg;
+  document.getElementById('confirm-ok-btn').onclick=()=>{closeConfirm();cb();};
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function closeConfirm(){ document.getElementById('confirm-modal').classList.remove('open'); }
+
+// ══════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    const tabs=['employees','attendance','helpers','salary'];
+    b.classList.toggle('active', tabs[i]===tab);
+  });
+  ['employees','attendance','helpers','salary'].forEach(t=>{
+    document.getElementById('page-'+t).classList.toggle('active', t===tab);
+  });
+  if(tab==='employees') renderEmployees();
+  if(tab==='attendance') renderAttendance();
+  if(tab==='helpers') renderHelpers();
+  if(tab==='salary') renderSalary();
+}
+
+// ══════════════════════════════════════════════════
+//  EMPLOYEES
+// ══════════════════════════════════════════════════
+function renderEmployees(){
+  const emps = db.get(K_EMP);
+  const el   = document.getElementById('emp-list');
+  if(!emps.length){
+    el.innerHTML=`<div class="empty"><div class="ei">👤</div><p>No employees yet. Add one above.</p></div>`;
+    return;
+  }
+  el.innerHTML = emps.map(e=>`
+    <div class="emp-card">
+      <div class="emp-avatar">${initials(e.name)}</div>
+      <div class="emp-info">
+        <div class="emp-name">${e.name}</div>
+        <div class="emp-meta">Joined: ${fmtDate(e.joinDate)}</div>
+        <div class="emp-tags">
+          <span class="tag tag-role">${e.role}</span>
+          <span class="tag tag-section">${sectionLabel(e.section)}</span>
+          <span class="tag tag-wage">₹${getDailyWage(e).toLocaleString('en-IN')}/day</span>
+        </div>
+      </div>
+      <div class="emp-actions">
+        <button class="icon-btn icon-btn-edit" title="Edit" onclick="editEmployee('${e.id}')">✏️</button>
+        <button class="icon-btn icon-btn-del"  title="Delete" onclick="deleteEmployee('${e.id}','${e.name}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function openEmpModal(editId){
+  const modal = document.getElementById('emp-modal');
+  document.getElementById('em-id').value = editId||'';
+  if(editId){
+    const e = db.get(K_EMP).find(x=>x.id===editId);
+    if(!e) return;
+    document.getElementById('emp-modal-title').textContent = '✏️ Edit Employee';
+    document.getElementById('em-name').value    = e.name;
+    document.getElementById('em-role').value    = e.role;
+    document.getElementById('em-section').value = e.section;
+    document.getElementById('em-salary').value  = getDailyWage(e);
+    document.getElementById('em-join').value    = e.joinDate||'';
+  } else {
+    document.getElementById('emp-modal-title').textContent = '👤 Add Employee';
+    ['em-name','em-salary','em-join'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('em-role').value='';
+    document.getElementById('em-section').value='';
+  }
+  modal.classList.add('open');
+}
+function closeEmpModal(){ document.getElementById('emp-modal').classList.remove('open'); }
+
+function saveEmployee(){
+  const id        = document.getElementById('em-id').value;
+  const name      = document.getElementById('em-name').value.trim();
+  const role      = document.getElementById('em-role').value;
+  const section   = document.getElementById('em-section').value;
+  const dailyWage = parseFloat(document.getElementById('em-salary').value)||0;
+  const join      = document.getElementById('em-join').value;
+
+  if(!name){ toast('⚠ Name is required'); return; }
+  if(!role){ toast('⚠ Select a role'); return; }
+  if(!section){ toast('⚠ Select a section'); return; }
+  if(!dailyWage){ toast('⚠ Enter daily wage'); return; }
+
+  const emps = db.get(K_EMP);
+  if(id){
+    const i = emps.findIndex(e=>e.id===id);
+    if(i>-1) emps[i] = {...emps[i], name, role, section, dailyWage, joinDate:join};
+  } else {
+    emps.push({ id:'emp_'+Date.now(), name, role, section, dailyWage, joinDate:join, active:true });
+  }
+  db.set(K_EMP, emps);
+  closeEmpModal();
+  renderEmployees();
+  toast(id ? '✅ Employee updated' : '✅ Employee added');
+}
+
+function editEmployee(id){ openEmpModal(id); }
+function deleteEmployee(id, name){
+  showConfirm('Delete Employee?', `Remove ${name}? Attendance and advance records will be kept.`, ()=>{
+    const emps = db.get(K_EMP).filter(e=>e.id!==id);
+    db.set(K_EMP, emps);
+    renderEmployees();
+    toast('🗑 Employee removed');
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  ATTENDANCE
+// ══════════════════════════════════════════════════
+function renderAttendance(){
+  const dateEl = document.getElementById('att-date');
+  const date   = dateEl.value || today();
+  if(!dateEl.value) dateEl.value = date;
+
+  const emps = db.get(K_EMP);
+  const att  = db.get(K_ATT);
+  const el   = document.getElementById('att-list');
+  const stats= document.getElementById('att-stats');
+  const wageEl = document.getElementById('att-wage-total');
+
+  if(!emps.length){
+    el.innerHTML=`<div class="empty"><div class="ei">👤</div><p>No employees. Add employees first.</p></div>`;
+    stats.innerHTML=''; wageEl.innerHTML='';
+    return;
+  }
+
+  // Count stats
+  let present=0, half=0, absent=0, extra=0, totalWage=0;
+  emps.forEach(e=>{
+    const rec = att.find(a=>a.empId===e.id && a.date===date);
+    if(rec?.status==='present') { present++; totalWage += rec.wage || getDailyWage(e); }
+    else if(rec?.status==='halfday') { half++; totalWage += rec.wage || getDailyWage(e)*0.5; }
+    else if(rec?.status==='absent') { absent++; }
+    else if(rec?.status==='extra') { extra++; totalWage += rec.wage || getDailyWage(e); }
+  });
+
+  stats.innerHTML = `
+    <div class="stat-chip green"><div class="snum">${present}</div><div class="slbl">Present</div></div>
+    <div class="stat-chip orange"><div class="snum">${half}</div><div class="slbl">Half Day</div></div>
+    <div class="stat-chip red"><div class="snum">${absent}</div><div class="slbl">Absent</div></div>
+    <div class="stat-chip purple"><div class="snum">${extra}</div><div class="slbl">Extra</div></div>`;
+
+  if(totalWage > 0){
+    wageEl.innerHTML = `<div class="wage-day-total"><span class="lbl">💰 Today's Total Wages (added to P&L)</span><span class="val">₹${totalWage.toLocaleString('en-IN')}</span></div>`;
+  } else {
+    wageEl.innerHTML = '';
+  }
+
+  el.innerHTML = emps.map(e=>{
+    const rec   = att.find(a=>a.empId===e.id && a.date===date);
+    const st    = rec?.status||'';
+    const dw    = getDailyWage(e);
+    let earnedStr = '';
+    if(st==='present')  earnedStr = `✅ ₹${(rec.wage||dw).toLocaleString('en-IN')} earned`;
+    if(st==='halfday')  earnedStr = `½ ₹${(rec.wage||Math.round(dw*0.5)).toLocaleString('en-IN')} earned`;
+    if(st==='absent')   earnedStr = `❌ ₹0 (absent)`;
+    if(st==='extra')    earnedStr = `⭐ ₹${(rec.wage||dw).toLocaleString('en-IN')} earned (extra)`;
+
+    const extraOpen = st==='extra' && !rec?.wage; // show panel only when first clicking extra
+    return `
+      <div class="att-wrap">
+        <div class="att-card ${st!=='extra'?'no-extra':''}">
+          <div class="att-avatar">${initials(e.name)}</div>
+          <div class="att-info">
+            <div class="att-name">${e.name}</div>
+            <div class="att-sub">${e.role} · ₹${dw.toLocaleString('en-IN')}/day</div>
+            ${earnedStr?`<div class="att-wage-badge">${earnedStr}</div>`:''}
+          </div>
+          <div class="att-btns">
+            <button class="att-btn ${st==='present'?'present':''}"  onclick="markAtt('${e.id}','present','${date}')">✅ P</button>
+            <button class="att-btn ${st==='halfday'?'halfday':''}"  onclick="markAtt('${e.id}','halfday','${date}')">½ H</button>
+            <button class="att-btn ${st==='absent'?'absent':''}"    onclick="markAtt('${e.id}','absent','${date}')">❌ A</button>
+            <button class="att-btn ${st==='extra'?'extra':''}"      onclick="markAttExtra('${e.id}','${date}')">⭐ E</button>
+          </div>
+        </div>
+        <div class="extra-panel ${st==='extra'?'open':''}" id="extra-panel-${e.id}">
+          <label>⭐ Extra amount (₹)</label>
+          <input type="number" id="extra-amt-${e.id}" placeholder="${dw}" min="${dw}"
+            value="${st==='extra'&&rec?.wage?rec.wage:''}"
+            onkeydown="if(event.key==='Enter')saveExtraWage('${e.id}','${date}')">
+          <button class="btn-save-extra" onclick="saveExtraWage('${e.id}','${date}')">Save ✅</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function markAtt(empId, status, date){
+  const emp = db.get(K_EMP).find(e=>e.id===empId);
+  const dw  = emp ? getDailyWage(emp) : 0;
+  const att = db.get(K_ATT);
+  const idx = att.findIndex(a=>a.empId===empId && a.date===date);
+
+  // Toggle off if same button clicked again
+  if(idx>-1 && att[idx].status===status){
+    att.splice(idx,1);
+  } else {
+    const wage = status==='present' ? dw
+               : status==='halfday' ? Math.round(dw*0.5)
+               : 0; // absent
+    if(idx>-1){ att[idx] = {...att[idx], status, wage}; }
+    else       { att.push({ id:'att_'+Date.now(), empId, date, status, wage }); }
+  }
+  db.set(K_ATT, att);
+  renderAttendance();
+}
+
+function markAttExtra(empId, date){
+  // Mark as extra and open the input panel
+  const emp = db.get(K_EMP).find(e=>e.id===empId);
+  const dw  = emp ? getDailyWage(emp) : 0;
+  const att = db.get(K_ATT);
+  const idx = att.findIndex(a=>a.empId===empId && a.date===date);
+
+  // Toggle off if extra already saved
+  if(idx>-1 && att[idx].status==='extra'){
+    att.splice(idx,1);
+    db.set(K_ATT, att);
+    renderAttendance();
+    return;
+  }
+
+  // Set status to extra with default wage = dailyWage (will be updated when user saves amount)
+  if(idx>-1){ att[idx] = {...att[idx], status:'extra', wage:dw}; }
+  else       { att.push({ id:'att_'+Date.now(), empId, date, status:'extra', wage:dw }); }
+  db.set(K_ATT, att);
+  renderAttendance();
+
+  // Focus the extra amount input
+  setTimeout(()=>{
+    const inp = document.getElementById('extra-amt-'+empId);
+    if(inp){ inp.select(); inp.focus(); }
+  }, 50);
+}
+
+function saveExtraWage(empId, date){
+  const inp    = document.getElementById('extra-amt-'+empId);
+  const amount = parseFloat(inp?.value)||0;
+  const emp    = db.get(K_EMP).find(e=>e.id===empId);
+  const dw     = emp ? getDailyWage(emp) : 0;
+
+  if(!amount){ toast('⚠ Enter the extra work amount'); return; }
+  if(amount <= dw){ toast(`⚠ Extra amount must be more than daily wage ₹${dw}`); return; }
+
+  const att = db.get(K_ATT);
+  const idx = att.findIndex(a=>a.empId===empId && a.date===date);
+  if(idx>-1){ att[idx].wage = amount; }
+  else       { att.push({ id:'att_'+Date.now(), empId, date, status:'extra', wage:amount }); }
+  db.set(K_ATT, att);
+  renderAttendance();
+  toast(`✅ Extra wage ₹${amount.toLocaleString('en-IN')} saved`);
+}
+
+// ══════════════════════════════════════════════════
+//  DAY HELPERS
+// ══════════════════════════════════════════════════
+let _helperSec = '';
+function selectHelperSec(el, sec){
+  _helperSec = sec;
+  document.querySelectorAll('#h-section-chips .schip').forEach(c=>{
+    c.className = 'schip';
+  });
+  el.classList.add('active-'+sec);
+}
+
+function addHelper(){
+  const date = document.getElementById('h-date').value || today();
+  const wage = parseFloat(document.getElementById('h-wage').value)||0;
+  const note = document.getElementById('h-note').value.trim();
+
+  if(!_helperSec){ toast('⚠ Select a section'); return; }
+  if(!wage){ toast('⚠ Enter wage amount'); return; }
+
+  const helpers = db.get(K_HELP);
+  helpers.push({ id:'hlp_'+Date.now(), date, section:_helperSec, wage, note });
+  db.set(K_HELP, helpers);
+
+  document.getElementById('h-wage').value = '';
+  document.getElementById('h-note').value = '';
+  _helperSec='';
+  document.querySelectorAll('#h-section-chips .schip').forEach(c=>c.className='schip');
+  document.getElementById('h-filter-date').value = date;
+  renderHelpers();
+  toast('✅ Day helper added');
+}
+
+function renderHelpers(){
+  const filterDate = document.getElementById('h-filter-date').value || today();
+  if(!document.getElementById('h-filter-date').value) document.getElementById('h-filter-date').value = filterDate;
+
+  const helpers = db.get(K_HELP).filter(h=>h.date===filterDate);
+  const el      = document.getElementById('helper-list');
+  const totEl   = document.getElementById('helper-total');
+
+  if(!helpers.length){
+    el.innerHTML=`<div class="empty" style="padding:20px;"><div class="ei">🔧</div><p>No day helpers for this date</p></div>`;
+    totEl.style.display='none';
+    return;
+  }
+
+  const total = helpers.reduce((s,h)=>s+h.wage,0);
+  el.innerHTML = helpers.map(h=>`
+    <div class="helper-row">
+      <div class="helper-icon">🔧</div>
+      <div class="helper-info">
+        <div class="helper-sec">${sectionLabel(h.section)}</div>
+        ${h.note?`<div class="helper-note">${h.note}</div>`:''}
+        <div class="helper-note">📅 ${fmtDate(h.date)}</div>
+      </div>
+      <div class="helper-wage">₹${h.wage.toLocaleString('en-IN')}</div>
+      <button class="helper-del" onclick="deleteHelper('${h.id}')">🗑</button>
+    </div>`).join('');
+
+  totEl.style.display='block';
+  totEl.textContent = `Total: ₹${total.toLocaleString('en-IN')}`;
+}
+
+function deleteHelper(id){
+  showConfirm('Delete Helper Entry?','Remove this day helper wage record?',()=>{
+    db.set(K_HELP, db.get(K_HELP).filter(h=>h.id!==id));
+    renderHelpers();
+    toast('🗑 Deleted');
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  ADVANCES
+// ══════════════════════════════════════════════════
+function openAdvModal(empId){
+  const emp = db.get(K_EMP).find(e=>e.id===empId);
+  if(!emp) return;
+  document.getElementById('adv-emp-id').value   = empId;
+  document.getElementById('adv-emp-name').textContent = emp.name;
+  document.getElementById('adv-amount').value   = '';
+  document.getElementById('adv-date').value     = today();
+  document.getElementById('adv-note').value     = '';
+  renderAdvLog(empId);
+  document.getElementById('adv-modal').classList.add('open');
+}
+function closeAdvModal(){ document.getElementById('adv-modal').classList.remove('open'); }
+
+function renderAdvLog(empId){
+  const advs = db.get(K_ADV).filter(a=>a.empId===empId).sort((a,b)=>b.date.localeCompare(a.date));
+  const wrap = document.getElementById('adv-log-wrap');
+  const el   = document.getElementById('adv-log');
+  if(!advs.length){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  el.innerHTML = advs.map(a=>`
+    <div class="adv-row">
+      <div>
+        <div style="font-weight:700;">${a.note||'Advance'}</div>
+        <div class="adv-date">${fmtDate(a.date)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="adv-amt">₹${Number(a.amount).toLocaleString('en-IN')}</span>
+        <button class="adv-del" onclick="deleteAdvance('${a.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function saveAdvance(){
+  const empId  = document.getElementById('adv-emp-id').value;
+  const amount = parseFloat(document.getElementById('adv-amount').value)||0;
+  const date   = document.getElementById('adv-date').value || today();
+  const note   = document.getElementById('adv-note').value.trim();
+  if(!amount){ toast('⚠ Enter advance amount'); return; }
+  const advs = db.get(K_ADV);
+  advs.push({ id:'adv_'+Date.now(), empId, amount, date, note });
+  db.set(K_ADV, advs);
+  document.getElementById('adv-amount').value='';
+  document.getElementById('adv-note').value='';
+  renderAdvLog(empId);
+  renderSalary();
+  toast('💸 Advance recorded');
+}
+
+function deleteAdvance(id){
+  db.set(K_ADV, db.get(K_ADV).filter(a=>a.id!==id));
+  const empId = document.getElementById('adv-emp-id').value;
+  renderAdvLog(empId);
+  renderSalary();
+  toast('🗑 Advance deleted');
+}
+
+// ══════════════════════════════════════════════════
+//  SALARY SUMMARY  (daily wage based)
+// ══════════════════════════════════════════════════
+function renderSalary(){
+  const monthEl = document.getElementById('sal-month');
+  const month   = monthEl.value || thisMonth();
+  if(!monthEl.value) monthEl.value = month;
+
+  const emps    = db.get(K_EMP);
+  const att     = db.get(K_ATT).filter(a=>a.date.startsWith(month));
+  const advs    = db.get(K_ADV).filter(a=>a.date.startsWith(month));
+  const helpers = db.get(K_HELP).filter(h=>h.date.startsWith(month));
+
+  const listEl = document.getElementById('sal-list');
+  const barEl  = document.getElementById('sal-total-bar');
+
+  if(!emps.length){
+    listEl.innerHTML=`<div class="empty"><div class="ei">💰</div><p>No employees added yet</p></div>`;
+    barEl.innerHTML='';
+    return;
+  }
+
+  let grandTotal = 0;
+  const helperTotal = helpers.reduce((s,h)=>s+h.wage,0);
+
+  const cards = emps.map(e=>{
+    const dw       = getDailyWage(e);
+    const empAtt   = att.filter(a=>a.empId===e.id);
+    const present  = empAtt.filter(a=>a.status==='present');
+    const halfdays = empAtt.filter(a=>a.status==='halfday');
+    const absents  = empAtt.filter(a=>a.status==='absent');
+    const extras   = empAtt.filter(a=>a.status==='extra');
+
+    // Sum wages from individual attendance records (already computed at mark time)
+    const earned = empAtt.reduce((s,a) => s + (a.wage||0), 0);
+    const advTotal = advs.filter(a=>a.empId===e.id).reduce((s,a)=>s+Number(a.amount),0);
+    const net      = Math.max(0, earned - advTotal);
+    grandTotal    += net;
+
+    const daysWorked = present.length + halfdays.length * 0.5 + extras.length;
+
+    return `
+      <div class="sal-card">
+        <div class="sal-head">
+          <div>
+            <div class="sal-name">${e.name}</div>
+            <div style="font-size:.73rem;color:var(--sub);margin-top:2px;">${e.role} · ${sectionLabel(e.section)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="sal-net">₹${net.toLocaleString('en-IN')}</div>
+            <button class="adv-btn" onclick="openAdvModal('${e.id}')">💸 Advance</button>
+          </div>
+        </div>
+        <div class="sal-rows">
+          <div class="sal-row"><span class="lbl">Daily Wage</span><span class="val">₹${dw.toLocaleString('en-IN')}/day</span></div>
+          <div class="sal-row"><span class="lbl">✅ Present Days</span><span class="val green">${present.length} days × ₹${dw.toLocaleString('en-IN')}</span></div>
+          ${halfdays.length?`<div class="sal-row"><span class="lbl">½ Half Days</span><span class="val" style="color:var(--orange);">${halfdays.length} × ₹${Math.round(dw*0.5).toLocaleString('en-IN')}</span></div>`:''}
+          ${extras.length?`<div class="sal-row"><span class="lbl">⭐ Extra Work Days</span><span class="val" style="color:var(--purple);">${extras.length} day(s) · ₹${extras.reduce((s,a)=>s+(a.wage||0),0).toLocaleString('en-IN')}</span></div>`:''}
+          ${absents.length?`<div class="sal-row"><span class="lbl">❌ Absent Days</span><span class="val red">${absents.length} days</span></div>`:''}
+          <div class="sal-row"><span class="lbl">Total Days Worked</span><span class="val">${daysWorked}</span></div>
+          <div class="sal-row"><span class="lbl">Gross Earned</span><span class="val green">₹${earned.toLocaleString('en-IN')}</span></div>
+          ${advTotal>0?`<div class="sal-row"><span class="lbl">💸 Advance Deduction</span><span class="val red">− ₹${advTotal.toLocaleString('en-IN')}</span></div>`:''}
+          <div class="sal-row" style="background:var(--green-soft);">
+            <span class="lbl" style="font-weight:800;color:var(--text);">Net Payable</span>
+            <span class="val green" style="font-size:1rem;">₹${net.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  listEl.innerHTML = cards + (helperTotal>0?`
+    <div class="sal-card">
+      <div class="sal-head" style="background:var(--orange-soft);">
+        <div><div class="sal-name">🔧 Day Helpers</div><div style="font-size:.73rem;color:var(--sub);margin-top:2px;">All sections combined</div></div>
+        <div class="sal-net" style="color:var(--orange);">₹${helperTotal.toLocaleString('en-IN')}</div>
+      </div>
+      <div class="sal-rows">
+        ${helpers.map(h=>`<div class="sal-row"><span class="lbl">${fmtDate(h.date)} · ${sectionLabel(h.section)} ${h.note?'· '+h.note:''}</span><span class="val">₹${h.wage.toLocaleString('en-IN')}</span></div>`).join('')}
+      </div>
+    </div>`:'');
+
+  const totalAll = grandTotal + helperTotal;
+  barEl.innerHTML = `
+    <div class="sal-total-bar">
+      <div>
+        <div class="lbl">Total Payroll — ${new Date(month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.7);margin-top:2px;">Staff: ₹${grandTotal.toLocaleString('en-IN')} + Helpers: ₹${helperTotal.toLocaleString('en-IN')}</div>
+      </div>
+      <div class="val">₹${totalAll.toLocaleString('en-IN')}</div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+fcInit(function(){
+  document.getElementById('att-date').value        = today();
+  document.getElementById('h-date').value          = today();
+  document.getElementById('h-filter-date').value   = today();
+  document.getElementById('sal-month').value       = thisMonth();
+  renderEmployees();
+});
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

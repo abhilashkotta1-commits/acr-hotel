@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amma Cheti Ruchulu — Org Chart</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header a { color: rgba(255,255,255,.75); font-size: 18px; text-decoration: none; line-height: 1; }
+  .header-title { font-size: 17px; font-weight: 700; }
+  .header-sub { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 1px; }
+
+  .page-body { padding: 24px 16px; max-width: 860px; margin: 0 auto; }
+
+  /* Tree */
+  .tree { display: flex; flex-direction: column; align-items: center; }
+  .connector-down { width: 2px; height: 32px; background: #94a3b8; }
+  .h-line { height: 2px; background: #94a3b8; margin-bottom: 0; }
+  .connector-up { width: 2px; height: 32px; background: #94a3b8; }
+
+  .group-row {
+    display: flex; justify-content: center; gap: 20px;
+    flex-wrap: wrap; width: 100%;
+  }
+  .branch { display: flex; flex-direction: column; align-items: center; }
+  .branch-cards { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* Cards */
+  .card {
+    border-radius: 14px; padding: 14px 16px;
+    min-width: 160px; max-width: 200px;
+    text-align: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,.12);
+    border: 2px solid transparent;
+    position: relative;
+    cursor: default;
+  }
+  .card .role-badge {
+    font-size: .65rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; padding: 3px 9px;
+    border-radius: 999px; display: inline-block; margin-bottom: 7px;
+  }
+  .card .pname { font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
+  .card .access-label { font-size: .72rem; margin-top: 4px; }
+
+  .card .card-actions {
+    display: flex; gap: 6px; justify-content: center; margin-top: 10px;
+  }
+  .card-btn {
+    font-size: .68rem; padding: 3px 9px; border-radius: 6px; border: none;
+    cursor: pointer; font-weight: 600;
+    background: rgba(255,255,255,.2); color: inherit;
+  }
+  .card-btn:hover { background: rgba(255,255,255,.35); }
+  .card-btn.del { background: rgba(255,0,0,.25); }
+  .card-btn.del:hover { background: rgba(255,0,0,.4); }
+
+  /* Role colour themes */
+  .theme-admin     { background: linear-gradient(135deg,#1e3a5f,#2563eb); color:#fff; border-color:#1e40af; }
+  .theme-admin     .role-badge { background:rgba(255,255,255,.2); color:#fff; }
+  .theme-admin     .access-label { color:#bfdbfe; }
+
+  .theme-manager   { background: linear-gradient(135deg,#065f46,#059669); color:#fff; border-color:#047857; }
+  .theme-manager   .role-badge { background:rgba(255,255,255,.2); color:#fff; }
+  .theme-manager   .access-label { color:#a7f3d0; }
+
+  .theme-partner   { background: linear-gradient(135deg,#4c1d95,#7c3aed); color:#fff; border-color:#6d28d9; }
+  .theme-partner   .role-badge { background:rgba(255,255,255,.2); color:#fff; }
+  .theme-partner   .access-label { color:#ddd6fe; }
+
+  .theme-storekeeper { background: linear-gradient(135deg,#92400e,#d97706); color:#fff; border-color:#b45309; }
+  .theme-storekeeper .role-badge { background:rgba(255,255,255,.2); color:#fff; }
+  .theme-storekeeper .access-label { color:#fde68a; }
+
+  /* Add card */
+  .card-add {
+    border-radius: 14px; padding: 14px 16px;
+    min-width: 140px; max-width: 180px;
+    text-align: center;
+    border: 2px dashed #94a3b8; background: #f8fafc;
+    color: #64748b; cursor: pointer;
+    transition: border-color .15s, background .15s;
+    font-size: .85rem; font-weight: 600;
+  }
+  .card-add:hover { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+  .card-add .add-icon { font-size: 1.4rem; margin-bottom: 6px; }
+
+  /* Branch label */
+  .branch-label {
+    font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #94a3b8;
+    margin-bottom: 8px; text-align: center;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 14px; justify-content: center;
+    flex-wrap: wrap; margin-top: 32px; padding: 16px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: .8rem; color: #374151; font-weight: 600; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Modal */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 16px; padding: 24px;
+    width: 90%; max-width: 340px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  }
+  .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: #1e293b; }
+  .modal label { font-size: .8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 5px; }
+  .modal input {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0;
+    border-radius: 9px; font-size: .95rem; font-family: inherit;
+    outline: none;
+  }
+  .modal input:focus { border-color: #2563eb; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+  .mbtn {
+    flex: 1; padding: 10px; border: none; border-radius: 9px;
+    font-size: .88rem; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+  .mbtn-primary { background: #2563eb; color: #fff; }
+  .mbtn-primary:hover { background: #1d4ed8; }
+  .mbtn-cancel { background: #f1f5f9; color: #64748b; }
+  .mbtn-cancel:hover { background: #e2e8f0; }
+
+  /* Confirm delete modal */
+  .del-modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 300;
+    align-items: center; justify-content: center;
+  }
+  .del-modal-bg.open { display: flex; }
+  .del-modal {
+    background: #fff; border-radius: 16px; padding: 24px;
+    width: 90%; max-width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .del-modal .del-icon { font-size: 2rem; margin-bottom: 8px; }
+  .del-modal h3 { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+  .del-modal p { font-size: .83rem; color: #64748b; margin-bottom: 18px; }
+  .del-modal-btns { display: flex; gap: 10px; }
+
+  @media (max-width: 600px) {
+    .group-row { gap: 12px; }
+    .card, .card-add { min-width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html" title="Home">←</a>
+  <div>
+    <div class="header-title">🏢 Organisation Chart</div>
+    <div class="header-sub">Amma Cheti Ruchulu · Role & Access Structure</div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="tree" id="tree"></div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Admin — Full Control</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> Manager — Full Control</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Partner — View Access</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Store Keeper — Inventory Only</div>
+  </div>
+</div>
+
+<!-- Add Person Modal -->
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h3 id="addModalTitle">➕ Add Person</h3>
+    <label>Name</label>
+    <input type="text" id="addName" placeholder="Enter name..." maxlength="40">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="mbtn mbtn-primary" onclick="confirmAdd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Person Modal -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3 id="editModalTitle">✏️ Edit Person</h3>
+    <label>Name</label>
+    <input type="text" id="editName" placeholder="Enter name..." maxlength="40">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="mbtn mbtn-primary" onclick="confirmEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="del-modal-bg" id="delModal">
+  <div class="del-modal">
+    <div class="del-icon">🗑️</div>
+    <h3>Remove Person?</h3>
+    <p id="delModalMsg">Are you sure?</p>
+    <div class="del-modal-btns">
+      <button class="mbtn mbtn-cancel" style="flex:1" onclick="closeDelModal()">Cancel</button>
+      <button class="mbtn" style="flex:1;background:#ef4444;color:#fff" onclick="confirmDel()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'fc_org_people';
+
+const ROLE_META = {
+  admin:       { label:'👑 Super Admin', theme:'theme-admin',       access:'Full Access — All Modules',    canAdd: false },
+  manager:     { label:'🛠 Manager',     theme:'theme-manager',     access:'Same access as Admin',          canAdd: true  },
+  partner:     { label:'🤝 Partner',     theme:'theme-partner',     access:'View access — Reports & P&L',   canAdd: true  },
+  storekeeper: { label:'📦 Store Keeper',theme:'theme-storekeeper', access:'Inventory & Usage only',        canAdd: true  },
+};
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData(); } catch { return defaultData(); }
+}
+function defaultData() {
+  return {
+    admin:       [{ id: uid(), name: 'Abhilash' }],
+    manager:     [{ id: uid(), name: 'Srinivas' }, { id: uid(), name: 'Murari' }],
+    partner:     [{ id: uid(), name: 'Sudhakar' }, { id: uid(), name: 'Mohan' }],
+    storekeeper: [],
+  };
+}
+function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ── Modal state ──
+let pendingRole = null, pendingIdx = null;
+
+function openAddModal(role) {
+  pendingRole = role;
+  document.getElementById('addModalTitle').textContent = '➕ Add ' + ROLE_META[role].label.split(' ').slice(1).join(' ');
+  document.getElementById('addName').value = '';
+  document.getElementById('addModal').classList.add('open');
+  setTimeout(() => document.getElementById('addName').focus(), 100);
+}
+function closeAddModal() { document.getElementById('addModal').classList.remove('open'); pendingRole = null; }
+function confirmAdd() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { document.getElementById('addName').focus(); return; }
+  const d = loadData();
+  d[pendingRole].push({ id: uid(), name });
+  saveData(d); closeAddModal(); render();
+}
+
+function openEditModal(role, idx) {
+  pendingRole = role; pendingIdx = idx;
+  const d = loadData();
+  document.getElementById('editModalTitle').textContent = '✏️ Edit — ' + ROLE_META[role].label.split(' ').slice(1).join(' ');
+  document.getElementById('editName').value = d[role][idx].name;
+  document.getElementById('editModal').classList.add('open');
+  setTimeout(() => document.getElementById('editName').focus(), 100);
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); pendingRole = null; pendingIdx = null; }
+function confirmEdit() {
+  const name = document.getElementById('editName').value.trim();
+  if (!name) { document.getElementById('editName').focus(); return; }
+  const d = loadData();
+  d[pendingRole][pendingIdx].name = name;
+  saveData(d); closeEditModal(); render();
+}
+
+function openDelModal(role, idx) {
+  pendingRole = role; pendingIdx = idx;
+  const d = loadData();
+  document.getElementById('delModalMsg').textContent = `Remove "${d[role][idx].name}" from ${ROLE_META[role].label}?`;
+  document.getElementById('delModal').classList.add('open');
+}
+function closeDelModal() { document.getElementById('delModal').classList.remove('open'); pendingRole = null; pendingIdx = null; }
+function confirmDel() {
+  const d = loadData();
+  d[pendingRole].splice(pendingIdx, 1);
+  saveData(d); closeDelModal(); render();
+}
+
+// Close modals on backdrop click
+document.getElementById('addModal').addEventListener('click', function(e){ if(e.target===this) closeAddModal(); });
+document.getElementById('editModal').addEventListener('click', function(e){ if(e.target===this) closeEditModal(); });
+document.getElementById('delModal').addEventListener('click', function(e){ if(e.target===this) closeDelModal(); });
+
+// Enter key in inputs
+document.getElementById('addName').addEventListener('keydown', e => { if(e.key==='Enter') confirmAdd(); });
+document.getElementById('editName').addEventListener('keydown', e => { if(e.key==='Enter') confirmEdit(); });
+
+// ── Render ──
+function render() {
+  const d = loadData();
+  const tree = document.getElementById('tree');
+
+  // Admin card (not editable by others, but name can be edited)
+  const adminCards = d.admin.map((p, i) => `
+    <div class="card theme-admin">
+      <span class="role-badge">${ROLE_META.admin.label}</span>
+      <div class="pname">${esc(p.name)}</div>
+      <div class="access-label">${ROLE_META.admin.access}</div>
+      <div class="card-actions">
+        <button class="card-btn" onclick="openEditModal('admin',${i})">✏️ Edit</button>
+      </div>
+    </div>`).join('');
+
+  // Branch renderer
+  function branch(role) {
+    const meta = ROLE_META[role];
+    const people = d[role];
+    const cards = people.map((p, i) => `
+      <div class="card ${meta.theme}">
+        <span class="role-badge">${meta.label}</span>
+        <div class="pname">${esc(p.name)}</div>
+        <div class="access-label">${meta.access}</div>
+        <div class="card-actions">
+          <button class="card-btn" onclick="openEditModal('${role}',${i})">✏️</button>
+          <button class="card-btn del" onclick="openDelModal('${role}',${i})">🗑</button>
+        </div>
+      </div>`).join('');
+
+    const addCard = meta.canAdd ? `
+      <div class="card-add" onclick="openAddModal('${role}')">
+        <div class="add-icon">➕</div>
+        Add ${meta.label.split(' ').slice(1).join(' ')}
+      </div>` : '';
+
+    return `
+      <div class="branch">
+        <div class="connector-up"></div>
+        <div class="branch-cards">${cards}${addCard}</div>
+      </div>`;
+  }
+
+  tree.innerHTML = `
+    <!-- Admin -->
+    <div style="display:flex;flex-direction:column;align-items:center">
+      ${adminCards}
+      <div class="connector-down"></div>
+    </div>
+    <!-- H-line -->
+    <div class="h-line" style="width:72%"></div>
+    <!-- Branches -->
+    <div class="group-row" style="margin-top:0;align-items:flex-start">
+      ${branch('manager')}
+      ${branch('partner')}
+      ${branch('storekeeper')}
+    </div>`;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+fcInit(function(){ render(); });
+</script>
+</body>
+</html>

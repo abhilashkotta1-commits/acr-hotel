@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+  <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ACR Hotel">
+  <meta name="theme-color" content="#1e293b">
+  <title>Amma Cheti Ruchulu — Other Expenses</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f6fa;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --green: #10b981;
+      --green-soft: #d1fae5;
+      --red: #ef4444;
+      --red-soft: #fee2e2;
+      --orange: #f59e0b;
+      --orange-soft: #fef3c7;
+      --purple: #8b5cf6;
+      --purple-soft: #ede9fe;
+      --text: #0f172a;
+      --sub: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ─── HEADER ─── */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 60%, #475569 100%);
+      padding: 20px 20px 64px; position: relative; overflow: hidden;
+    }
+    .header::before { content:''; position:absolute; width:260px; height:260px; background:rgba(255,255,255,.05); border-radius:50%; top:-90px; right:-40px; }
+    .header::after  { content:''; position:absolute; width:160px; height:160px; background:rgba(255,255,255,.04); border-radius:50%; bottom:-60px; left:30px; }
+    .header-inner { display:flex; align-items:flex-start; justify-content:space-between; position:relative; z-index:1; max-width:760px; margin:0 auto; }
+    .header h1 { font-size:1.3rem; font-weight:800; color:#fff; letter-spacing:-.02em; }
+    .header p  { font-size:.78rem; color:rgba(255,255,255,.65); margin-top:4px; }
+    .hbtn { padding:8px 14px; border-radius:999px; font-size:.78rem; font-weight:600; cursor:pointer; border:none; display:flex; align-items:center; gap:5px; transition:all .15s; text-decoration:none; }
+    .hbtn-ghost { background:rgba(255,255,255,.15); color:#fff; backdrop-filter:blur(8px); }
+    .hbtn-ghost:hover { background:rgba(255,255,255,.25); }
+
+    /* ─── TABS ─── */
+    .tabs-wrap { max-width:760px; margin:-38px auto 0; padding:0 16px; position:relative; z-index:10; }
+    .tabs { display:flex; background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .tab-btn { flex:1; padding:13px 8px; text-align:center; font-size:.82rem; font-weight:600; color:var(--sub); cursor:pointer; border:none; background:none; font-family:inherit; transition:all .18s; border-bottom:2px solid transparent; }
+    .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); background:var(--primary-soft); }
+
+    /* ─── MAIN ─── */
+    .main { max-width:760px; margin:18px auto 40px; padding:0 16px; }
+
+    /* ─── SECTION CARD ─── */
+    .section-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:18px; overflow:hidden; }
+    .section-head { padding:16px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .section-head h2 { font-size:.95rem; font-weight:700; }
+    .section-body { padding:18px 20px; }
+
+    /* ─── MONTH SELECTOR BAR ─── */
+    .month-bar { display:flex; align-items:center; gap:10px; margin-bottom:18px; background:var(--bg); border-radius:var(--radius-sm); padding:10px 14px; }
+    .month-bar label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+    .month-bar input[type=month] { flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; font-size:.88rem; font-family:inherit; background:#fff; }
+
+    /* ─── FORM ROW ─── */
+    .form-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+    .form-group { display:flex; flex-direction:column; gap:5px; flex:1; min-width:140px; }
+    .form-group label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+    .form-group input, .form-group select, .form-group textarea {
+      border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      padding:9px 11px; font-size:.9rem; font-family:inherit; background:#fff;
+      transition:border-color .15s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--primary); outline:none; }
+    .hint { font-size:.7rem; color:var(--sub); margin-top:3px; }
+
+    /* ─── ADD BUTTON ─── */
+    .btn-add {
+      background:var(--primary); color:#fff; border:none; border-radius:var(--radius-sm);
+      padding:10px 22px; font-size:.88rem; font-weight:700; cursor:pointer; font-family:inherit;
+      transition:filter .15s; display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn-add:hover { filter:brightness(1.1); }
+    .btn-add:active { filter:brightness(.95); }
+
+    /* ─── FIXED COST LIST ─── */
+    .fc-list { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+    .fc-item { display:flex; align-items:center; gap:10px; background:var(--bg); border-radius:var(--radius-sm); padding:11px 14px; }
+    .fc-item-name { font-weight:700; font-size:.9rem; }
+    .fc-item-default { font-size:.75rem; color:var(--sub); margin-top:2px; }
+    .fc-item-input { width:100px; border:1.5px solid var(--border); border-radius:6px; padding:6px 9px; font-size:.88rem; font-family:inherit; text-align:right; }
+    .fc-item-input:focus { border-color:var(--primary); outline:none; }
+    .btn-del { background:var(--red-soft); color:var(--red); border:none; border-radius:6px; width:30px; height:30px; cursor:pointer; font-size:.85rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .fc-total-bar { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--primary-soft); border-radius:var(--radius-sm); font-weight:700; font-size:.9rem; color:var(--primary-dark); }
+
+    /* ─── VARIABLE EXPENSE LIST ─── */
+    .exp-list { display:flex; flex-direction:column; gap:10px; }
+    .exp-item { display:flex; align-items:flex-start; gap:10px; background:var(--bg); border-radius:var(--radius-sm); padding:12px 14px; }
+    .exp-item-info { flex:1; }
+    .exp-item-desc { font-weight:700; font-size:.9rem; }
+    .exp-item-meta { font-size:.75rem; color:var(--sub); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; }
+    .exp-item-amt { font-weight:800; font-size:.95rem; color:var(--red); white-space:nowrap; }
+    .tag-scope { padding:2px 8px; border-radius:999px; font-size:.7rem; font-weight:700; }
+    .tag-daily   { background:var(--orange-soft); color:#92400e; }
+    .tag-monthly { background:var(--purple-soft); color:#5b21b6; }
+
+    /* ─── TYPE TOGGLE ─── */
+    .type-toggle { display:flex; gap:8px; margin-bottom:14px; }
+    .type-btn {
+      flex:1; padding:10px 8px; border-radius:var(--radius-sm); border:2px solid var(--border);
+      background:#fff; cursor:pointer; text-align:center; font-size:.82rem; font-weight:600;
+      color:var(--sub); transition:all .15s; font-family:inherit;
+    }
+    .type-btn.active-daily   { border-color:var(--orange); background:var(--orange-soft); color:#92400e; }
+    .type-btn.active-monthly { border-color:var(--purple); background:var(--purple-soft); color:#5b21b6; }
+
+    /* ─── FILTER BAR ─── */
+    .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+    .filter-bar select, .filter-bar input[type=month] {
+      border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      padding:7px 10px; font-size:.83rem; font-family:inherit; background:#fff;
+    }
+
+    /* ─── EMPTY STATE ─── */
+    .empty { text-align:center; padding:32px 16px; color:var(--sub); }
+    .empty-icon { font-size:2.2rem; margin-bottom:10px; }
+
+    /* ─── DIVIDER ─── */
+    .divider { height:1px; background:var(--border); margin:18px 0; }
+
+    /* ─── TOAST ─── */
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:#1e293b; color:#fff; padding:10px 22px; border-radius:999px; font-size:.85rem; font-weight:600; opacity:0; transition:all .3s; pointer-events:none; z-index:999; white-space:nowrap; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ─── ERROR MODAL ─── */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500; align-items:center; justify-content:center; }
+    .overlay.open { display:flex; }
+    .err-box { background:#fff; border-radius:var(--radius); padding:28px 24px; max-width:320px; text-align:center; }
+    .err-icon { font-size:2rem; margin-bottom:10px; }
+    .err-box p { color:var(--sub); font-size:.9rem; margin-bottom:16px; }
+    .err-box button { background:var(--primary); color:#fff; border:none; border-radius:var(--radius-sm); padding:9px 28px; font-size:.88rem; font-weight:700; cursor:pointer; font-family:inherit; }
+
+    @media(max-width:500px){
+      .form-row { flex-direction:column; }
+      .form-group { min-width:unset; }
+      .type-toggle { flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>💸 Other Expenses</h1>
+      <p>Fixed overheads & miscellaneous variable costs</p>
+    </div>
+    <a href="pnl.html" class="hbtn hbtn-ghost">📊 P&L</a>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-fixed"    onclick="switchTab('fixed')">🏢 Fixed Overheads</button>
+    <button class="tab-btn"        id="tab-variable" onclick="switchTab('variable')">🔀 Variable Expenses</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ══════════════ FIXED OVERHEADS TAB ══════════════ -->
+  <div id="pane-fixed">
+
+    <!-- Month selector -->
+    <div class="section-card">
+      <div class="section-head">
+        <h2>📅 Select Month</h2>
+      </div>
+      <div class="section-body">
+        <div class="month-bar" style="margin-bottom:0">
+          <label>Month</label>
+          <input type="month" id="fc-month" onchange="renderFixedList()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed costs list for selected month -->
+    <div class="section-card">
+      <div class="section-head">
+        <h2>📋 Monthly Overheads</h2>
+        <span id="fc-month-label" style="font-size:.78rem;color:var(--sub);font-weight:600"></span>
+      </div>
+      <div class="section-body">
+        <div id="fc-list"><p style="color:var(--sub);font-size:.88rem;text-align:center;padding:12px 0">No fixed costs added yet.</p></div>
+        <div id="fc-total-bar" class="fc-total-bar" style="display:none;margin-top:14px">
+          <span>Total for month</span>
+          <span id="fc-total-amt">₹0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add new fixed cost -->
+    <div class="section-card">
+      <div class="section-head">
+        <h2>➕ Add Fixed Overhead</h2>
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Name *</label>
+            <input type="text" id="fc-name" placeholder="e.g. Rent, Electricity, Internet">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Default Monthly ₹</label>
+            <input type="number" id="fc-amt" placeholder="0" min="0">
+            <span class="hint">Used if no override set</span>
+          </div>
+        </div>
+        <button class="btn-add" onclick="addFixedCost()">➕ Add Overhead</button>
+      </div>
+    </div>
+
+  </div><!-- /pane-fixed -->
+
+  <!-- ══════════════ VARIABLE EXPENSES TAB ══════════════ -->
+  <div id="pane-variable" style="display:none">
+
+    <!-- Add variable expense -->
+    <div class="section-card">
+      <div class="section-head">
+        <h2>➕ Add Variable Expense</h2>
+      </div>
+      <div class="section-body">
+
+        <!-- Daily or Monthly toggle -->
+        <div style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Expense Scope</div>
+        <div class="type-toggle">
+          <button class="type-btn active-daily" id="scope-daily" onclick="setScope('daily')">
+            📅 Single Day<br><span style="font-size:.72rem;font-weight:500">Records on a specific date</span>
+          </button>
+          <button class="type-btn" id="scope-monthly" onclick="setScope('monthly')">
+            🗓️ Full Month<br><span style="font-size:.72rem;font-weight:500">Applies to entire month</span>
+          </button>
+        </div>
+
+        <!-- Date / Month picker -->
+        <div class="form-row" id="scope-date-row">
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" id="var-date">
+          </div>
+        </div>
+        <div class="form-row" id="scope-month-row" style="display:none">
+          <div class="form-group">
+            <label>Month *</label>
+            <input type="month" id="var-month">
+          </div>
+        </div>
+
+        <!-- Description + Amount -->
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Description *</label>
+            <input type="text" id="var-desc" placeholder="e.g. Auto fare, Courier charge, Tool repair">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Amount ₹ *</label>
+            <input type="number" id="var-amt" placeholder="0" min="0" step="0.01">
+          </div>
+        </div>
+
+        <button class="btn-add" onclick="addVarExpense()">➕ Add Expense</button>
+      </div>
+    </div>
+
+    <!-- Filter + List -->
+    <div class="section-card">
+      <div class="section-head">
+        <h2>📋 Expense History</h2>
+      </div>
+      <div class="section-body">
+        <div class="filter-bar">
+          <select id="var-filter-scope" onchange="renderVarList()">
+            <option value="">All (Daily + Monthly)</option>
+            <option value="daily">Daily only</option>
+            <option value="monthly">Monthly only</option>
+          </select>
+          <input type="month" id="var-filter-month" onchange="renderVarList()">
+        </div>
+        <div id="var-list"></div>
+      </div>
+    </div>
+
+  </div><!-- /pane-variable -->
+
+</div><!-- /main -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ERROR MODAL -->
+<div class="overlay" id="err-modal">
+  <div class="err-box">
+    <div class="err-icon">⚠️</div>
+    <p id="err-msg"></p>
+    <button onclick="document.getElementById('err-modal').classList.remove('open')">OK</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════════
+const FC_KEY  = 'fc_fixed_costs';
+const VAR_KEY = 'fc_misc_expenses';
+
+function getFixed()    { return JSON.parse(localStorage.getItem(FC_KEY)  || '[]'); }
+function saveFixed(a)  { localStorage.setItem(FC_KEY,  JSON.stringify(a)); }
+function getVar()      { return JSON.parse(localStorage.getItem(VAR_KEY) || '[]'); }
+function saveVar(a)    { localStorage.setItem(VAR_KEY, JSON.stringify(a)); }
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function today()   { return new Date().toISOString().split('T')[0]; }
+function thisMonth(){ return today().slice(0,7); }
+function fmt(n)    { return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function monthLabel(ym){ if(!ym) return ''; const [y,m]=ym.split('-'); return new Date(y,m-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'}); }
+
+// ══════════════════════════════════════════════
+//  TAB SWITCH
+// ══════════════════════════════════════════════
+let activeTab = 'fixed';
+function switchTab(tab){
+  activeTab = tab;
+  document.getElementById('pane-fixed').style.display    = tab==='fixed'    ? '' : 'none';
+  document.getElementById('pane-variable').style.display = tab==='variable' ? '' : 'none';
+  document.getElementById('tab-fixed').classList.toggle('active',    tab==='fixed');
+  document.getElementById('tab-variable').classList.toggle('active', tab==='variable');
+}
+
+// ══════════════════════════════════════════════
+//  FIXED OVERHEADS
+// ══════════════════════════════════════════════
+function renderFixedList(){
+  const ym     = document.getElementById('fc-month').value;
+  const costs  = getFixed();
+  const listEl = document.getElementById('fc-list');
+  const totalBar = document.getElementById('fc-total-bar');
+
+  document.getElementById('fc-month-label').textContent = ym ? monthLabel(ym) : '';
+
+  if(!costs.length){
+    listEl.innerHTML = `<p style="color:var(--sub);font-size:.88rem;text-align:center;padding:12px 0">No fixed costs added yet. Add one below ↓</p>`;
+    totalBar.style.display = 'none';
+    return;
+  }
+
+  listEl.innerHTML = `<div class="fc-list">${costs.map(c => {
+    const monthAmt = (ym && c.monthly && c.monthly[ym] != null) ? c.monthly[ym] : '';
+    return `
+    <div class="fc-item">
+      <div style="flex:1">
+        <div class="fc-item-name">${c.name}</div>
+        <div class="fc-item-default">Default: ${fmt(c.amount||0)}</div>
+      </div>
+      <input class="fc-item-input" type="number" min="0" step="0.01"
+        placeholder="${c.amount||0}" value="${monthAmt}"
+        onchange="saveFcMonthAmt('${c.id}','${ym}',this.value)"
+        title="Amount for ${ym||'month'}">
+      <button class="btn-del" onclick="deleteFixed('${c.id}')">🗑</button>
+    </div>`;
+  }).join('')}</div>`;
+
+  // Total
+  const total = calcFixedForMonth(ym);
+  document.getElementById('fc-total-amt').textContent = fmt(total);
+  totalBar.style.display = total > 0 ? 'flex' : 'none';
+}
+
+function calcFixedForMonth(ym){
+  if(!ym) return 0;
+  return getFixed().reduce((s,c) => {
+    const override = c.monthly && c.monthly[ym] != null ? c.monthly[ym] : c.amount||0;
+    return s + Number(override);
+  }, 0);
+}
+
+function saveFcMonthAmt(id, ym, valStr){
+  if(!ym){ showErr('Please select a month first.'); return; }
+  const amt   = parseFloat(valStr);
+  const costs = getFixed();
+  const cost  = costs.find(c => c.id === id);
+  if(!cost) return;
+  if(!cost.monthly) cost.monthly = {};
+  if(isNaN(amt) || valStr.trim() === ''){
+    delete cost.monthly[ym];
+  } else {
+    cost.monthly[ym] = amt;
+  }
+  saveFixed(costs);
+  renderFixedList();
+  toast('✅ Amount saved');
+}
+
+function addFixedCost(){
+  const name = document.getElementById('fc-name').value.trim();
+  const amt  = parseFloat(document.getElementById('fc-amt').value) || 0;
+  if(!name){ showErr('Please enter a name.'); return; }
+  const costs = getFixed();
+  if(costs.find(c => c.name.toLowerCase() === name.toLowerCase())){
+    showErr(`"${name}" already exists in fixed costs.`); return;
+  }
+  costs.push({ id:'fxc_'+Date.now(), name, amount:amt, monthly:{} });
+  saveFixed(costs);
+  document.getElementById('fc-name').value = '';
+  document.getElementById('fc-amt').value  = '';
+  renderFixedList();
+  toast(`✅ "${name}" added to fixed overheads`);
+}
+
+function deleteFixed(id){
+  const costs = getFixed();
+  const item  = costs.find(c => c.id === id);
+  saveFixed(costs.filter(c => c.id !== id));
+  renderFixedList();
+  toast(`🗑 "${item?.name}" removed`);
+}
+
+// ══════════════════════════════════════════════
+//  VARIABLE EXPENSES
+// ══════════════════════════════════════════════
+let currentScope = 'daily';
+
+function setScope(scope){
+  currentScope = scope;
+  document.getElementById('scope-daily').className   = 'type-btn' + (scope==='daily'   ? ' active-daily'   : '');
+  document.getElementById('scope-monthly').className = 'type-btn' + (scope==='monthly' ? ' active-monthly' : '');
+  document.getElementById('scope-date-row').style.display  = scope==='daily'   ? '' : 'none';
+  document.getElementById('scope-month-row').style.display = scope==='monthly' ? '' : 'none';
+}
+
+function addVarExpense(){
+  const desc  = document.getElementById('var-desc').value.trim();
+  const amt   = parseFloat(document.getElementById('var-amt').value);
+  const scope = currentScope;
+
+  if(!desc){ showErr('Please enter a description.'); return; }
+  if(!amt || amt <= 0){ showErr('Please enter a valid amount.'); return; }
+
+  let date = null, month = null;
+  if(scope === 'daily'){
+    date = document.getElementById('var-date').value;
+    if(!date){ showErr('Please select a date.'); return; }
+    month = date.slice(0,7);
+  } else {
+    month = document.getElementById('var-month').value;
+    if(!month){ showErr('Please select a month.'); return; }
+  }
+
+  const arr = getVar();
+  arr.push({
+    id:    'misc_'+Date.now(),
+    scope, desc, amt,
+    date:  date || null,
+    month: month,
+    createdAt: today()
+  });
+  saveVar(arr);
+
+  document.getElementById('var-desc').value = '';
+  document.getElementById('var-amt').value  = '';
+  renderVarList();
+  toast(`✅ ₹${amt.toLocaleString('en-IN')} expense added`);
+}
+
+function deleteVarExpense(id){
+  const arr  = getVar();
+  const item = arr.find(e => e.id === id);
+  saveVar(arr.filter(e => e.id !== id));
+  renderVarList();
+  toast(`🗑 "${item?.desc}" removed`);
+}
+
+function renderVarList(){
+  const filterScope = document.getElementById('var-filter-scope').value;
+  const filterMonth = document.getElementById('var-filter-month').value;
+  let   arr = getVar();
+
+  // Filter
+  if(filterScope) arr = arr.filter(e => e.scope === filterScope);
+  if(filterMonth) arr = arr.filter(e => e.month === filterMonth);
+
+  // Sort newest first
+  arr = [...arr].sort((a,b) => (b.date||b.month).localeCompare(a.date||a.month));
+
+  const el = document.getElementById('var-list');
+  if(!arr.length){
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No expenses found.</p></div>`;
+    return;
+  }
+
+  // Group by month
+  const groups = {};
+  arr.forEach(e => {
+    const key = e.month;
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+
+  let html = '';
+  Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(ym => {
+    const items  = groups[ym];
+    const total  = items.reduce((s,e) => s+e.amt, 0);
+    html += `<div style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em">${monthLabel(ym)}</span>
+        <span style="font-size:.8rem;font-weight:800;color:var(--red)">${fmt(total)}</span>
+      </div>
+      <div class="exp-list">
+        ${items.map(e => `
+        <div class="exp-item">
+          <div class="exp-item-info">
+            <div class="exp-item-desc">${e.desc}</div>
+            <div class="exp-item-meta">
+              <span class="tag-scope ${e.scope==='daily'?'tag-daily':'tag-monthly'}">${e.scope==='daily'?'📅 Daily':'🗓️ Monthly'}</span>
+              <span>${e.scope==='daily' ? e.date : monthLabel(e.month)}</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="exp-item-amt">${fmt(e.amt)}</span>
+            <button class="btn-del" onclick="deleteVarExpense('${e.id}')">🗑</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  ERROR / TOAST
+// ══════════════════════════════════════════════
+function showErr(msg){ document.getElementById('err-msg').textContent=msg; document.getElementById('err-modal').classList.add('open'); }
+let _t; function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2800); }
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+fcInit(function(){
+  document.getElementById('fc-month').value    = thisMonth();
+  document.getElementById('var-date').value    = today();
+  document.getElementById('var-month').value   = thisMonth();
+  document.getElementById('var-filter-month').value = thisMonth();
+  renderFixedList();
+  renderVarList();
+  document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('err-modal').classList.remove('open'); });
+});
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+  <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ACR Hotel">
+  <meta name="theme-color" content="#1e293b">
+  <title>Amma Cheti Ruchulu — P&L Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --orange:  #f97316;
+      --purple:  #8b5cf6;
+      --yellow:  #f59e0b;
+      --bg:      #f8fafc;
+      --card:    #ffffff;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --radius:  12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-title { font-size: 17px; font-weight: 700; }
+    .header-sub   { font-size: 11px; opacity: .65; margin-top: 1px; }
+    .btn-settings {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      color: white;
+      padding: 8px 13px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+    .btn-settings:hover { background: rgba(255,255,255,.25); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 57px; z-index: 99;
+    }
+    .tab {
+      flex: 1; padding: 11px 2px; text-align: center;
+      font-size: 12px; font-weight: 500; color: var(--muted);
+      cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s;
+      white-space: nowrap;
+    }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+    /* ── Content ── */
+    .content { padding: 14px; max-width: 640px; margin: 0 auto; }
+
+    /* ── Period bar ── */
+    .period-bar {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 11px 14px;
+      margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+    }
+    .period-bar label { font-size: 13px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+    .period-bar input, .period-bar select {
+      flex: 1; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none;
+    }
+    .period-bar input:focus, .period-bar select:focus { border-color: var(--primary); }
+
+    /* ── Summary cards ── */
+    .summary-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+    }
+    .summary-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 13px 14px;
+    }
+    .card-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .card-value { font-size: 19px; font-weight: 700; }
+    .card-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .card-revenue .card-value { color: var(--green); }
+    .card-cost    .card-value { color: var(--red); }
+    .card-gross   .card-value { color: var(--primary); }
+    .card-labor   .card-value { color: var(--orange); }
+    .card-fixed   .card-value { color: var(--purple); }
+    .card-net {
+      grid-column: span 2;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+    }
+    .card-net .card-label { color: rgba(255,255,255,.65); }
+    .card-net .card-value { font-size: 26px; }
+    .card-net .card-value.profit { color: #4ade80; }
+    .card-net .card-value.loss   { color: #f87171; }
+    .card-net .card-sub { color: rgba(255,255,255,.55); }
+
+    /* ── Section card ── */
+    .section-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 15px; margin-bottom: 12px;
+    }
+    .section-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+
+    /* ── Bar chart ── */
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-name  { font-size: 12px; font-weight: 500; min-width: 95px; }
+    .bar-track { flex: 1; background: #f1f5f9; border-radius: 4px; height: 7px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 4px; transition: width .4s; }
+    .bar-amt   { font-size: 12px; font-weight: 600; min-width: 68px; text-align: right; }
+
+    /* ── Cost breakdown table ── */
+    .cost-table { width: 100%; border-collapse: collapse; }
+    .cost-table tr { border-bottom: 1px solid #f1f5f9; }
+    .cost-table tr:last-child { border-bottom: none; }
+    .cost-table td { padding: 7px 3px; font-size: 13px; }
+    .cost-table td:last-child { text-align: right; font-weight: 600; }
+    .cost-table .total-row td { font-weight: 700; font-size: 13px; border-top: 2px solid var(--border); padding-top: 9px; }
+
+    /* ── Daily/monthly data table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th {
+      background: #f8fafc; padding: 7px 5px;
+      text-align: left; font-weight: 600; color: var(--muted);
+      font-size: 10px; text-transform: uppercase;
+    }
+    .data-table td { padding: 7px 5px; border-bottom: 1px solid #f8fafc; }
+    .data-table td:not(:first-child), .data-table th:not(:first-child) { text-align: right; }
+    .data-table .profit-net { color: var(--green); font-weight: 700; }
+    .data-table .loss-net   { color: var(--red);   font-weight: 700; }
+    .no-data { color: var(--muted); font-style: italic; }
+
+    /* ── Week label ── */
+    .week-label { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 12px; }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-state .ei { font-size: 44px; margin-bottom: 10px; }
+    .empty-state p { font-size: 13px; }
+
+    .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .form-group { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+    .form-group input {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 11px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none;
+    }
+    .form-group input:focus { border-color: var(--purple); }
+    .btn-add {
+      background: var(--primary); color: white; border: none;
+      border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif; width: 100%;
+    }
+    .btn-add:hover { background: #1d4ed8; }
+
+    /* ── Error modal ── */
+    .err-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 1100;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .err-overlay.open { display: flex; }
+    .err-box {
+      background: white; border-radius: 16px; padding: 22px 20px;
+      max-width: 320px; width: 100%; text-align: center;
+    }
+    .err-box .err-icon { font-size: 36px; margin-bottom: 10px; }
+    .err-box p { font-size: 14px; color: var(--text); margin-bottom: 16px; line-height: 1.5; }
+    .err-box button {
+      background: var(--primary); color: white; border: none;
+      border-radius: 9px; padding: 10px 28px; font-size: 14px;
+      font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+
+    @media (max-width: 360px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .card-net { grid-column: span 1; }
+      .card-value { font-size: 17px; }
+    }
+  </style>
+  <!-- ── Role Guard ── -->
+  <script>
+  (function(){
+    var role=sessionStorage.getItem('fc_role');
+    if(!role){window.location.href='index.html';return;}
+    if(role==='admin')return;
+    var mid='pnl';
+    var cfg={};
+    try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit'};
+    var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
+    if(access==='none'){window.location.href='index.html';return;}
+    if(access==='view'){
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add('fc-readonly');
+      });
+    }
+  })();
+  </script>
+  <style>
+  /* ── Read-only mode ── */
+  .fc-readonly .btn-save,.fc-readonly .btn-del-entry,.fc-readonly .btn-settings,
+  .fc-readonly .btn-add,.fc-readonly .btn-primary,.fc-readonly .btn-green,
+  .fc-readonly .btn-orange,.fc-readonly .icon-btn-del,.fc-readonly .hbtn-white,
+  .fc-readonly .mbtn-save,.fc-readonly .mbtn-del,.fc-readonly .submit-btn,
+  .fc-readonly .new-entry-btn,.fc-readonly .hist-del-btn,.fc-readonly .del-confirm,
+  .fc-readonly .exp-add-btn,.fc-readonly .exp-remove-btn{display:none!important;}
+  #fc-readonly-banner{display:none;background:#eff6ff;border-bottom:2px solid #bfdbfe;
+    padding:9px 16px;font-size:12px;color:#1d4ed8;text-align:center;font-weight:600;}
+  .fc-readonly #fc-readonly-banner{display:block!important;}
+  </style>
+</head>
+<body>
+<div id="fc-readonly-banner">👁 View-only mode — you can browse data but cannot make changes</div>
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="index.html" style="color:rgba(255,255,255,.75);font-size:18px;text-decoration:none;line-height:1" title="Home">←</a>
+    <div>
+      <div class="header-title">📊 P&amp;L Dashboard</div>
+      <div class="header-sub">Profit &amp; Loss — All Sections</div>
+    </div>
+  </div>
+  <a href="expenses.html" class="btn-settings" style="text-decoration:none">💸 Expenses</a>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" id="tab-daily"   onclick="switchTab('daily',this)">Daily</div>
+  <div class="tab"        id="tab-weekly"  onclick="switchTab('weekly',this)">Weekly</div>
+  <div class="tab"        id="tab-monthly" onclick="switchTab('monthly',this)">Monthly</div>
+  <div class="tab"        id="tab-yearly"  onclick="switchTab('yearly',this)">Yearly</div>
+  <div class="tab"        id="tab-range"   onclick="switchTab('range',this)">📆 Range</div>
+</div>
+
+<!-- Main content -->
+<div class="content" id="content"></div>
+
+
+<!-- ── Error Modal ───────────────────────────────────────────────── -->
+<div class="err-overlay" id="errModal">
+  <div class="err-box">
+    <div class="err-icon">⚠️</div>
+    <p id="errMsg"></p>
+    <button onclick="document.getElementById('errModal').classList.remove('open')">OK</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════════════════
+const SECTIONS = [
+  {id:'tiffin',  label:'Tiffins',      icon:'🍳', color:'#f97316'},
+  {id:'meals',   label:'Meals',        icon:'🍽️', color:'#10b981'},
+  {id:'chat',    label:'Chat',         icon:'🥙', color:'#ec4899'},
+  {id:'catreen', label:'Catreen',      icon:'🥘', color:'#8b5cf6'},
+  {id:'water',   label:'Water Bottle', icon:'💧', color:'#0ea5e9'},
+];
+
+// ══════════════════════════════════════════════════════════════════
+//  VIEW STATE  (persists across re-renders)
+// ══════════════════════════════════════════════════════════════════
+let currentTab  = 'daily';
+let state = {
+  daily:   { date:  todayStr() },
+  weekly:  { date:  todayStr() },
+  monthly: { month: currentMonthStr() },
+  yearly:  { year:  currentYearStr() },
+  range:   { from:  currentMonthStr() + '-01', to: todayStr() },
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  DATE HELPERS
+// ══════════════════════════════════════════════════════════════════
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+function currentMonthStr() { return todayStr().substring(0,7); }
+function currentYearStr()  { return todayStr().substring(0,4); }
+
+function daysInMonth(ym) {
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+function getWeekDates(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return Array.from({length:7}, (_,i) => {
+    const dd = new Date(mon);
+    dd.setDate(mon.getDate() + i);
+    return dd.toISOString().split('T')[0];
+  });
+}
+
+function getDatesInMonth(ym) {
+  const days = daysInMonth(ym);
+  return Array.from({length:days}, (_,i) =>
+    `${ym}-${String(i+1).padStart(2,'0')}`
+  );
+}
+
+function getDatesInRange(from, to) {
+  const dates = [];
+  const cur = new Date(from + 'T00:00:00');
+  const end = new Date(to   + 'T00:00:00');
+  while (cur <= end) {
+    dates.push(cur.toISOString().split('T')[0]);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+function fmtDate(d) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN',
+    {day:'numeric', month:'short'});
+}
+
+function fmtDay(d) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN',
+    {weekday:'short', day:'numeric'});
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  FORMATTING
+// ══════════════════════════════════════════════════════════════════
+function fmt(n) {
+  if (!n && n !== 0) return '—';
+  return '₹' + Math.round(n).toLocaleString('en-IN');
+}
+function pct(part, total) {
+  if (!total) return '0%';
+  return Math.round(part / total * 100) + '%';
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  LOCALSTORAGE READERS
+// ══════════════════════════════════════════════════════════════════
+function ls(key, fallback = []) {
+  try { return JSON.parse(localStorage.getItem(key)) || fallback; }
+  catch { return fallback; }
+}
+function getItems()      { return ls('fc_items_v2'); }
+function getRevenue()    { return ls('fc_revenue_v2'); }
+function getDailyUsage() { return ls('fc_daily_usage'); }
+function getDayHelpers() { return ls('fc_day_helpers'); }
+function getEmployees()  { return ls('fc_employees'); }
+function getAttendance() { return ls('fc_attendance'); }
+function getFixedCosts()  { return ls('fc_fixed_costs'); }
+function saveFixedCosts(arr) { localStorage.setItem('fc_fixed_costs', JSON.stringify(arr)); }
+function getMiscExp()    { return ls('fc_misc_expenses'); }
+function getPurchases()  { return ls('fc_purchases'); }
+
+/* Build a map of itemId → best available rate from purchases (latest purchase date).
+   Used as fallback for old daily-usage records that predate FIFO cost tracking. */
+function buildPurchaseRateMap() {
+  const purchases = getPurchases();
+  const map = {};
+  // Sort oldest→newest so the last assignment wins (= most recent price)
+  const sorted = [...purchases]
+    .filter(p => p.type !== 'opening_balance')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  for (const p of sorted) {
+    if (p.itemId != null) {
+      map[p.itemId] = p.transferRate || p.rate || 0;
+    }
+  }
+  // Also include opening_balance rates where no regular purchase exists
+  const ob = purchases.filter(p => p.type === 'opening_balance');
+  for (const p of ob) {
+    if (p.itemId != null && !map[p.itemId]) {
+      map[p.itemId] = p.transferRate || p.rate || 0;
+    }
+  }
+  return map;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  P&L ENGINE  — per date
+// ══════════════════════════════════════════════════════════════════
+
+/* Revenue */
+function revenueForDate(date) {
+  const all = getRevenue();
+  const entry = all.find(r => r.date === date);
+  if (!entry) return { total:0, bySection:{} };
+
+  let total = 0;
+  const bySection = {};
+
+  if (entry.sections && typeof entry.sections === 'object' && !Array.isArray(entry.sections)) {
+    // Object map: { tiffin: { items:[], total:500 }, … }
+    for (const [sid, sd] of Object.entries(entry.sections)) {
+      const amt = sd.total || sd.amount || 0;
+      bySection[sid] = amt;
+      total += amt;
+    }
+  } else if (Array.isArray(entry.entries)) {
+    // Array: [{ section:'tiffin', items:[], sectionTotal:500 }, …]
+    for (const sec of entry.entries) {
+      const sid = sec.section || sec.sectionId || 'other';
+      const amt = sec.sectionTotal || sec.total || 0;
+      bySection[sid] = (bySection[sid] || 0) + amt;
+      total += amt;
+    }
+  }
+
+  if (entry.grandTotal) total = entry.grandTotal;
+  return { total, bySection };
+}
+
+/* Material cost */
+function materialCostForDate(date) {
+  const records = getDailyUsage().filter(u => u.date === date);
+  const items   = getItems();
+  const itemMap = {};
+  for (const it of items) itemMap[it.id] = it;
+
+  // Fallback rate map: most recent purchase price per item
+  // (used for old daily-usage records that predate FIFO cost tracking)
+  const purRates = buildPurchaseRateMap();
+
+  let total = 0;
+  const bySection = {};
+
+  for (const rec of records) {
+    const sid  = rec.section || 'other';
+    let cost;
+
+    if (rec.cost != null && rec.cost > 0) {
+      // Best case: FIFO cost stored directly on the record
+      cost = rec.cost;
+    } else {
+      // Fallback 1: item.price (legacy store-level price)
+      const itm = itemMap[rec.itemId];
+      const itemPrice = itm ? (itm.price || 0) : 0;
+      // Fallback 2: most recent purchase rate for this item
+      const purRate = purRates[rec.itemId] || 0;
+      const rate = purRate || itemPrice;
+      cost = rate * (rec.qty || 0);
+    }
+
+    bySection[sid] = (bySection[sid] || 0) + cost;
+    total += cost;
+  }
+  return { total, bySection };
+}
+
+/* Day-helper wages */
+function helperWagesForDate(date) {
+  const helpers = getDayHelpers().filter(h => h.date === date);
+  let total = 0;
+  const bySection = {};
+  for (const h of helpers) {
+    const w = h.wage || 0;
+    total += w;
+    const sid = h.section || 'other';
+    bySection[sid] = (bySection[sid] || 0) + w;
+  }
+  return { total, bySection };
+}
+
+/* Daily-wage salary for a specific date
+   Reads wage stored in each attendance record (present/halfday/extra/absent).
+   Falls back to prorated monthly salary for legacy records. */
+function salaryForDate(date) {
+  const ym         = date.substring(0,7);
+  const employees  = getEmployees();
+  const attendance = getAttendance();
+  let total = 0;
+
+  // New model: each attendance record carries a wage field
+  const dayRecs = attendance.filter(a => a.date === date);
+  for (const rec of dayRecs) {
+    if (rec.wage != null) {
+      total += Number(rec.wage);
+    } else {
+      // Legacy fallback: prorate monthly salary
+      const emp    = employees.find(e => e.id === rec.empId);
+      if (!emp) continue;
+      const perDay = (emp.salary || 0) / daysInMonth(ym);
+      const dv     = rec.status === 'present' ? 1 : rec.status === 'halfday' ? 0.5 : 0;
+      total       += perDay * dv;
+    }
+  }
+  return { total };
+}
+
+/* Fixed costs — prorated for a single date */
+function fixedCostForDate(date) {
+  const ym = date.substring(0,7);
+  const dim = daysInMonth(ym);
+  const costs = getFixedCosts();
+  const monthly = costs.reduce((s,c) => {
+    const amt = (c.monthly && c.monthly[ym] != null) ? c.monthly[ym] : (c.amount || 0);
+    return s + amt;
+  }, 0);
+  return { total: monthly / dim, monthly, items: costs };
+}
+
+function fixedCostForMonth(ym) {
+  const costs = getFixedCosts();
+  return costs.reduce((s,c) => {
+    const amt = (c.monthly && c.monthly[ym] != null) ? c.monthly[ym] : (c.amount || 0);
+    return s + amt;
+  }, 0);
+}
+
+/* Transport costs from purchases on a given date (stored once per batch, first item only) */
+function transportCostForDate(date) {
+  const purchases = getPurchases();
+  const seen = new Set();
+  let total = 0;
+  purchases.filter(p => p.date === date && (p.transportCost||0) > 0).forEach(p => {
+    const key = p.batchId || p.id;
+    if(!seen.has(key)){
+      seen.add(key);
+      total += Number(p.transportCost);
+    }
+  });
+  return { total };
+}
+
+function transportCostForMonth(ym) {
+  const purchases = getPurchases();
+  const seen = new Set();
+  let total = 0;
+  purchases.filter(p => p.date && p.date.slice(0,7) === ym && (p.transportCost||0) > 0).forEach(p => {
+    const key = p.batchId || p.id;
+    if(!seen.has(key)){
+      seen.add(key);
+      total += Number(p.transportCost);
+    }
+  });
+  return total;
+}
+
+/* Misc (variable) expenses for a single date */
+function miscExpForDate(date) {
+  const ym  = date.substring(0,7);
+  const dim = daysInMonth(ym);
+  const all = getMiscExp();
+  let total = 0;
+  // Daily entries that match exact date
+  all.filter(e => e.scope === 'daily' && e.date === date)
+     .forEach(e => total += Number(e.amt||0));
+  // Monthly entries prorated across days in month
+  all.filter(e => e.scope === 'monthly' && e.month === ym)
+     .forEach(e => total += Number(e.amt||0) / dim);
+  return { total };
+}
+
+/* Misc expenses total for a full month */
+function miscExpForMonth(ym) {
+  const all = getMiscExp();
+  let total = 0;
+  all.filter(e => e.scope === 'daily'   && e.month === ym).forEach(e => total += Number(e.amt||0));
+  all.filter(e => e.scope === 'monthly' && e.month === ym).forEach(e => total += Number(e.amt||0));
+  return total;
+}
+
+/* Full P&L for one date */
+function pnlForDate(date) {
+  const rev  = revenueForDate(date);
+  const mat  = materialCostForDate(date);
+  const hlp  = helperWagesForDate(date);
+  const sal  = salaryForDate(date);
+  const fix   = fixedCostForDate(date);
+  const misc  = miscExpForDate(date);
+  const trans = transportCostForDate(date);
+
+  const grossProfit    = rev.total - mat.total;
+  const totalExpenses  = mat.total + hlp.total + sal.total + fix.total + misc.total + trans.total;
+  const netProfit      = rev.total - totalExpenses;
+
+  return {
+    date,
+    revenue:       rev.total,
+    revBySection:  rev.bySection,
+    materialCost:  mat.total,
+    matBySection:  mat.bySection,
+    helperWages:   hlp.total,
+    salary:        sal.total,
+    fixedCost:     fix.total,
+    miscExp:       misc.total,
+    transportCost: trans.total,
+    grossProfit,
+    totalExpenses,
+    netProfit,
+  };
+}
+
+/* Aggregate over an array of dates */
+function pnlForDates(dates) {
+  const agg = {
+    revenue:0, revBySection:{},
+    materialCost:0, matBySection:{},
+    helperWages:0, salary:0, fixedCost:0, miscExp:0, transportCost:0,
+    grossProfit:0, totalExpenses:0, netProfit:0,
+    days:[]
+  };
+
+  for (const date of dates) {
+    const d = pnlForDate(date);
+    agg.revenue        += d.revenue;
+    agg.materialCost   += d.materialCost;
+    agg.helperWages    += d.helperWages;
+    agg.salary         += d.salary;
+    agg.fixedCost      += d.fixedCost;
+    agg.miscExp        += d.miscExp;
+    agg.transportCost  += d.transportCost;
+    for (const [k,v] of Object.entries(d.revBySection))
+      agg.revBySection[k] = (agg.revBySection[k]||0) + v;
+    for (const [k,v] of Object.entries(d.matBySection))
+      agg.matBySection[k] = (agg.matBySection[k]||0) + v;
+    agg.days.push(d);
+  }
+
+  agg.grossProfit   = agg.revenue - agg.materialCost;
+  agg.totalExpenses = agg.materialCost + agg.helperWages + agg.salary + agg.fixedCost + agg.miscExp + agg.transportCost;
+  agg.netProfit     = agg.revenue - agg.totalExpenses;
+  return agg;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  RENDER BLOCKS
+// ══════════════════════════════════════════════════════════════════
+
+function renderCards(p, subtext) {
+  const nc  = p.netProfit >= 0 ? 'profit' : 'loss';
+  const mrg = p.revenue > 0 ? Math.round(p.netProfit / p.revenue * 100) : 0;
+  return `
+    <div class="summary-grid">
+      <div class="summary-card card-revenue">
+        <div class="card-label">Revenue</div>
+        <div class="card-value">${fmt(p.revenue)}</div>
+        <div class="card-sub">Total income</div>
+      </div>
+      <div class="summary-card card-cost">
+        <div class="card-label">Material Cost</div>
+        <div class="card-value">${fmt(p.materialCost)}</div>
+        <div class="card-sub">Raw materials used</div>
+      </div>
+      <div class="summary-card card-gross">
+        <div class="card-label">Gross Profit</div>
+        <div class="card-value">${fmt(p.grossProfit)}</div>
+        <div class="card-sub">Revenue − Materials</div>
+      </div>
+      <div class="summary-card card-labor">
+        <div class="card-label">Labor Cost</div>
+        <div class="card-value">${fmt(p.helperWages + p.salary)}</div>
+        <div class="card-sub">Helpers + Salary</div>
+      </div>
+      <div class="summary-card card-fixed">
+        <div class="card-label">Fixed Overheads</div>
+        <div class="card-value">${fmt(p.fixedCost)}</div>
+        <div class="card-sub">${subtext}</div>
+      </div>
+      ${(p.miscExp||0) > 0 ? `
+      <div class="summary-card card-fixed" style="--purple:#f59e0b">
+        <div class="card-label">Misc Expenses</div>
+        <div class="card-value" style="color:#d97706">${fmt(p.miscExp)}</div>
+        <div class="card-sub">Variable / one-off</div>
+      </div>` : ''}
+      ${(p.transportCost||0) > 0 ? `
+      <div class="summary-card card-fixed" style="--purple:#0891b2">
+        <div class="card-label">Transport & Travel</div>
+        <div class="card-value" style="color:#0e7490">${fmt(p.transportCost)}</div>
+        <div class="card-sub">From purchase entries</div>
+      </div>` : ''}
+      <div class="summary-card card-net">
+        <div class="card-label">Net Profit / Loss</div>
+        <div class="card-value ${nc}">${fmt(p.netProfit)}</div>
+        <div class="card-sub">Margin: ${mrg}%</div>
+      </div>
+    </div>`;
+}
+
+function renderSectionBars(revBySection) {
+  const maxVal = Math.max(...SECTIONS.map(s => revBySection[s.id]||0), 1);
+  const rows = SECTIONS.map(s => {
+    const amt = revBySection[s.id] || 0;
+    const w   = Math.round(amt / maxVal * 100);
+    return `
+      <div class="bar-row">
+        <div class="bar-name">${s.icon} ${s.label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${s.color}"></div></div>
+        <div class="bar-amt" style="color:${s.color}">${fmt(amt)}</div>
+      </div>`;
+  }).join('');
+  return `<div class="section-card"><h3>📊 Revenue by Section</h3>${rows}</div>`;
+}
+
+function renderCostBreak(p) {
+  return `
+    <div class="section-card">
+      <h3>💸 Cost Breakdown</h3>
+      <table class="cost-table">
+        <tr><td>Raw Materials</td><td>${fmt(p.materialCost)}</td></tr>
+        <tr><td>Day Helper Wages</td><td>${fmt(p.helperWages)}</td></tr>
+        <tr><td>Staff Wages (daily)</td><td>${fmt(p.salary)}</td></tr>
+        <tr><td>Fixed Overheads</td><td>${fmt(p.fixedCost)}</td></tr>
+        ${(p.miscExp||0)>0?`<tr><td>Misc Expenses</td><td>${fmt(p.miscExp)}</td></tr>`:''}
+        ${(p.transportCost||0)>0?`<tr><td>🚛 Transport & Travel</td><td>${fmt(p.transportCost)}</td></tr>`:''}
+        <tr class="total-row"><td>Total Expenses</td><td>${fmt(p.totalExpenses)}</td></tr>
+      </table>
+    </div>`;
+}
+
+function emptyState(msg) {
+  return `<div class="empty-state"><div class="ei">📭</div><p>${msg}</p></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  TAB RENDERERS
+// ══════════════════════════════════════════════════════════════════
+
+function renderDaily() {
+  const date = state.daily.date;
+  const p    = pnlForDate(date);
+  const hasData = p.revenue > 0 || p.materialCost > 0 || p.helperWages > 0;
+
+  let html = `
+    <div class="period-bar">
+      <label>📅 Date</label>
+      <input type="date" id="inp-daily" value="${date}"
+             onchange="state.daily.date=this.value; renderContent()">
+    </div>`;
+
+  if (!hasData) {
+    html += emptyState('No data recorded for this date yet.');
+  } else {
+    html += renderCards(p, 'Prorated for today');
+    html += renderSectionBars(p.revBySection);
+    html += renderCostBreak(p);
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderWeekly() {
+  const date  = state.weekly.date;
+  const dates = getWeekDates(date);
+  const p     = pnlForDates(dates);
+  const hasData = p.revenue > 0 || p.materialCost > 0;
+
+  let html = `
+    <div class="period-bar">
+      <label>📅 Week of</label>
+      <input type="date" id="inp-weekly" value="${date}"
+             onchange="state.weekly.date=this.value; renderContent()">
+    </div>
+    <div class="week-label">${dates[0]} &nbsp;→&nbsp; ${dates[6]}</div>`;
+
+  if (!hasData) {
+    html += emptyState('No data for this week yet.');
+  } else {
+    html += renderCards(p, 'Prorated for week');
+  }
+
+  // Daily trend table (always show if week range is meaningful)
+  html += `
+    <div class="section-card">
+      <h3>📈 Day-by-Day</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Day</th><th>Revenue</th><th>Expenses</th><th>Net</th></tr></thead>
+          <tbody>`;
+
+  for (const d of p.days) {
+    const any = d.revenue > 0 || d.materialCost > 0 || d.helperWages > 0;
+    const nc  = d.netProfit >= 0 ? 'profit-net' : 'loss-net';
+    html += `<tr>
+      <td>${fmtDay(d.date)}</td>
+      <td>${any ? fmt(d.revenue)       : '<span class="no-data">—</span>'}</td>
+      <td>${any ? fmt(d.totalExpenses) : '<span class="no-data">—</span>'}</td>
+      <td class="${any ? nc : ''}">${any ? fmt(d.netProfit) : '<span class="no-data">—</span>'}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div></div>`;
+
+  if (hasData) {
+    html += renderSectionBars(p.revBySection);
+    html += renderCostBreak(p);
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderMonthly() {
+  const ym    = state.monthly.month;
+  const dates = getDatesInMonth(ym);
+  const p     = pnlForDates(dates);
+
+  // For monthly view, use the actual full fixed + misc cost (not prorated per day)
+  const fxMonthly    = fixedCostForMonth(ym);
+  const miscMonthly  = miscExpForMonth(ym);
+  const transMonthly = transportCostForMonth(ym);
+  const pDisplay = { ...p, fixedCost: fxMonthly, miscExp: miscMonthly, transportCost: transMonthly,
+    totalExpenses: p.materialCost + p.helperWages + p.salary + fxMonthly + miscMonthly + transMonthly,
+    netProfit: p.revenue - (p.materialCost + p.helperWages + p.salary + fxMonthly + miscMonthly + transMonthly),
+  };
+  pDisplay.grossProfit = pDisplay.revenue - pDisplay.materialCost;
+
+  const hasData = p.revenue > 0 || p.materialCost > 0;
+
+  let html = `
+    <div class="period-bar">
+      <label>📅 Month</label>
+      <input type="month" id="inp-monthly" value="${ym}"
+             onchange="state.monthly.month=this.value; renderContent()">
+    </div>`;
+
+  html += renderCards(pDisplay, 'Full monthly amount');
+
+  // Daily records table
+  const daysWithData = p.days.filter(d => d.revenue > 0 || d.materialCost > 0 || d.helperWages > 0);
+  if (daysWithData.length > 0) {
+    html += `
+      <div class="section-card">
+        <h3>📋 Daily Records (${daysWithData.length} / ${dates.length} days)</h3>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Revenue</th><th>Mat Cost</th><th>Labor</th><th>Net</th></tr></thead>
+            <tbody>`;
+
+    for (const d of daysWithData) {
+      const labor = d.helperWages + d.salary;
+      const nc    = d.netProfit >= 0 ? 'profit-net' : 'loss-net';
+      html += `<tr>
+        <td>${fmtDate(d.date)}</td>
+        <td>${fmt(d.revenue)}</td>
+        <td>${fmt(d.materialCost)}</td>
+        <td>${fmt(labor)}</td>
+        <td class="${nc}">${fmt(d.netProfit)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table></div></div>`;
+  } else if (!hasData) {
+    html += emptyState('No data recorded for this month yet.');
+  }
+
+  if (hasData) {
+    html += renderSectionBars(p.revBySection);
+    html += renderCostBreak(pDisplay);
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderYearly() {
+  const year = state.yearly.year;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const monthlyPnl = Array.from({length:12}, (_,i) => {
+    const ym = `${year}-${String(i+1).padStart(2,'0')}`;
+    const dates = getDatesInMonth(ym);
+    const p = pnlForDates(dates);
+    // Use full fixed cost for each month
+    const fxMonthly = getFixedCosts().reduce((s,c) => s + (c.amount||0), 0);
+    return {
+      ym, month: MONTHS[i],
+      ...p,
+      fixedCost:     fxMonthly,
+      totalExpenses: p.materialCost + p.helperWages + p.salary + fxMonthly,
+      netProfit:     p.revenue - (p.materialCost + p.helperWages + p.salary + fxMonthly),
+    };
+  });
+
+  // Year totals
+  const yr = monthlyPnl.reduce((agg, m) => {
+    agg.revenue      += m.revenue;
+    agg.materialCost += m.materialCost;
+    agg.helperWages  += m.helperWages;
+    agg.salary       += m.salary;
+    agg.fixedCost    += m.fixedCost;
+    agg.totalExpenses+= m.totalExpenses;
+    agg.netProfit    += m.netProfit;
+    for (const [k,v] of Object.entries(m.revBySection||{}))
+      agg.revBySection[k] = (agg.revBySection[k]||0) + v;
+    return agg;
+  }, { revenue:0, materialCost:0, helperWages:0, salary:0,
+       fixedCost:0, totalExpenses:0, netProfit:0, revBySection:{} });
+  yr.grossProfit = yr.revenue - yr.materialCost;
+
+  const curYear = new Date().getFullYear();
+  const yearOpts = Array.from({length:4}, (_,i) => curYear - i)
+    .map(y => `<option value="${y}" ${y==year?'selected':''}>${y}</option>`).join('');
+
+  let html = `
+    <div class="period-bar">
+      <label>📅 Year</label>
+      <select id="inp-yearly" onchange="state.yearly.year=this.value; renderContent()">
+        ${yearOpts}
+      </select>
+    </div>`;
+
+  html += renderCards(yr, 'Full annual overheads');
+
+  // Month-by-month table
+  html += `
+    <div class="section-card">
+      <h3>📆 Month-by-Month</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net P&amp;L</th></tr></thead>
+          <tbody>`;
+
+  for (const m of monthlyPnl) {
+    const hasData = m.revenue > 0 || m.materialCost > 0;
+    const nc = m.netProfit >= 0 ? 'profit-net' : 'loss-net';
+    html += `<tr>
+      <td>${m.month}</td>
+      <td>${hasData ? fmt(m.revenue)       : '<span class="no-data">—</span>'}</td>
+      <td>${hasData ? fmt(m.totalExpenses) : '<span class="no-data">—</span>'}</td>
+      <td class="${hasData ? nc : ''}">${hasData ? fmt(m.netProfit) : '<span class="no-data">—</span>'}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div></div>`;
+
+  if (yr.revenue > 0) {
+    html += renderSectionBars(yr.revBySection);
+    html += renderCostBreak(yr);
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderRange() {
+  const { from, to } = state.range;
+  const valid   = from && to && from <= to;
+  const dates   = valid ? getDatesInRange(from, to) : [];
+  const p       = dates.length ? pnlForDates(dates) : null;
+  const hasData = p && (p.revenue > 0 || p.materialCost > 0);
+  const dayCount = dates.length;
+
+  let html = `
+    <div class="period-bar" style="flex-wrap:wrap;gap:8px">
+      <label>📅 From</label>
+      <input type="date" id="inp-range-from" value="${from || ''}"
+             onchange="state.range.from=this.value; renderContent()"
+             style="flex:1;min-width:130px">
+      <label style="white-space:nowrap">→ To</label>
+      <input type="date" id="inp-range-to" value="${to || ''}"
+             onchange="state.range.to=this.value; renderContent()"
+             style="flex:1;min-width:130px">
+    </div>`;
+
+  if (!from || !to) {
+    html += emptyState('Please select a start and end date.');
+  } else if (from > to) {
+    html += `<div class="empty-state"><div class="ei">⚠️</div><p>Start date must be on or before the end date.</p></div>`;
+  } else if (dayCount > 366) {
+    html += `<div class="empty-state"><div class="ei">⚠️</div><p>Range is too large (max 366 days). Please narrow the dates.</p></div>`;
+  } else if (!hasData) {
+    html += emptyState(`No data recorded in this ${dayCount}-day range yet.`);
+  } else {
+    html += `<div class="week-label">${fmtDate(from)} &nbsp;→&nbsp; ${fmtDate(to)} &nbsp;·&nbsp; ${dayCount} day${dayCount !== 1 ? 's' : ''}</div>`;
+    html += renderCards(p, `Prorated across ${dayCount} days`);
+  }
+
+  if (p && hasData) {
+    // Day-by-day table — only when range is ≤ 62 days (otherwise too long)
+    const daysWithData = p.days.filter(d => d.revenue > 0 || d.materialCost > 0 || d.helperWages > 0);
+    if (daysWithData.length > 0 && dayCount <= 62) {
+      html += `
+        <div class="section-card">
+          <h3>📋 Day-by-Day (${daysWithData.length} day${daysWithData.length !== 1 ? 's' : ''} with data)</h3>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Revenue</th><th>Expenses</th><th>Net</th></tr></thead>
+              <tbody>`;
+      for (const d of daysWithData) {
+        const nc = d.netProfit >= 0 ? 'profit-net' : 'loss-net';
+        html += `<tr>
+          <td>${fmtDate(d.date)}</td>
+          <td>${fmt(d.revenue)}</td>
+          <td>${fmt(d.totalExpenses)}</td>
+          <td class="${nc}">${fmt(d.netProfit)}</td>
+        </tr>`;
+      }
+      html += `</tbody></table></div></div>`;
+    } else if (dayCount > 62) {
+      html += `<div class="section-card" style="text-align:center;color:var(--muted);font-size:12px;padding:14px">📋 Day-by-day table hidden for ranges over 62 days</div>`;
+    }
+    html += renderSectionBars(p.revBySection);
+    html += renderCostBreak(p);
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════════════════════
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderContent();
+}
+
+function renderContent() {
+  if      (currentTab === 'daily')   renderDaily();
+  else if (currentTab === 'weekly')  renderWeekly();
+  else if (currentTab === 'monthly') renderMonthly();
+  else if (currentTab === 'yearly')  renderYearly();
+  else if (currentTab === 'range')   renderRange();
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  ERROR HELPER
+// ══════════════════════════════════════════════════════════════════
+function showErr(msg) {
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('errModal').classList.add('open');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+fcInit(function(){ renderContent(); });
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

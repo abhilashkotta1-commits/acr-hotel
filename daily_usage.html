@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACR Hotel">
+<meta name="theme-color" content="#1e293b">
+<title>Amma Cheti Ruchulu — Daily Usage</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #f0f4ff;
+    --card: #ffffff;
+    --primary: #4f46e5;
+    --primary-soft: #eef2ff;
+    --green: #10b981;
+    --green-soft: #d1fae5;
+    --red: #ef4444;
+    --red-soft: #fee2e2;
+    --orange: #f59e0b;
+    --orange-soft: #fef3c7;
+    --text: #0f172a;
+    --sub: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 2px 8px rgba(0,0,0,.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+
+    /* Section colours */
+    --tiffin:  #f97316;
+    --meals:   #10b981;
+    --chat:    #8b5cf6;
+    --water:   #0ea5e9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 110px; /* space for sticky footer */
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--primary);
+    padding: 14px 18px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(79,70,229,.3);
+  }
+  .header-left h1 { font-size: 1.05rem; font-weight: 800; color: #fff; }
+  .header-left p  { font-size: .72rem; color: rgba(255,255,255,.7); margin-top: 2px; }
+
+  /* ─── DATE BAR ─── */
+  .date-bar {
+    background: var(--primary);
+    padding: 0 18px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .date-bar label { font-size: .78rem; font-weight: 700; color: rgba(255,255,255,.8); white-space: nowrap; }
+  #date-input {
+    flex: 1; padding: 8px 14px;
+    border-radius: 999px; border: 2px solid rgba(255,255,255,.4);
+    background: rgba(255,255,255,.15); color: #fff;
+    font-size: .9rem; font-weight: 700; font-family: inherit;
+    cursor: pointer; outline: none; color-scheme: dark;
+    min-width: 0;
+  }
+  #date-input:focus { border-color: #fff; background: rgba(255,255,255,.25); }
+
+  /* ─── TAB BAR ─── */
+  .tab-bar {
+    display: flex; background: var(--card);
+    border-bottom: 2px solid var(--border);
+    position: sticky; top: 0; z-index: 99;
+  }
+  .tab-btn {
+    flex: 1; padding: 13px 8px; text-align: center;
+    font-size: .85rem; font-weight: 700; color: var(--sub);
+    cursor: pointer; border: none; background: none;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    font-family: inherit; transition: all .15s;
+  }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ─── HISTORY VIEW ─── */
+  .history-wrap { padding: 14px; display: none; }
+  .history-wrap.visible { display: block; }
+  .hist-empty { text-align: center; padding: 50px 20px; color: var(--sub); }
+  .hist-empty .ei { font-size: 3rem; margin-bottom: 10px; }
+  .hist-group {
+    background: var(--card); border-radius: var(--radius);
+    border: 1.5px solid var(--border); margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .hist-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .hist-head-left { display: flex; flex-direction: column; gap: 3px; }
+  .hist-date { font-size: .9rem; font-weight: 800; color: var(--text); }
+  .hist-sec-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: .72rem; font-weight: 700; color: #fff;
+  }
+  .hist-sec-tiffin { background: var(--tiffin); }
+  .hist-sec-meals  { background: var(--meals); }
+  .hist-sec-chat   { background: var(--chat); }
+  .hist-sec-water  { background: var(--water); }
+  .hist-del-btn {
+    padding: 7px 14px; border-radius: var(--radius-sm);
+    background: var(--red-soft); color: var(--red);
+    border: none; font-size: .8rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; gap: 5px;
+    flex-shrink: 0;
+  }
+  .hist-del-btn:active { filter: brightness(.9); }
+  .hist-item-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .hist-item-row:last-child { border-bottom: none; }
+  .hi-name { font-weight: 700; color: var(--text); }
+  .hi-tel  { font-size: .72rem; color: var(--sub); font-family: 'Noto Sans Telugu', sans-serif; margin-top: 1px; }
+  .hi-qty  { font-weight: 800; color: var(--primary); white-space: nowrap; margin-left: 10px; }
+  .hist-count { font-size: .75rem; color: var(--sub); font-weight: 600; }
+
+  /* ─── CONFIRM DELETE MODAL ─── */
+  .del-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 600;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .del-modal-overlay.open { display: flex; }
+  .del-modal {
+    background: #fff; border-radius: var(--radius);
+    padding: 24px; max-width: 340px; width: 100%;
+    box-shadow: var(--shadow-lg);
+  }
+  .del-modal h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 8px; }
+  .del-modal p  { font-size: .88rem; color: var(--sub); margin-bottom: 20px; line-height: 1.5; }
+  .del-modal-btns { display: flex; gap: 10px; }
+  .del-cancel { flex:1; padding:12px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:#fff; color:var(--sub); font-weight:700; cursor:pointer; font-family:inherit; }
+  .del-confirm { flex:1; padding:12px; border-radius:var(--radius-sm); border:none; background:var(--red); color:#fff; font-weight:700; cursor:pointer; font-family:inherit; }
+
+  /* ─── SECTION SELECTOR ─── */
+  .section-bar {
+    padding: 16px 14px 10px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  .section-label { font-size: .72rem; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .section-btns  { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .sec-btn {
+    padding: 12px 6px; border-radius: var(--radius-sm); text-align: center;
+    cursor: pointer; border: 2px solid transparent; transition: all .18s;
+    background: var(--bg);
+  }
+  .sec-btn .sec-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+  .sec-btn .sec-name { font-size: .74rem; font-weight: 700; color: var(--sub); display: block; }
+  .sec-btn .sec-tel  { font-size: .65rem; color: var(--sub); display: block; font-family: 'Noto Sans Telugu', sans-serif; opacity: .8; }
+  .sec-btn.active-tiffin { background: #fff7ed; border-color: var(--tiffin); }
+  .sec-btn.active-tiffin .sec-name { color: var(--tiffin); }
+  .sec-btn.active-meals  { background: #f0fdf4; border-color: var(--meals);  }
+  .sec-btn.active-meals  .sec-name  { color: var(--meals); }
+  .sec-btn.active-chat   { background: #f5f3ff; border-color: var(--chat);   }
+  .sec-btn.active-chat   .sec-name  { color: var(--chat); }
+  .sec-btn.active-water  { background: #f0f9ff; border-color: var(--water);  }
+  .sec-btn.active-water  .sec-name  { color: var(--water); }
+
+  /* ─── SEARCH ─── */
+  .search-bar {
+    padding: 10px 14px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  .search-inner {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border-radius: 999px;
+    padding: 9px 14px; border: 1.5px solid var(--border);
+  }
+  .search-inner:focus-within { border-color: var(--primary); background: #fff; }
+  .search-inner input { flex:1; border:none; background:none; font-size:.9rem; font-family:inherit; outline:none; color:var(--text); }
+
+  /* ─── CAT PILLS ─── */
+  .cat-scroll {
+    padding: 8px 14px 6px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    display: flex; gap: 8px;
+    scrollbar-width: none;
+  }
+  .cat-scroll::-webkit-scrollbar { display: none; }
+  .cpill {
+    padding: 5px 13px; border-radius: 999px; font-size: .76rem; font-weight: 600;
+    border: 1.5px solid var(--border); background: #fff; color: var(--sub);
+    white-space: nowrap; cursor: pointer; flex-shrink: 0; transition: all .15s;
+  }
+  .cpill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  /* ─── ITEM GRID ─── */
+  .grid-wrap { padding: 14px; }
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  /* ─── ITEM TILE (collapsed) ─── */
+  .tile {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    padding: 12px 8px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    min-height: 100px;
+  }
+  .tile:active { transform: scale(.96); }
+  .tile.has-qty { border-color: var(--green); background: #f0fdf8; }
+  .tile.expanded {
+    grid-column: 1 / -1;
+    cursor: default;
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    padding: 16px;
+    text-align: left;
+  }
+
+  /* collapsed content */
+  .tile-collapsed { display: block; }
+  .tile.expanded .tile-collapsed { display: none; }
+  .tile-emoji { font-size: 1.8rem; display: block; margin-bottom: 5px; }
+  .tile-en { font-size: .74rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .tile-tel { font-size: .68rem; color: var(--sub); font-family: 'Noto Sans Telugu', sans-serif; margin-top: 2px; display: block; line-height: 1.4; }
+
+  /* qty badge on collapsed tile */
+  .qty-badge {
+    position: absolute; top: 6px; right: 6px;
+    background: var(--green); color: #fff;
+    font-size: .65rem; font-weight: 800;
+    padding: 2px 7px; border-radius: 999px;
+    display: none;
+  }
+  .tile.has-qty .qty-badge { display: block; }
+
+  /* ─── EXPANDED CONTENT ─── */
+  .tile-expanded { display: none; }
+  .tile.expanded .tile-expanded { display: block; }
+  .exp-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .exp-emoji { font-size: 2.4rem; flex-shrink: 0; }
+  .exp-names .exp-en  { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+  .exp-names .exp-tel { font-size: .85rem; color: var(--sub); font-family: 'Noto Sans Telugu', sans-serif; margin-top: 2px; }
+  .exp-names .exp-unit { font-size: .75rem; color: var(--primary); font-weight: 700; margin-top: 3px; background: var(--primary-soft); display: inline-block; padding: 2px 8px; border-radius: 999px; }
+
+  /* controls */
+  .exp-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .qty-btn {
+    width: 48px; height: 48px; border-radius: 50%; border: none;
+    font-size: 1.5rem; font-weight: 800; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .qty-btn:active { transform: scale(.9); }
+  .qty-minus { background: var(--red-soft); color: var(--red); }
+  .qty-plus  { background: var(--green-soft); color: var(--green); }
+  .qty-field {
+    flex: 1; min-width: 80px; max-width: 120px;
+    padding: 10px 14px; border: 2px solid var(--primary); border-radius: var(--radius-sm);
+    font-size: 1.2rem; font-weight: 800; text-align: center;
+    font-family: inherit; color: var(--primary); background: #fff; outline: none;
+  }
+  .qty-unit-lbl { font-size: .85rem; font-weight: 700; color: var(--sub); }
+  .exp-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .exp-add-btn {
+    flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none;
+    background: var(--green); color: #fff; font-size: .95rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: filter .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .exp-add-btn:active { filter: brightness(.9); }
+  .exp-close-btn {
+    padding: 12px 16px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: #fff; color: var(--sub); font-size: .9rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .exp-remove-btn {
+    padding: 12px 14px; border-radius: var(--radius-sm); border: none;
+    background: var(--red-soft); color: var(--red); font-size: .9rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* ─── DIRECT BUY MINI TOGGLE (top-right of tile) ─── */
+  .dbt-mini {
+    display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; align-self: flex-start;
+  }
+  .dbt-mini-label { font-size: .85rem; }
+  .dbt-mini-switch { position: relative; width: 30px; height: 17px; flex-shrink: 0; }
+  .dbt-mini-switch input { opacity: 0; width: 0; height: 0; }
+  .dbt-mini-slider {
+    position: absolute; inset: 0; background: #d1d5db; border-radius: 999px; cursor: pointer; transition: .2s;
+  }
+  .dbt-mini-slider::before {
+    content: ''; position: absolute; width: 12px; height: 12px; background: #fff;
+    border-radius: 50%; left: 2.5px; top: 2.5px; transition: .2s;
+  }
+  .dbt-mini-switch input:checked + .dbt-mini-slider { background: #f97316; }
+  .dbt-mini-switch input:checked + .dbt-mini-slider::before { transform: translateX(13px); }
+
+  /* Rate input — shows below item name when toggled on */
+  .direct-buy-rate {
+    display: none; margin-bottom: 8px;
+    background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: var(--radius-sm);
+    padding: 7px 11px;
+  }
+  .direct-buy-rate.show { display: flex; align-items: center; gap: 8px; }
+  .direct-buy-rate label { font-size: .75rem; font-weight: 700; color: #92400e; white-space: nowrap; }
+  .direct-buy-rate input {
+    flex: 1; border: 1.5px solid #fed7aa; border-radius: 6px; padding: 6px 9px;
+    font-size: .9rem; font-family: inherit; background: #fff; min-width: 0;
+  }
+  .direct-buy-rate input:focus { border-color: #f97316; outline: none; }
+
+  /* Badge on collapsed tile */
+  .dbt-badge {
+    background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 999px;
+    padding: 2px 7px; font-size: .65rem; font-weight: 700; color: #92400e; margin-top: 3px;
+  }
+
+  /* ─── STICKY FOOTER ─── */
+  .sticky-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: var(--card);
+    border-top: 1.5px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.1);
+    padding: 10px 14px 14px;
+  }
+  .footer-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .footer-count { font-size: .82rem; font-weight: 700; color: var(--sub); }
+  .view-list-btn {
+    font-size: .78rem; font-weight: 600; color: var(--primary);
+    background: var(--primary-soft); border: none; padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .submit-btn {
+    width: 100%; padding: 15px; border-radius: var(--radius-sm); border: none;
+    font-size: 1rem; font-weight: 800; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: filter .15s;
+  }
+  .submit-btn.ready  { background: var(--green); color: #fff; }
+  .submit-btn.empty  { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+  .submit-btn:active { filter: brightness(.92); }
+
+  /* ─── USAGE LIST SHEET ─── */
+  .sheet-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    z-index: 300; align-items: flex-end;
+  }
+  .sheet-overlay.open { display: flex; }
+  .sheet {
+    background: #fff; border-radius: 20px 20px 0 0;
+    width: 100%; padding: 20px 16px 30px;
+    max-height: 80vh; overflow-y: auto;
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .sheet-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 999px; margin: 0 auto 16px; }
+  .sheet h3 { font-size: 1rem; font-weight: 800; margin-bottom: 14px; }
+  .sheet-item { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+  .sheet-item:last-child { border-bottom: none; }
+  .si-name { font-weight: 700; font-size: .92rem; }
+  .si-tel  { font-size: .75rem; color: var(--sub); font-family: 'Noto Sans Telugu', sans-serif; }
+  .si-qty  { font-size: 1rem; font-weight: 800; color: var(--green); white-space: nowrap; }
+
+  /* ─── SUCCESS SCREEN ─── */
+  .success-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    z-index: 400; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 30px;
+  }
+  .success-overlay.open { display: flex; }
+  .success-icon { font-size: 5rem; margin-bottom: 16px; animation: bounce .5s ease; }
+  @keyframes bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+  .success-title { font-size: 1.5rem; font-weight: 800; color: var(--green); margin-bottom: 8px; }
+  .success-sub   { font-size: .95rem; color: var(--sub); margin-bottom: 24px; }
+  .success-detail { background: var(--green-soft); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; width: 100%; max-width: 340px; text-align: left; }
+  .success-detail .sd-row { display:flex; justify-content:space-between; padding:5px 0; font-size:.88rem; border-bottom:1px solid rgba(0,0,0,.06); }
+  .success-detail .sd-row:last-child { border-bottom:none; }
+  .new-entry-btn { padding:14px 32px; border-radius:var(--radius-sm); border:none; background:var(--green); color:#fff; font-size:1rem; font-weight:800; cursor:pointer; font-family:inherit; }
+
+  /* ─── TOAST ─── */
+  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:11px 20px; border-radius:999px; font-size:.85rem; font-weight:600; z-index:999; opacity:0; transition:all .3s; pointer-events:none; white-space:nowrap; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state { text-align:center; padding:40px 20px; color:var(--sub); }
+  .empty-state .ei { font-size:3rem; margin-bottom:10px; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (min-width: 600px) {
+    .item-grid { grid-template-columns: repeat(4, 1fr); }
+    body { max-width: 700px; margin: 0 auto; }
+  }
+</style>
+  <!-- ── Role Guard ── -->
+  <script>
+  (function(){
+    var role=sessionStorage.getItem('fc_role');
+    if(!role){window.location.href='index.html';return;}
+    if(role==='admin')return;
+    var mid='usage';
+    var cfg={};
+    try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit'};
+    var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
+    if(access==='none'){window.location.href='index.html';return;}
+    if(access==='view'){
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add('fc-readonly');
+      });
+    }
+  })();
+  </script>
+  <style>
+  /* ── Read-only mode ── */
+  .fc-readonly .btn-save,.fc-readonly .btn-del-entry,.fc-readonly .btn-settings,
+  .fc-readonly .btn-add,.fc-readonly .btn-primary,.fc-readonly .btn-green,
+  .fc-readonly .btn-orange,.fc-readonly .icon-btn-del,.fc-readonly .hbtn-white,
+  .fc-readonly .mbtn-save,.fc-readonly .mbtn-del,.fc-readonly .submit-btn,
+  .fc-readonly .new-entry-btn,.fc-readonly .hist-del-btn,.fc-readonly .del-confirm,
+  .fc-readonly .exp-add-btn,.fc-readonly .exp-remove-btn{display:none!important;}
+  #fc-readonly-banner{display:none;background:#eff6ff;border-bottom:2px solid #bfdbfe;
+    padding:9px 16px;font-size:12px;color:#1d4ed8;text-align:center;font-weight:600;}
+  .fc-readonly #fc-readonly-banner{display:block!important;}
+  </style>
+</head>
+<body>
+<div id="fc-readonly-banner">👁 View-only mode — you can browse data but cannot make changes</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left" style="display:flex;align-items:center;gap:10px">
+    <a href="index.html" style="color:rgba(255,255,255,.75);font-size:18px;text-decoration:none;line-height:1" title="Home">←</a>
+    <div>
+      <h1>📋 Daily Usage</h1>
+      <p>Record daily item consumption per section</p>
+    </div>
+  </div>
+</div>
+<!-- DATE BAR -->
+<div class="date-bar">
+  <label for="date-input">📅 Date</label>
+  <input type="date" id="date-input" onchange="onDateChange()">
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-record" onclick="switchTab('record')">✏️ New Entry</button>
+  <button class="tab-btn" id="tab-history" onclick="switchTab('history')">📜 History</button>
+</div>
+
+<!-- HISTORY VIEW -->
+<div class="history-wrap" id="history-wrap"></div>
+
+<!-- RECORD VIEW -->
+<div id="record-view">
+
+<!-- SECTION SELECTOR -->
+<div class="section-bar">
+  <div class="section-label">Select Section</div>
+  <div class="section-btns">
+    <div class="sec-btn" id="sec-tiffin" onclick="selectSection('tiffin')">
+      <span class="sec-icon">🍳</span>
+      <span class="sec-name">Tiffin</span>
+      <span class="sec-tel">టిఫిన్</span>
+    </div>
+    <div class="sec-btn" id="sec-meals" onclick="selectSection('meals')">
+      <span class="sec-icon">🍽️</span>
+      <span class="sec-name">Meals</span>
+      <span class="sec-tel">మీల్స్</span>
+    </div>
+    <div class="sec-btn" id="sec-chat" onclick="selectSection('chat')">
+      <span class="sec-icon">🥙</span>
+      <span class="sec-name">Chat</span>
+      <span class="sec-tel">చాట్</span>
+    </div>
+    <div class="sec-btn" id="sec-water" onclick="selectSection('water')">
+      <span class="sec-icon">💧</span>
+      <span class="sec-name">Water</span>
+      <span class="sec-tel">వాటర్</span>
+    </div>
+  </div>
+</div>
+
+<!-- NO SECTION MESSAGE -->
+<div id="no-section-msg" style="text-align:center;padding:40px 20px;color:#94a3b8;">
+  <div style="font-size:2.5rem;margin-bottom:10px">👆</div>
+  <div style="font-size:.95rem;font-weight:600;color:#64748b">Select a section above to start entering usage</div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-bar" id="search-bar" style="display:none">
+  <div class="search-inner">
+    <span>🔍</span>
+    <input type="text" id="search" placeholder="Search item…" oninput="renderGrid()">
+  </div>
+</div>
+
+<!-- CATEGORY PILLS -->
+<div class="cat-scroll" id="cat-scroll" style="display:none">
+  <div class="cpill active" onclick="setCat(this,'')">All</div>
+  <div class="cpill" onclick="setCat(this,'Flours & Grains')">🌾 Flours & Grains</div>
+  <div class="cpill" onclick="setCat(this,'Dals & Legumes')">🫘 Dals & Legumes</div>
+  <div class="cpill" onclick="setCat(this,'Spices & Condiments')">🌶️ Spices</div>
+  <div class="cpill" onclick="setCat(this,'Masalas & Powders')">🧂 Masalas</div>
+  <div class="cpill" onclick="setCat(this,'Oils')">🛢️ Oils</div>
+  <div class="cpill" onclick="setCat(this,'Sauces & Liquids')">🍶 Sauces</div>
+  <div class="cpill" onclick="setCat(this,'Packaging')">📦 Packaging</div>
+  <div class="cpill" onclick="setCat(this,'Water')">💧 Water</div>
+  <div class="cpill" onclick="setCat(this,'Dairy Products')">🥛 Dairy</div>
+  <div class="cpill" onclick="setCat(this,'Vegetables')">🥦 Vegetables</div>
+</div>
+
+<!-- GRID -->
+<div class="grid-wrap" id="grid-wrap" style="display:none">
+  <div class="item-grid" id="item-grid"></div>
+</div>
+
+</div><!-- /record-view -->
+
+<!-- STICKY FOOTER -->
+<div class="sticky-footer" id="sticky-footer" style="display:none">
+  <div class="footer-summary">
+    <span class="footer-count" id="footer-count">0 items selected</span>
+    <button class="view-list-btn" onclick="openSheet()">👁 View List</button>
+  </div>
+  <button class="submit-btn empty" id="submit-btn" onclick="submitUsage()">
+    ✅ Submit Usage
+  </button>
+</div>
+
+<!-- USAGE LIST SHEET -->
+<div class="sheet-overlay" id="sheet" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>📋 Today's Usage</h3>
+    <div id="sheet-content"></div>
+    <button style="width:100%;margin-top:16px;padding:12px;border-radius:10px;border:none;background:var(--bg);color:var(--sub);font-weight:700;cursor:pointer;font-family:inherit" onclick="closeSheet()">✕ Close</button>
+  </div>
+</div>
+
+<!-- SUCCESS SCREEN -->
+<div class="success-overlay" id="success">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Usage Submitted!</div>
+  <div class="success-sub">Submitted successfully</div>
+  <div class="success-detail" id="success-detail"></div>
+  <button class="new-entry-btn" onclick="resetAll()">+ New Entry</button>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="del-modal-overlay" id="del-modal">
+  <div class="del-modal">
+    <h3>🗑 Delete Entry?</h3>
+    <p id="del-modal-msg">This will permanently remove this usage entry and restore the stock quantities.</p>
+    <div class="del-modal-btns">
+      <button class="del-cancel" onclick="closeDelModal()">Cancel</button>
+      <button class="del-confirm" onclick="confirmDeleteSession()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  ITEM DATA — English + Telugu + Emoji
+// ══════════════════════════════════════════════════
+let ALL_ITEMS = [
+  // Flours & Grains
+  {id:1,  en:'Idly Rawa',             tel:'ఇడ్లీ రవ్వ',          cat:'Flours & Grains',     unit:'KG',     emoji:'🌾'},
+  {id:2,  en:'Upma Rawa',             tel:'ఉప్మా రవ్వ',           cat:'Flours & Grains',     unit:'KG',     emoji:'🌾'},
+  {id:3,  en:'Super Atta',            tel:'సూపర్ అట్టా',          cat:'Flours & Grains',     unit:'KG',     emoji:'🌾'},
+  {id:4,  en:'Chikki Atta',           tel:'చిక్కీ అట్టా',         cat:'Flours & Grains',     unit:'KG',     emoji:'🌾'},
+  {id:5,  en:'Maida',                 tel:'మైదా పిండి',           cat:'Flours & Grains',     unit:'KG',     emoji:'🍞'},
+  {id:6,  en:'Besan',                 tel:'శనగ పిండి',            cat:'Flours & Grains',     unit:'KG',     emoji:'🟡'},
+  {id:7,  en:'Rice Atta',             tel:'అన్నం పిండి',          cat:'Flours & Grains',     unit:'KG',     emoji:'🍚'},
+  {id:8,  en:'Corn Flour',            tel:'మొక్కజొన్న పిండి',    cat:'Flours & Grains',     unit:'KG',     emoji:'🌽'},
+  {id:12, en:'Meals Rice',            tel:'మీల్స్ బియ్యం',        cat:'Flours & Grains',     unit:'KG',     emoji:'🍚'},
+  {id:13, en:'Tiffin Rice',           tel:'టిఫిన్ బియ్యం',       cat:'Flours & Grains',     unit:'KG',     emoji:'🍚'},
+  {id:39, en:'Barik Sev',             tel:'బారిక్ సేవ్',          cat:'Flours & Grains',     unit:'KG',     emoji:'🍜'},
+  {id:40, en:'Kaju',                  tel:'జీడిపప్పు',            cat:'Flours & Grains',     unit:'KG',     emoji:'🥜'},
+  {id:65, en:'Thil',                  tel:'నువ్వులు',             cat:'Flours & Grains',     unit:'KG',     emoji:'🌱'},
+  // Dals & Legumes
+  {id:9,  en:'Toor Dal',              tel:'కందిపప్పు',            cat:'Dals & Legumes',      unit:'KG',     emoji:'🫘'},
+  {id:10, en:'Minapa Gundu',          tel:'మినప గుండు',           cat:'Dals & Legumes',      unit:'KG',     emoji:'🫘'},
+  {id:11, en:'Chana Dal',             tel:'శనగపప్పు',             cat:'Dals & Legumes',      unit:'KG',     emoji:'🫘'},
+  {id:18, en:'Green Batana',          tel:'పచ్చి బటానీ',          cat:'Dals & Legumes',      unit:'KG',     emoji:'💚'},
+  {id:19, en:'White Batana',          tel:'తెల్ల బటానీ',          cat:'Dals & Legumes',      unit:'KG',     emoji:'⚪'},
+  {id:20, en:'Kabuli Chana',          tel:'కాబూలి శనగలు',        cat:'Dals & Legumes',      unit:'KG',     emoji:'🫘'},
+  // Spices & Condiments
+  {id:14, en:'Jaggery',               tel:'బెల్లం',               cat:'Spices & Condiments', unit:'KG',     emoji:'🍯'},
+  {id:15, en:'Suka Mirchi',           tel:'ఎండు మిర్చి',          cat:'Spices & Condiments', unit:'KG',     emoji:'🌶️'},
+  {id:16, en:'Tenkaya',               tel:'తెంకాయ',               cat:'Spices & Condiments', unit:'PCS',    emoji:'🥥'},
+  {id:17, en:'Palli',                 tel:'వేరుశనగలు',            cat:'Spices & Condiments', unit:'KG',     emoji:'🥜'},
+  {id:21, en:'Sugar',                 tel:'చక్కెర',               cat:'Spices & Condiments', unit:'KG',     emoji:'🍬'},
+  {id:23, en:'Haldi',                 tel:'పసుపు',                cat:'Spices & Condiments', unit:'KG',     emoji:'💛'},
+  {id:25, en:'Inguva',                tel:'ఇంగువ',                cat:'Spices & Condiments', unit:'KG',     emoji:'🟤'},
+  {id:26, en:'Copra Powder',          tel:'కొబ్బరి పొడి',         cat:'Spices & Condiments', unit:'KG',     emoji:'🥥'},
+  {id:27, en:'Daniya Powder',         tel:'ధనియాల పొడి',          cat:'Spices & Condiments', unit:'KG',     emoji:'🌿'},
+  {id:28, en:'Kasturi Methi',         tel:'కస్తూరి మేంతి',        cat:'Spices & Condiments', unit:'KG',     emoji:'🌿'},
+  {id:29, en:'Mirchi',                tel:'మిర్చి పొడి',          cat:'Spices & Condiments', unit:'KG',     emoji:'🌶️'},
+  {id:30, en:'Imly',                  tel:'చింతపండు',             cat:'Spices & Condiments', unit:'PCS',    emoji:'🟤'},
+  {id:31, en:'Jeera',                 tel:'జీలకర్ర',              cat:'Spices & Condiments', unit:'KG',     emoji:'🌰'},
+  {id:32, en:'Rai',                   tel:'ఆవాలు',               cat:'Spices & Condiments', unit:'KG',     emoji:'⚫'},
+  {id:42, en:'Nimbu Salt',            tel:'నిమ్బు ఉప్పు',         cat:'Spices & Condiments', unit:'KG',     emoji:'🍋'},
+  {id:43, en:'Tata Soda',             tel:'టాటా సోడా',            cat:'Spices & Condiments', unit:'KG',     emoji:'🥤'},
+  {id:44, en:'Black Salt',            tel:'నల్ల ఉప్పు',           cat:'Spices & Condiments', unit:'KG',     emoji:'⚫'},
+  // Masalas & Powders
+  {id:24, en:'Chat Masala',           tel:'చాట్ మసాలా',           cat:'Masalas & Powders',   unit:'KG',     emoji:'🧂'},
+  {id:33, en:'Swastik Samber Masala', tel:'స్వస్తిక్ సాంబార్',   cat:'Masalas & Powders',   unit:'PCS',    emoji:'📦'},
+  {id:34, en:'MTR Samber Masala',     tel:'MTR సాంబార్',          cat:'Masalas & Powders',   unit:'PCS',    emoji:'📦'},
+  {id:35, en:'Pav Masala',            tel:'పావ్ మసాలా',           cat:'Masalas & Powders',   unit:'KG',     emoji:'🧂'},
+  {id:36, en:'Garam Masala',          tel:'గరం మసాలా',            cat:'Masalas & Powders',   unit:'PCS',    emoji:'🧂'},
+  {id:37, en:'Jal Jeera Powder',      tel:'జల్ జీరా పొడి',       cat:'Masalas & Powders',   unit:'PCS',    emoji:'🧂'},
+  {id:38, en:'Dosa Masala Powder',    tel:'దోశ మసాలా',           cat:'Masalas & Powders',   unit:'PCS',    emoji:'🧂'},
+  {id:41, en:'Idly Karam Powder',     tel:'ఇడ్లీ కారం',          cat:'Masalas & Powders',   unit:'PCS',    emoji:'🌶️'},
+  // Oils
+  {id:45, en:'Palm Oil 800ml',        tel:'పామాయిల్ 800ml',       cat:'Oils',                unit:'PCS',    emoji:'🫙'},
+  {id:46, en:'Palm Oil Loose',        tel:'పామాయిల్ వదులు',       cat:'Oils',                unit:'KG',     emoji:'🛢️'},
+  {id:47, en:'Groundnut Oil',         tel:'వేరుశనగ నూనె',         cat:'Oils',                unit:'KG',     emoji:'🛢️'},
+  // Sauces & Liquids
+  {id:48, en:'Chilli Sauce',          tel:'చిల్లీ సాస్',          cat:'Sauces & Liquids',    unit:'BOTTLE', emoji:'🌶️'},
+  {id:49, en:'Tomato Sauce',          tel:'టొమాటో సాస్',          cat:'Sauces & Liquids',    unit:'BOTTLE', emoji:'🍅'},
+  {id:50, en:'Red Chilli Sauce',      tel:'ఎర్ర మిర్చి సాస్',    cat:'Sauces & Liquids',    unit:'BOTTLE', emoji:'🌶️'},
+  {id:51, en:'Soya Sauce',            tel:'సోయా సాస్',            cat:'Sauces & Liquids',    unit:'BOTTLE', emoji:'🫙'},
+  {id:52, en:'Vinegar',               tel:'వెనిగర్',              cat:'Sauces & Liquids',    unit:'BOTTLE', emoji:'🍶'},
+  // Packaging
+  {id:22, en:'Spoons Chat',           tel:'చాట్ స్పూన్లు',        cat:'Packaging',           unit:'PCS',    emoji:'🥄'},
+  {id:53, en:'7×9 Silver Covers',     tel:'సిల్వర్ కవర్లు 7×9',  cat:'Packaging',           unit:'PCS',    emoji:'📦'},
+  {id:54, en:'Dosa Box',              tel:'దోశ బాక్స్',           cat:'Packaging',           unit:'PCS',    emoji:'📦'},
+  {id:55, en:'Samber Covers',         tel:'సాంబార్ కవర్లు',       cat:'Packaging',           unit:'PCS',    emoji:'📦'},
+  {id:56, en:'10×12 Covers',          tel:'10×12 కవర్లు',         cat:'Packaging',           unit:'KG',     emoji:'📦'},
+  {id:57, en:'13×16 Covers',          tel:'13×16 కవర్లు',         cat:'Packaging',           unit:'KG',     emoji:'📦'},
+  {id:58, en:'8×10 Covers',           tel:'8×10 కవర్లు',          cat:'Packaging',           unit:'KG',     emoji:'📦'},
+  {id:59, en:'250ml Manchuria Box',   tel:'మంచూరియా బాక్స్',      cat:'Packaging',           unit:'PCS',    emoji:'📦'},
+  {id:60, en:'250ml Chat Box',        tel:'చాట్ బాక్స్',          cat:'Packaging',           unit:'BOX',    emoji:'📦'},
+  {id:61, en:'16×20 Covers',          tel:'16×20 కవర్లు',         cat:'Packaging',           unit:'KG',     emoji:'📦'},
+  // Water
+  {id:62, en:'Water 1 Litre',         tel:'నీళ్ళు 1 లీటర్',      cat:'Water',               unit:'PCS',    emoji:'💧'},
+  {id:63, en:'Water 500ml',           tel:'నీళ్ళు 500ml',         cat:'Water',               unit:'PCS',    emoji:'💧'},
+  {id:64, en:'Bisleri 10 Litre',      tel:'బిస్లేరి 10 లీటర్',   cat:'Water',               unit:'PCS',    emoji:'💧'},
+];
+
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let selectedSection = '';
+let activeCat = '';
+let expandedId = null;
+const usage     = {}; // { itemId: qty }
+const directBuy = {}; // { itemId: rate } — items bought & used directly today
+
+const ITEMS_KEY  = 'fc_items_v2';
+const USAGE_KEY  = 'fc_daily_usage';
+const PUR_KEY    = 'fc_purchases';
+
+// ══════════════════════════════════════════════════
+//  FIFO HELPERS
+// ══════════════════════════════════════════════════
+
+// Consume qty of an item from oldest purchase batches first.
+// Updates remainingQty in each purchase batch.
+// Returns { totalCost, fifoBreakdown: [{purchaseId, qty, rate}] }
+function fifoConsume(itemId, qtyNeeded) {
+  const purchases = JSON.parse(localStorage.getItem(PUR_KEY) || '[]');
+
+  // Only batches for this item that still have remaining stock, oldest first
+  const batches = purchases
+    .filter(p => p.itemId === itemId && (p.remainingQty || 0) > 0)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
+  let remaining = qtyNeeded;
+  let totalCost = 0;
+  const breakdown = [];
+
+  for (const batch of batches) {
+    if (remaining <= 0) break;
+    const consume = Math.min(remaining, batch.remainingQty);
+    const rate    = batch.transferRate || batch.rate || 0;
+    totalCost    += consume * rate;
+    breakdown.push({ purchaseId: batch.id, qty: consume, rate });
+    remaining    -= consume;
+
+    // Update in the main array
+    const idx = purchases.findIndex(p => p.id === batch.id);
+    if (idx >= 0) purchases[idx].remainingQty = batch.remainingQty - consume;
+  }
+
+  // If remaining > 0 there are no purchase batches left (stock discrepancy) — cost = 0
+  localStorage.setItem(PUR_KEY, JSON.stringify(purchases));
+  return { totalCost: Math.round(totalCost * 100) / 100, fifoBreakdown: breakdown };
+}
+
+// Reverse a FIFO consume — called when a usage session is deleted.
+// Restores remainingQty back to the purchase batches.
+function fifoRestore(records) {
+  const purchases = JSON.parse(localStorage.getItem(PUR_KEY) || '[]');
+  for (const record of records) {
+    if (!record.fifoBreakdown) continue;
+    for (const entry of record.fifoBreakdown) {
+      const idx = purchases.findIndex(p => p.id === entry.purchaseId);
+      if (idx >= 0) purchases[idx].remainingQty = (purchases[idx].remainingQty || 0) + entry.qty;
+    }
+  }
+  localStorage.setItem(PUR_KEY, JSON.stringify(purchases));
+}
+
+// ══════════════════════════════════════════════════
+//  DATE
+// ══════════════════════════════════════════════════
+function today(){ return new Date().toISOString().split('T')[0]; }
+function formatDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+function onDateChange(){ /* date-input value used directly on submit */ }
+document.getElementById('date-input').value = today();
+
+// ══════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════
+let activeTab = 'record';
+function switchTab(tab){
+  activeTab = tab;
+  document.getElementById('tab-record').classList.toggle('active', tab==='record');
+  document.getElementById('tab-history').classList.toggle('active', tab==='history');
+  document.getElementById('record-view').style.display  = tab==='record'  ? '' : 'none';
+  document.getElementById('history-wrap').classList.toggle('visible', tab==='history');
+  document.querySelector('.sticky-footer').style.display = tab==='record' ? '' : 'none';
+  if(tab==='history') renderHistory();
+}
+
+// ══════════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════════
+let _pendingDelSession = null;
+
+function renderHistory(){
+  const wrap = document.getElementById('history-wrap');
+  const log  = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+
+  if(!log.length){
+    wrap.innerHTML = `<div class="hist-empty"><div class="ei">📭</div><p>No usage entries yet</p></div>`;
+    return;
+  }
+
+  // Group by sessionId (fallback: date+section)
+  const groups = {};
+  log.forEach(r=>{
+    const key = r.sessionId || (r.date+'__'+r.section);
+    if(!groups[key]) groups[key] = { sessionId: key, date: r.date, section: r.section, items: [] };
+    groups[key].items.push(r);
+  });
+
+  // Sort newest first
+  const sorted = Object.values(groups).sort((a,b)=> b.date.localeCompare(a.date) || b.sessionId.localeCompare(a.sessionId));
+
+  wrap.innerHTML = sorted.map(g=>{
+    const secClass = 'hist-sec-'+g.section;
+    const secLabel = {tiffin:'🍳 Tiffin', meals:'🍽️ Meals', chat:'🥙 Chat', water:'💧 Water'}[g.section] || g.section;
+    const rows = g.items.map(r=>`
+      <div class="hist-item-row">
+        <div>
+          <div class="hi-name">${ALL_ITEMS.find(i=>i.id===r.itemId)?.emoji||''} ${r.itemName}</div>
+          <div class="hi-tel">${r.itemTel||''}</div>
+        </div>
+        <div class="hi-qty">${r.qty} ${r.unit}</div>
+      </div>`).join('');
+    return `
+      <div class="hist-group">
+        <div class="hist-head">
+          <div class="hist-head-left">
+            <div class="hist-date">📅 ${formatDate(g.date)}</div>
+            <span class="hist-sec-badge ${secClass}">${secLabel}</span>
+            <span class="hist-count">${g.items.length} item${g.items.length!==1?'s':''}</span>
+          </div>
+          <button class="hist-del-btn" onclick="askDeleteSession('${g.sessionId}','${g.date}','${g.section}')">🗑 Delete</button>
+        </div>
+        ${rows}
+      </div>`;
+  }).join('');
+}
+
+function askDeleteSession(sessionId, date, section){
+  _pendingDelSession = sessionId;
+  document.getElementById('del-modal-msg').textContent =
+    `Delete all items for ${formatDate(date)} — ${section.toUpperCase()} section? Stock will be restored.`;
+  document.getElementById('del-modal').classList.add('open');
+}
+function closeDelModal(){
+  _pendingDelSession = null;
+  document.getElementById('del-modal').classList.remove('open');
+}
+function confirmDeleteSession(){
+  if(!_pendingDelSession){ closeDelModal(); return; }
+  const sid = _pendingDelSession;
+  let log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+
+  // Find records to delete
+  const toDelete = log.filter(r=> (r.sessionId||r.date+'__'+r.section) === sid);
+
+  // Restore FIFO purchase batch remainingQty
+  fifoRestore(toDelete);
+
+  // Restore store stock
+  const storeItems = JSON.parse(localStorage.getItem(ITEMS_KEY)||'[]');
+  toDelete.forEach(r=>{
+    const si = storeItems.find(i=>i.id===r.itemId);
+    if(si) si.qty = (si.qty||0) + r.qty;
+  });
+  localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
+
+  // Remove from log
+  log = log.filter(r=> (r.sessionId||r.date+'__'+r.section) !== sid);
+  localStorage.setItem(USAGE_KEY, JSON.stringify(log));
+
+  closeDelModal();
+  toast('🗑 Entry deleted & stock restored');
+  renderHistory();
+}
+
+// ══════════════════════════════════════════════════
+//  SECTION
+// ══════════════════════════════════════════════════
+function selectSection(sec){
+  selectedSection = selectedSection===sec ? '' : sec;
+  ['tiffin','meals','chat','water'].forEach(s=>{
+    const el = document.getElementById('sec-'+s);
+    el.className = 'sec-btn' + (s===selectedSection ? ` active-${s}` : '');
+  });
+  expandedId = null;
+  // Show/hide entry area based on section selection
+  const hasSection = !!selectedSection;
+  document.getElementById('no-section-msg').style.display = hasSection ? 'none' : '';
+  document.getElementById('search-bar').style.display     = hasSection ? ''     : 'none';
+  document.getElementById('cat-scroll').style.display     = hasSection ? ''     : 'none';
+  document.getElementById('grid-wrap').style.display      = hasSection ? ''     : 'none';
+  document.getElementById('sticky-footer').style.display  = hasSection ? ''     : 'none';
+  renderGrid();
+}
+
+// ══════════════════════════════════════════════════
+//  CATEGORY
+// ══════════════════════════════════════════════════
+function setCat(el, cat){
+  document.querySelectorAll('.cpill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  activeCat = cat;
+  expandedId = null;
+  renderGrid();
+}
+
+// ══════════════════════════════════════════════════
+//  FILTER ITEMS
+// ══════════════════════════════════════════════════
+function getFiltered(){
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  return ALL_ITEMS.filter(item=>{
+    if(activeCat && item.cat !== activeCat) return false;
+    if(q && !item.en.toLowerCase().includes(q) && !item.tel.includes(q)) return false;
+    return true;
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  STEP SIZE
+// ══════════════════════════════════════════════════
+function step(unit){ return unit==='KG' ? 0.5 : 1; }
+
+// ══════════════════════════════════════════════════
+//  RENDER GRID
+// ══════════════════════════════════════════════════
+function renderGrid(){
+  const items = getFiltered();
+  const grid  = document.getElementById('item-grid');
+
+  if(!items.length){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="ei">🔍</div><p>No items found</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = items.map(item=>{
+    const qty     = usage[item.id] || 0;
+    const isExp   = expandedId === item.id;
+    const hasQty  = qty > 0;
+    const s       = step(item.unit);
+
+    if(isExp){
+      return `<div class="tile expanded" id="tile-${item.id}">
+        <!-- collapsed hidden -->
+        <div class="tile-collapsed"></div>
+        <!-- expanded -->
+        <div class="tile-expanded">
+          <div class="exp-top">
+            <span class="exp-emoji">${item.emoji}</span>
+            <div class="exp-names">
+              <div class="exp-en">${item.en}</div>
+              <div class="exp-tel">${item.tel}</div>
+              <span class="exp-unit">${item.unit}</span>
+            </div>
+            <!-- Direct Buy compact toggle top-right -->
+            <div class="dbt-mini">
+              <span class="dbt-mini-label">🛒</span>
+              <label class="dbt-mini-switch">
+                <input type="checkbox" id="dbt-${item.id}"
+                  ${directBuy[item.id] !== undefined ? 'checked' : ''}
+                  onchange="toggleDirectBuy(${item.id}, this.checked)">
+                <span class="dbt-mini-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="direct-buy-rate ${directBuy[item.id] !== undefined ? 'show' : ''}" id="dbr-${item.id}">
+            <label>Purchase Rate ₹</label>
+            <input type="number" id="db-rate-${item.id}" min="0" step="0.01" placeholder="0.00"
+              value="${directBuy[item.id] || ''}"
+              oninput="directBuy[${item.id}] = parseFloat(this.value)||0">
+          </div>
+          <div class="exp-controls">
+            <button class="qty-btn qty-minus" onclick="changeQty(${item.id},${-s})">−</button>
+            <input class="qty-field" id="qf-${item.id}" type="number" min="0" step="${s}"
+              value="${qty}" onchange="setQty(${item.id},this.value)" oninput="setQty(${item.id},this.value)">
+            <span class="qty-unit-lbl">${item.unit}</span>
+            <button class="qty-btn qty-plus" onclick="changeQty(${item.id},${s})">＋</button>
+          </div>
+
+          <div class="exp-actions">
+            <button class="exp-add-btn" onclick="confirmAdd(${item.id})">
+              ✅ ${hasQty ? 'Update' : 'Add'}
+            </button>
+            ${hasQty ? `<button class="exp-remove-btn" onclick="removeItem(${item.id})">🗑 Remove</button>` : ''}
+            <button class="exp-close-btn" onclick="collapseTile()">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    const isDirect = directBuy[item.id] !== undefined;
+    return `<div class="tile ${hasQty?'has-qty':''}" id="tile-${item.id}" onclick="expandTile(${item.id})">
+      <div class="tile-collapsed">
+        <span class="qty-badge">${qty} ${item.unit}</span>
+        <span class="tile-emoji">${item.emoji}</span>
+        <div class="tile-en">${item.en}</div>
+        <span class="tile-tel">${item.tel}</span>
+        ${isDirect ? `<span class="dbt-badge">🛒 Direct</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  updateFooter();
+
+  // Scroll expanded tile into view
+  if(expandedId){
+    setTimeout(()=>{
+      const el = document.getElementById('tile-'+expandedId);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 50);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  EXPAND / COLLAPSE
+// ══════════════════════════════════════════════════
+function expandTile(id){
+  expandedId = id;
+  renderGrid();
+}
+function collapseTile(){
+  expandedId = null;
+  renderGrid();
+}
+
+function toggleDirectBuy(id, on){
+  if(on){
+    directBuy[id] = 0;
+    document.getElementById('dbr-'+id)?.classList.add('show');
+    setTimeout(()=>document.getElementById('db-rate-'+id)?.focus(), 50);
+  } else {
+    delete directBuy[id];
+    document.getElementById('dbr-'+id)?.classList.remove('show');
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  QTY CONTROLS
+// ══════════════════════════════════════════════════
+function changeQty(id, delta){
+  const inp = document.getElementById('qf-'+id);
+  if(!inp) return;
+  const cur = parseFloat(inp.value)||0;
+  const item = ALL_ITEMS.find(i=>i.id===id);
+  const s = step(item?.unit||'KG');
+  const newVal = Math.max(0, Math.round((cur + delta) * 100) / 100);
+  inp.value = newVal;
+}
+function setQty(id, val){
+  const v = parseFloat(val);
+  if(isNaN(v)||v<0) return;
+  // just update input, don't commit yet — commit on confirmAdd
+}
+
+function confirmAdd(id){
+  const inp = document.getElementById('qf-'+id);
+  const val = parseFloat(inp?.value)||0;
+  if(val > 0){
+    usage[id] = val;
+    toast(`✅ ${ALL_ITEMS.find(i=>i.id===id)?.en} — ${val} ${ALL_ITEMS.find(i=>i.id===id)?.unit}`);
+  } else {
+    delete usage[id];
+  }
+  expandedId = null;
+  renderGrid();
+}
+
+function removeItem(id){
+  delete usage[id];
+  delete directBuy[id];
+  expandedId = null;
+  renderGrid();
+  toast(`🗑 Item removed`);
+}
+
+// ══════════════════════════════════════════════════
+//  FOOTER
+// ══════════════════════════════════════════════════
+function updateFooter(){
+  const count  = Object.keys(usage).length;
+  const btn    = document.getElementById('submit-btn');
+  const fcnt   = document.getElementById('footer-count');
+
+  if(!selectedSection){
+    fcnt.textContent = count > 0 ? `${count} item${count!==1?'s':''} selected — select a section` : 'Select a section first';
+    btn.className = 'submit-btn empty';
+    return;
+  }
+  if(count === 0){
+    fcnt.textContent = `Section: ${selectedSection.toUpperCase()} · 0 items`;
+    btn.className = 'submit-btn empty';
+  } else {
+    fcnt.textContent = `${count} item${count!==1?'s':''} · ${selectedSection.toUpperCase()} section`;
+    btn.className = 'submit-btn ready';
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  USAGE LIST SHEET
+// ══════════════════════════════════════════════════
+function openSheet(){
+  const keys = Object.keys(usage);
+  if(!keys.length){ toast('⚠ No items added yet'); return; }
+  const content = document.getElementById('sheet-content');
+  content.innerHTML = keys.map(id=>{
+    const item = ALL_ITEMS.find(i=>i.id===parseInt(id));
+    const qty  = usage[id];
+    return `<div class="sheet-item">
+      <div>
+        <div class="si-name">${item?.emoji} ${item?.en}</div>
+        <div class="si-tel">${item?.tel}</div>
+      </div>
+      <div class="si-qty">${qty} ${item?.unit}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('sheet').classList.add('open');
+}
+function closeSheet(){ document.getElementById('sheet').classList.remove('open'); }
+
+// ══════════════════════════════════════════════════
+//  SUBMIT
+// ══════════════════════════════════════════════════
+function submitUsage(){
+  const keys = Object.keys(usage);
+  if(!keys.length){ toast('⚠ Add at least one item'); return; }
+  if(!selectedSection){ toast('⚠ Please select a section first'); return; }
+
+  const date      = document.getElementById('date-input').value;
+  const sessionId = 'sess_' + Date.now();
+  const records   = [];
+
+  // Step 1: Auto-create purchase records for direct-buy items
+  const purchases  = JSON.parse(localStorage.getItem(PUR_KEY)||'[]');
+  const storeItems = JSON.parse(localStorage.getItem(ITEMS_KEY)||'[]');
+  const now        = Date.now();
+  let   purIdx     = 0;
+
+  keys.forEach(id => {
+    const itemId = parseInt(id);
+    const qty    = usage[id];
+    const rate   = directBuy[itemId];
+    if(rate === undefined) return; // not a direct buy
+
+    const item         = ALL_ITEMS.find(i=>i.id===itemId);
+    const storeItem    = storeItems.find(i=>i.id===itemId);
+    const markupPct    = storeItem?.markup || 0;
+    const transferRate = rate * (1 + markupPct/100);
+    const batchId      = 'db_batch_' + now + '_' + purIdx;
+
+    purchases.push({
+      id:           now + purIdx++,
+      batchId,
+      date,
+      itemId,
+      itemName:     item?.en || '—',
+      unit:         item?.unit || '',
+      qty,
+      rate,
+      markupPct,
+      transferRate,
+      vendorTotal:  Math.round(qty * rate * 100) / 100,
+      total:        Math.round(qty * transferRate * 100) / 100,
+      remainingQty: qty,
+      vendor:       'Direct Purchase',
+      bill:         '',
+      note:         'Auto-recorded from daily usage',
+      type:         'cash',
+      payMethod:    'cash',
+      cashPaid:     Math.round(qty * rate * 100) / 100,
+      creditAmt:    0,
+      paidStatus:   'paid',
+      paidDate:     date,
+      directBuy:    true
+    });
+
+    // Add to store stock (will be immediately consumed by FIFO below)
+    if(storeItem) storeItem.qty = (storeItem.qty||0) + qty;
+  });
+  localStorage.setItem(PUR_KEY, JSON.stringify(purchases));
+
+  // Step 2: FIFO consume + usage records
+  keys.forEach(id=>{
+    const itemId = parseInt(id);
+    const qty    = usage[id];
+    const item   = ALL_ITEMS.find(i=>i.id===itemId);
+
+    // FIFO cost calculation (now includes direct-buy batch if applicable)
+    const { totalCost, fifoBreakdown } = fifoConsume(itemId, qty);
+
+    records.push({ id: Date.now()+Math.random(), sessionId, date, section: selectedSection, itemId, itemName: item?.en, itemTel: item?.tel, unit: item?.unit, qty, cost: totalCost, fifoBreakdown, directBuy: directBuy[itemId] !== undefined });
+
+    // Deduct from store
+    const si = storeItems.find(i=>i.id===itemId);
+    if(si){ si.qty = Math.max(0, (si.qty||0) - qty); }
+  });
+  localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
+
+  // Save usage log
+  const log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  records.forEach(r=>log.push(r));
+  localStorage.setItem(USAGE_KEY, JSON.stringify(log));
+
+  // Show success screen
+  const detail = document.getElementById('success-detail');
+  detail.innerHTML = `
+    <div class="sd-row"><span>📅 Date</span><span>${formatDate(date)}</span></div>
+    <div class="sd-row"><span>🏷 Section</span><span>${selectedSection.toUpperCase()}</span></div>
+    <div class="sd-row"><span>📦 Items Used</span><span>${keys.length}</span></div>
+    ${records.map(r=>`<div class="sd-row"><span>${ALL_ITEMS.find(i=>i.id===r.itemId)?.emoji} ${r.itemName}${r.directBuy?' 🛒':''}</span><span>${r.qty} ${r.unit}</span></div>`).join('')}
+  `;
+  document.getElementById('success').classList.add('open');
+}
+
+// ══════════════════════════════════════════════════
+//  RESET
+// ══════════════════════════════════════════════════
+function resetAll(){
+  Object.keys(usage).forEach(k=>delete usage[k]);
+  Object.keys(directBuy).forEach(k=>delete directBuy[k]);
+  selectedSection = '';
+  expandedId = null;
+  ['tiffin','meals','chat','water'].forEach(s=> document.getElementById('sec-'+s).className='sec-btn');
+  document.getElementById('date-input').value = today();
+  document.getElementById('search').value = '';
+  document.getElementById('success').classList.remove('open');
+  switchTab('record');
+  renderGrid();
+}
+
+// ══════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════
+let _t;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_t); _t = setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+fcInit(function(){
+  // ── Sync ALL_ITEMS from fc_items_v2 (inventory master list)
+  // Build tel-name + emoji fallback from the hardcoded list above
+  const _telFallback   = {};
+  const _emojiFallback = {};
+  ALL_ITEMS.forEach(i => { _telFallback[i.id] = i.tel; _emojiFallback[i.id] = i.emoji; });
+
+  const catEmoji = {
+    'Flours & Grains'   : '🌾',
+    'Dals & Legumes'    : '🫘',
+    'Spices & Condiments': '🌶️',
+    'Masalas & Powders' : '🧂',
+    'Oils'              : '🫙',
+    'Sauces & Liquids'  : '🍶',
+    'Packaging'         : '📦',
+    'Water'             : '💧',
+    'Dairy Products'    : '🥛',
+    'Vegetables'        : '🥦'
+  };
+
+  const storeItems = JSON.parse(localStorage.getItem(ITEMS_KEY) || '[]');
+  if(storeItems.length){
+    ALL_ITEMS = storeItems.map(si => ({
+      id    : si.id,
+      en    : si.name,
+      tel   : _telFallback[si.id] || si.tel || '',
+      cat   : si.cat,
+      unit  : si.unit,
+      markup: si.markup || 0,
+      emoji : _emojiFallback[si.id] || catEmoji[si.cat] || '📦'
+    }));
+  }
+  // ──────────────────────────────────────────────
+
+  renderGrid();
+  switchTab('record');
+});
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

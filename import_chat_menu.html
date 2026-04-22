@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Chat Menu Items</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --pink:    #ec4899;
+      --bg:      #f8fafc;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --radius:  12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .header {
+      background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+      color: white; padding: 16px 18px;
+    }
+    .header h1 { font-size: 17px; font-weight: 700; }
+    .header p  { font-size: 12px; opacity: .75; margin-top: 3px; }
+
+    .content { padding: 16px; max-width: 560px; margin: 0 auto; }
+
+    /* Status banner */
+    .status-box {
+      border-radius: var(--radius); padding: 14px 16px;
+      margin-bottom: 16px; font-size: 14px; font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .status-box.info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .status-box.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .status-box.warn    { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+    /* Import button */
+    .btn-import {
+      background: var(--pink); color: white; border: none;
+      border-radius: var(--radius); padding: 14px; font-size: 15px;
+      font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+      width: 100%; margin-bottom: 16px; letter-spacing: .3px;
+    }
+    .btn-import:hover  { background: #db2777; }
+    .btn-import:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+    /* Summary row */
+    .summary-row {
+      display: flex; gap: 10px; margin-bottom: 16px;
+    }
+    .sum-card {
+      flex: 1; background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px; text-align: center;
+    }
+    .sum-card .sv { font-size: 22px; font-weight: 700; color: var(--pink); }
+    .sum-card .sl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Item list */
+    .list-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .list-head {
+      padding: 12px 14px; background: #fdf2f8;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; font-weight: 600; color: var(--pink);
+    }
+    .item-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 14px; border-bottom: 1px solid #f8fafc;
+      font-size: 13px;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-code { color: var(--muted); font-size: 11px; min-width: 36px; }
+    .item-name { flex: 1; font-weight: 500; padding: 0 10px; }
+    .item-price { font-weight: 700; color: var(--green); min-width: 48px; text-align: right; }
+    .item-row.imported .item-name::after {
+      content: ' ✓'; color: var(--green); font-size: 11px;
+    }
+
+    /* Done message */
+    .done-box {
+      display: none; text-align: center;
+      background: white; border: 2px solid var(--green);
+      border-radius: var(--radius); padding: 24px 20px; margin-bottom: 16px;
+    }
+    .done-box.show { display: block; }
+    .done-box .di { font-size: 44px; margin-bottom: 10px; }
+    .done-box h2 { font-size: 17px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+    .done-box p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .done-box .nav-links { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .nav-link {
+      display: block; padding: 11px; border-radius: 9px;
+      font-size: 13px; font-weight: 600; text-decoration: none; text-align: center;
+      border: 1.5px solid var(--border); color: var(--text);
+    }
+    .nav-link:hover { background: var(--bg); }
+    .nav-link.primary { background: var(--pink); color: white; border-color: var(--pink); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🥙 Chat Menu — Bulk Import</h1>
+  <p>36 items ready to load into your revenue module</p>
+</div>
+
+<div class="content">
+
+  <div class="status-box info" id="statusBox">
+    ℹ️ Review the list below, then tap Import to load all items into fc_menu_items.
+  </div>
+
+  <div class="summary-row">
+    <div class="sum-card">
+      <div class="sv">36</div>
+      <div class="sl">Items</div>
+    </div>
+    <div class="sum-card">
+      <div class="sv">Chat</div>
+      <div class="sl">Section</div>
+    </div>
+    <div class="sum-card">
+      <div class="sv" id="priceRange">₹10–100</div>
+      <div class="sl">Price Range</div>
+    </div>
+  </div>
+
+  <button class="btn-import" id="importBtn" onclick="doImport()">
+    ⬇️ Import All 36 Items into Revenue Module
+  </button>
+
+  <div class="done-box" id="doneBox">
+    <div class="di">✅</div>
+    <h2>Import Complete!</h2>
+    <p>All 36 Chat items have been added to your menu.<br>
+       Open <strong>revenue.html</strong> → Menu Setup tab to see them.</p>
+    <div class="nav-links">
+      <a class="nav-link primary" href="revenue.html">Open Revenue Module →</a>
+      <a class="nav-link" href="pnl.html">Open P&amp;L Dashboard →</a>
+    </div>
+  </div>
+
+  <div class="list-card">
+    <div class="list-head">🥙 CHAT SECTION — Full Item List</div>
+    <div id="itemList"></div>
+  </div>
+
+</div>
+
+<script>
+const CHAT_ITEMS = [
+  { code:  83, name: 'Papadi Chat',            price: 40 },
+  { code:  84, name: 'Samosa Chat',            price: 40 },
+  { code:  85, name: 'Cutlet',                 price: 40 },
+  { code:  89, name: 'Dabhelli',               price: 60 },
+  { code:  90, name: 'Veg Noodles',            price: 50 },
+  { code:  91, name: 'Vada Pav',               price: 40 },
+  { code:  94, name: 'Dahi Papdi',             price: 40 },
+  { code:  95, name: 'Dahi Puri',              price: 40 },
+  { code:  96, name: 'Masala Puri',            price: 40 },
+  { code:  99, name: 'Plain Ragi Dosa',        price: 50 },
+  { code: 100, name: 'Masala Bhel Puri',       price: 60 },
+  { code: 101, name: 'Plain Pav Bhaji',        price: 60 },
+  { code: 102, name: 'Butter Pav Bhaji',       price: 90 },
+  { code: 103, name: 'Paneer Pav Bhaji',       price: 80 },
+  { code: 104, name: 'Cheese Pav Bhaji',       price: 80 },
+  { code: 105, name: 'Masala Pav Bhaji',       price: 90 },
+  { code: 106, name: 'Spl Pav Bhaji',          price: 70 },
+  { code: 107, name: 'Panipuri 4 Pcs',         price: 10 },
+  { code: 108, name: 'Pani Puri 10 Pcs',       price: 30 },
+  { code: 109, name: 'Sev Puri',               price: 50 },
+  { code: 185, name: 'Sev Papdi',              price: 40 },
+  { code: 189, name: 'Veg Sandwich',           price: 60 },
+  { code: 190, name: 'Veg Cheese Sandwich',    price: 80 },
+  { code: 191, name: 'Veg Grill Sandwich',     price: 70 },
+  { code: 192, name: 'Cheese Grill Sandwich',  price: 80 },
+  { code: 193, name: 'Paneer Grill Sandwich',  price: 80 },
+  { code: 194, name: 'Panipuri 8 Pcs',         price: 20 },
+  { code: 195, name: 'Dahi Samosa',            price: 40 },
+  { code: 208, name: 'Katori Chat',            price: 40 },
+  { code: 218, name: 'Panipuri Parcel ₹50',    price: 50 },
+  { code: 219, name: 'Panipuri Parcel ₹100',   price: 100 },
+  { code: 249, name: 'Papad',                  price: 40 },
+  { code: 254, name: 'Extra Pav',              price: 20 },
+  { code: 265, name: 'Manchuriya',             price: 50 },
+  { code: 284, name: 'Papad Parsal',           price: 50 },
+  { code: 292, name: 'Sandwich',               price: 50 },
+];
+
+// Render list
+function renderList(importedIds = []) {
+  const el = document.getElementById('itemList');
+  el.innerHTML = CHAT_ITEMS.map(it => `
+    <div class="item-row ${importedIds.includes(it.code) ? 'imported' : ''}">
+      <span class="item-code">${it.code}</span>
+      <span class="item-name">${it.name}</span>
+      <span class="item-price">₹${it.price}</span>
+    </div>`).join('');
+}
+
+function doImport() {
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+
+  try {
+    // Load existing menu items
+    let existing = [];
+    try { existing = JSON.parse(localStorage.getItem('fc_menu_items')) || []; }
+    catch { existing = []; }
+
+    // Build set of existing item names (lowercase) to avoid duplicates
+    const existingNames = new Set(existing.map(i => i.name.toLowerCase().trim()));
+
+    let added = 0;
+    const importedCodes = [];
+
+    for (const it of CHAT_ITEMS) {
+      if (existingNames.has(it.name.toLowerCase().trim())) {
+        importedCodes.push(it.code); // already exists, mark as done
+        continue;
+      }
+      existing.push({
+        id:      'mi_' + Date.now() + '_' + it.code,
+        name:    it.name,
+        section: 'chat',
+        price:   it.price,
+        unit:    'plate',
+      });
+      importedCodes.push(it.code);
+      added++;
+      existingNames.add(it.name.toLowerCase().trim());
+    }
+
+    localStorage.setItem('fc_menu_items', JSON.stringify(existing));
+
+    // Update UI
+    const status = document.getElementById('statusBox');
+    if (added === 0) {
+      status.className = 'status-box warn';
+      status.textContent = '⚠️ All items were already in your menu — nothing new was added.';
+    } else {
+      status.className = 'status-box success';
+      status.textContent = `✅ Successfully imported ${added} item${added>1?'s':''} into fc_menu_items.`;
+    }
+
+    renderList(importedCodes);
+    document.getElementById('doneBox').classList.add('show');
+
+    btn.textContent = '✓ Import Done';
+
+  } catch (e) {
+    document.getElementById('statusBox').className = 'status-box warn';
+    document.getElementById('statusBox').textContent = '❌ Error: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = '⬇️ Import All 36 Items';
+  }
+}
+
+// Init
+renderList();
+</script>
+</body>
+</html>

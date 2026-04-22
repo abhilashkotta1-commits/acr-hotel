@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Accounting — Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #1a56db;
+    --primary-dark: #1e429f;
+    --accent: #0e9f6e;
+    --danger: #e02424;
+    --warn: #ff5a1f;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --sidebar-w: 220px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w); background: #1e3a5f; color: #fff;
+    display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+  }
+  #sidebar .logo {
+    padding: 22px 18px 18px; border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+  #sidebar .logo h2 { font-size: 1.1rem; font-weight: 700; color: #fff; }
+  #sidebar .logo p { font-size: .72rem; color: #93c5fd; margin-top: 2px; }
+  #sidebar nav { padding: 14px 0; flex: 1; overflow-y: auto; }
+  #sidebar nav a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px; color: #cbd5e1; text-decoration: none;
+    font-size: .88rem; cursor: pointer; transition: background .15s;
+    border-left: 3px solid transparent;
+  }
+  #sidebar nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+  #sidebar nav a.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: #60a5fa; }
+  #sidebar nav a .icon { font-size: 1.1rem; width: 22px; text-align: center; }
+  #sidebar .sidebar-footer { padding: 14px 18px; font-size: .75rem; color: #64748b; border-top: 1px solid rgba(255,255,255,.08); }
+
+  /* ── Main ── */
+  #main { margin-left: var(--sidebar-w); flex: 1; padding: 28px 32px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-size: 1.45rem; font-weight: 700; margin-bottom: 22px; }
+
+  /* ── Cards ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; margin-bottom: 26px; }
+  .card {
+    background: var(--card); border-radius: 12px; padding: 20px 22px;
+    border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .card .label { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .card .value { font-size: 1.6rem; font-weight: 700; }
+  .card.green .value { color: var(--accent); }
+  .card.red .value { color: var(--danger); }
+  .card.blue .value { color: var(--primary); }
+  .card.orange .value { color: var(--warn); }
+
+  /* ── Section box ── */
+  .box { background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.05); margin-bottom: 26px; overflow: hidden; }
+  .box-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .box-header h3 { font-size: 1rem; font-weight: 600; }
+  .box-body { padding: 20px; }
+
+  /* ── Forms ── */
+  .form-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+  .form-group label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: .9rem; background: #f9fafb; outline: none; transition: border .15s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary); background: #fff; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 8px; font-size: .88rem; font-weight: 600;
+    cursor: pointer; border: none; transition: filter .15s;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-success { background: var(--accent); color: #fff; }
+  .btn-danger  { background: var(--danger); color: #fff; }
+  .btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+  .btn-sm { padding: 5px 11px; font-size: .8rem; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: .78rem; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 600;
+  }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-orange { background: #fef3c7; color: #92400e; }
+  .badge-gray { background: #f3f4f6; color: #374151; }
+
+  /* ── Charts ── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 26px; }
+  .chart-box { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 18px 20px; }
+  .chart-box h4 { font-size: .9rem; font-weight: 600; margin-bottom: 14px; color: var(--muted); }
+  .chart-box canvas { max-height: 230px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 22px; }
+  .tab-btn {
+    padding: 10px 20px; font-size: .88rem; font-weight: 600; cursor: pointer;
+    border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color .15s;
+  }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── Alert ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: .87rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .alert-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+  .alert-info  { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+  .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+
+  /* ── Month filter ── */
+  .filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-bar label { font-size: .85rem; font-weight: 600; color: var(--muted); }
+
+  /* ── Print ── */
+  @media print {
+    #sidebar { display: none; }
+    #main { margin-left: 0; }
+    .btn { display: none; }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    #sidebar { width: 56px; }
+    #sidebar .logo p, #sidebar nav a span, #sidebar .sidebar-footer { display: none; }
+    #sidebar nav a { padding: 14px; justify-content: center; }
+    #main { margin-left: 56px; padding: 18px 14px; }
+    .charts-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<div id="sidebar">
+  <div class="logo">
+    <h2>🏨 Hotel Accounts</h2>
+    <p>Small Hotel Manager</p>
+  </div>
+  <nav>
+    <a class="active" onclick="navigate('dashboard')"><span class="icon">📊</span><span>Dashboard</span></a>
+    <a onclick="navigate('inflows')"><span class="icon">💰</span><span>Cash Inflows</span></a>
+    <a onclick="navigate('outflows')"><span class="icon">💸</span><span>Cash Outflows</span></a>
+    <a onclick="navigate('noncash')"><span class="icon">📋</span><span>Non-Cash Expenses</span></a>
+    <a onclick="navigate('inventory')"><span class="icon">📦</span><span>Inventory</span></a>
+    <a onclick="navigate('reports')"><span class="icon">📄</span><span>Reports</span></a>
+  </nav>
+  <div class="sidebar-footer">v1.0 · Hotel Accounting</div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div id="main">
+
+  <!-- ─── DASHBOARD ─── -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-title">📊 Dashboard</div>
+    <div class="filter-bar">
+      <label>Month:</label>
+      <select id="dash-month" onchange="renderDashboard()"></select>
+      <label>Year:</label>
+      <select id="dash-year" onchange="renderDashboard()"></select>
+    </div>
+    <div class="cards" id="dash-cards"></div>
+    <div id="dash-alerts"></div>
+    <div class="charts-row">
+      <div class="chart-box"><h4>Cash Flow Overview</h4><canvas id="chartCashFlow"></canvas></div>
+      <div class="chart-box"><h4>Expense Breakdown</h4><canvas id="chartExpenses"></canvas></div>
+    </div>
+    <div class="box">
+      <div class="box-header"><h3>Recent Transactions (Last 10)</h3></div>
+      <div class="box-body" style="padding:0;overflow-x:auto;">
+        <table id="recent-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount (₹)</th></tr></thead>
+          <tbody id="recent-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CASH INFLOWS ─── -->
+  <div id="page-inflows" class="page">
+    <div class="page-title">💰 Cash Inflows</div>
+    <div class="box">
+      <div class="box-header"><h3>Record New Inflow</h3></div>
+      <div class="box-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="in-date">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="in-cat">
+              <option>Room Revenue</option>
+              <option>Food & Beverage</option>
+              <option>Laundry</option>
+              <option>Conference/Events</option>
+              <option>Advance / Deposit</option>
+              <option>Other Income</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Payment Mode</label>
+            <select id="in-mode">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Card</option>
+              <option>Bank Transfer</option>
+              <option>Cheque</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Description / Guest Name / Room No.</label>
+            <input type="text" id="in-desc" placeholder="e.g. Room 5 – Mr. Ravi, 3 nights">
+          </div>
+          <div class="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" id="in-amt" min="0" placeholder="0.00">
+          </div>
+        </div>
+        <button class="btn btn-success" onclick="addInflow()">➕ Add Inflow</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-header">
+        <h3>Inflow Records</h3>
+        <div class="filter-bar" style="margin:0">
+          <select id="inf-month" onchange="renderInflowTable()"></select>
+          <select id="inf-year" onchange="renderInflowTable()"></select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Date</th><th>Category</th><th>Mode</th><th>Description</th><th style="text-align:right">Amount (₹)</th><th></th></tr></thead>
+          <tbody id="inflow-tbody"></tbody>
+        </table>
+      </div>
+      <div style="padding:14px 20px;text-align:right;font-weight:700;font-size:1rem;border-top:1px solid var(--border)" id="inflow-total"></div>
+    </div>
+  </div>
+
+  <!-- ─── CASH OUTFLOWS ─── -->
+  <div id="page-outflows" class="page">
+    <div class="page-title">💸 Cash Outflows</div>
+    <div class="box">
+      <div class="box-header"><h3>Record New Outflow (Cash Expense)</h3></div>
+      <div class="box-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="out-date">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="out-cat">
+              <option>Staff Salaries</option>
+              <option>Electricity / Utilities</option>
+              <option>Water</option>
+              <option>Food / Kitchen Supplies</option>
+              <option>Housekeeping Supplies</option>
+              <option>Maintenance & Repairs</option>
+              <option>Laundry Expenses</option>
+              <option>Telephone / Internet</option>
+              <option>Taxes & Licences</option>
+              <option>Marketing</option>
+              <option>Loan Repayment</option>
+              <option>Advance to Staff</option>
+              <option>Miscellaneous</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Payment Mode</label>
+            <select id="out-mode">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Card</option>
+              <option>Bank Transfer</option>
+              <option>Cheque</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Description / Vendor / Invoice No.</label>
+            <input type="text" id="out-desc" placeholder="e.g. Electricty bill MSEB July">
+          </div>
+          <div class="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" id="out-amt" min="0" placeholder="0.00">
+          </div>
+        </div>
+        <button class="btn btn-danger" onclick="addOutflow()">➕ Add Outflow</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-header">
+        <h3>Outflow Records</h3>
+        <div class="filter-bar" style="margin:0">
+          <select id="outf-month" onchange="renderOutflowTable()"></select>
+          <select id="outf-year" onchange="renderOutflowTable()"></select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Date</th><th>Category</th><th>Mode</th><th>Description</th><th style="text-align:right">Amount (₹)</th><th></th></tr></thead>
+          <tbody id="outflow-tbody"></tbody>
+        </table>
+      </div>
+      <div style="padding:14px 20px;text-align:right;font-weight:700;font-size:1rem;border-top:1px solid var(--border)" id="outflow-total"></div>
+    </div>
+  </div>
+
+  <!-- ─── NON-CASH EXPENSES ─── -->
+  <div id="page-noncash" class="page">
+    <div class="page-title">📋 Non-Cash Expenses</div>
+    <div class="alert alert-info">ℹ️ Non-cash expenses are accounting entries (like depreciation) that reduce profit but do NOT involve actual cash payment.</div>
+    <div class="box">
+      <div class="box-header"><h3>Add Non-Cash Expense</h3></div>
+      <div class="box-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Month / Year</label>
+            <input type="month" id="nc-month">
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="nc-type">
+              <option>Depreciation – Building</option>
+              <option>Depreciation – Furniture</option>
+              <option>Depreciation – Equipment</option>
+              <option>Depreciation – Vehicle</option>
+              <option>Amortisation</option>
+              <option>Bad Debt Provision</option>
+              <option>Accrued Expense</option>
+              <option>Other Non-Cash</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" id="nc-amt" min="0" placeholder="0.00">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Notes</label>
+            <input type="text" id="nc-note" placeholder="e.g. 10% p.a. on AC units – ₹3,000/month">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addNonCash()">➕ Add Entry</button>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-header"><h3>Non-Cash Expense Records</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Month</th><th>Type</th><th>Notes</th><th style="text-align:right">Amount (₹)</th><th></th></tr></thead>
+          <tbody id="nc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── INVENTORY ─── -->
+  <div id="page-inventory" class="page">
+    <div class="page-title">📦 Inventory Control</div>
+    <div id="inv-alerts"></div>
+    <div class="box">
+      <div class="box-header"><h3>Add / Update Item</h3></div>
+      <div class="box-body">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Item Name</label>
+            <input type="text" id="inv-name" placeholder="e.g. Bed Sheets, Rice (kg), Soap Bars">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="inv-cat">
+              <option>Housekeeping</option>
+              <option>Kitchen / Food</option>
+              <option>Bathroom Amenities</option>
+              <option>Stationery</option>
+              <option>Maintenance</option>
+              <option>Linen</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Unit</label>
+            <input type="text" id="inv-unit" placeholder="e.g. pcs, kg, litres">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Current Stock (Qty)</label>
+            <input type="number" id="inv-qty" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Reorder Level (Min Qty)</label>
+            <input type="number" id="inv-reorder" min="0" placeholder="e.g. 10">
+          </div>
+          <div class="form-group">
+            <label>Unit Cost (₹)</label>
+            <input type="number" id="inv-cost" min="0" placeholder="0.00">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addInventory()">➕ Add Item</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-header">
+        <h3>Stock Update (Issue / Receive)</h3>
+      </div>
+      <div class="box-body">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Item</label>
+            <select id="inv-sel"></select>
+          </div>
+          <div class="form-group">
+            <label>Action</label>
+            <select id="inv-action">
+              <option value="add">Receive (Stock In)</option>
+              <option value="sub">Issue / Use (Stock Out)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="inv-upd-qty" min="1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Note</label>
+            <input type="text" id="inv-upd-note" placeholder="e.g. Purchased from Raj Stores">
+          </div>
+        </div>
+        <button class="btn btn-success" onclick="updateStock()">✅ Update Stock</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-header"><h3>Inventory List</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Item</th><th>Category</th><th>Unit</th><th style="text-align:center">Stock</th><th style="text-align:center">Reorder</th><th style="text-align:right">Unit Cost</th><th style="text-align:right">Stock Value</th><th>Status</th><th></th></tr></thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REPORTS ─── -->
+  <div id="page-reports" class="page">
+    <div class="page-title">📄 Reports</div>
+    <div class="filter-bar">
+      <label>Month:</label>
+      <select id="rpt-month"></select>
+      <label>Year:</label>
+      <select id="rpt-year"></select>
+      <button class="btn btn-primary" onclick="generateReport()">📊 Generate</button>
+      <button class="btn btn-outline" onclick="window.print()">🖨️ Print</button>
+    </div>
+    <div id="report-content"></div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA STORE  (localStorage)
+// ═══════════════════════════════════════════════════
+const DB = {
+  get: k => JSON.parse(localStorage.getItem(k) || '[]'),
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function fmt(n){ return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function nowMonth(){ return new Date().toISOString().slice(0,7); }
+
+// ═══════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#sidebar nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const links = document.querySelectorAll('#sidebar nav a');
+  const order = ['dashboard','inflows','outflows','noncash','inventory','reports'];
+  links[order.indexOf(page)].classList.add('active');
+  // refresh
+  if(page==='dashboard') renderDashboard();
+  if(page==='inflows') renderInflowTable();
+  if(page==='outflows') renderOutflowTable();
+  if(page==='noncash') renderNcTable();
+  if(page==='inventory') renderInventory();
+}
+
+// ═══════════════════════════════════════════════════
+//  MONTH / YEAR SELECTORS SETUP
+// ═══════════════════════════════════════════════════
+function buildSelectors(monthId, yearId, onChange){
+  const now = new Date();
+  const mSel = document.getElementById(monthId);
+  const ySel = document.getElementById(yearId);
+  MONTHS.forEach((m,i)=>{
+    const o = document.createElement('option');
+    o.value = i+1; o.textContent = m;
+    if(i+1 === now.getMonth()+1) o.selected = true;
+    mSel.appendChild(o);
+  });
+  for(let y = now.getFullYear(); y >= now.getFullYear()-5; y--){
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if(y === now.getFullYear()) o.selected = true;
+    ySel.appendChild(o);
+  }
+  if(onChange){ mSel.onchange = onChange; ySel.onchange = onChange; }
+}
+
+// ═══════════════════════════════════════════════════
+//  FILTER HELPERS
+// ═══════════════════════════════════════════════════
+function getFilter(mId, yId){
+  return { m: parseInt(document.getElementById(mId).value), y: parseInt(document.getElementById(yId).value) };
+}
+function matchMY(dateStr, m, y){
+  const d = new Date(dateStr);
+  return d.getMonth()+1 === m && d.getFullYear() === y;
+}
+
+// ═══════════════════════════════════════════════════
+//  CASH INFLOWS
+// ═══════════════════════════════════════════════════
+function addInflow(){
+  const d = document.getElementById('in-date').value;
+  const cat = document.getElementById('in-cat').value;
+  const mode = document.getElementById('in-mode').value;
+  const desc = document.getElementById('in-desc').value.trim();
+  const amt = parseFloat(document.getElementById('in-amt').value);
+  if(!d || !amt || amt<=0){ alert('Please enter a valid date and amount.'); return; }
+  const rec = { id: Date.now(), date:d, cat, mode, desc, amt };
+  const data = DB.get('inflows');
+  data.push(rec); DB.set('inflows', data);
+  document.getElementById('in-amt').value='';
+  document.getElementById('in-desc').value='';
+  renderInflowTable();
+}
+
+function renderInflowTable(){
+  const {m,y} = getFilter('inf-month','inf-year');
+  const data = DB.get('inflows').filter(r=>matchMY(r.date,m,y)).sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody = document.getElementById('inflow-tbody');
+  tbody.innerHTML = data.length ? data.map(r=>`<tr>
+    <td>${r.date}</td><td><span class="badge badge-green">${r.cat}</span></td>
+    <td><span class="badge badge-blue">${r.mode}</span></td>
+    <td>${r.desc||'-'}</td>
+    <td style="text-align:right;font-weight:600;color:var(--accent)">${fmt(r.amt)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delInflow(${r.id})">🗑</button></td>
+  </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No records for this period.</td></tr>';
+  const total = data.reduce((s,r)=>s+r.amt,0);
+  document.getElementById('inflow-total').textContent = `Total: ${fmt(total)}`;
+}
+
+function delInflow(id){
+  if(!confirm('Delete this record?')) return;
+  DB.set('inflows', DB.get('inflows').filter(r=>r.id!==id));
+  renderInflowTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  CASH OUTFLOWS
+// ═══════════════════════════════════════════════════
+function addOutflow(){
+  const d = document.getElementById('out-date').value;
+  const cat = document.getElementById('out-cat').value;
+  const mode = document.getElementById('out-mode').value;
+  const desc = document.getElementById('out-desc').value.trim();
+  const amt = parseFloat(document.getElementById('out-amt').value);
+  if(!d || !amt || amt<=0){ alert('Please enter a valid date and amount.'); return; }
+  const data = DB.get('outflows');
+  data.push({ id: Date.now(), date:d, cat, mode, desc, amt });
+  DB.set('outflows', data);
+  document.getElementById('out-amt').value='';
+  document.getElementById('out-desc').value='';
+  renderOutflowTable();
+}
+
+function renderOutflowTable(){
+  const {m,y} = getFilter('outf-month','outf-year');
+  const data = DB.get('outflows').filter(r=>matchMY(r.date,m,y)).sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody = document.getElementById('outflow-tbody');
+  tbody.innerHTML = data.length ? data.map(r=>`<tr>
+    <td>${r.date}</td><td><span class="badge badge-orange">${r.cat}</span></td>
+    <td><span class="badge badge-blue">${r.mode}</span></td>
+    <td>${r.desc||'-'}</td>
+    <td style="text-align:right;font-weight:600;color:var(--danger)">${fmt(r.amt)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delOutflow(${r.id})">🗑</button></td>
+  </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No records for this period.</td></tr>';
+  const total = data.reduce((s,r)=>s+r.amt,0);
+  document.getElementById('outflow-total').textContent = `Total: ${fmt(total)}`;
+}
+
+function delOutflow(id){
+  if(!confirm('Delete this record?')) return;
+  DB.set('outflows', DB.get('outflows').filter(r=>r.id!==id));
+  renderOutflowTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  NON-CASH EXPENSES
+// ═══════════════════════════════════════════════════
+function addNonCash(){
+  const monthVal = document.getElementById('nc-month').value;
+  const type = document.getElementById('nc-type').value;
+  const amt = parseFloat(document.getElementById('nc-amt').value);
+  const note = document.getElementById('nc-note').value.trim();
+  if(!monthVal || !amt || amt<=0){ alert('Please enter month and amount.'); return; }
+  const data = DB.get('noncash');
+  data.push({ id: Date.now(), month: monthVal, type, amt, note });
+  DB.set('noncash', data);
+  document.getElementById('nc-amt').value='';
+  document.getElementById('nc-note').value='';
+  renderNcTable();
+}
+
+function renderNcTable(){
+  const data = DB.get('noncash').sort((a,b)=>b.month.localeCompare(a.month));
+  const tbody = document.getElementById('nc-tbody');
+  tbody.innerHTML = data.length ? data.map(r=>`<tr>
+    <td>${r.month}</td>
+    <td><span class="badge badge-gray">${r.type}</span></td>
+    <td>${r.note||'-'}</td>
+    <td style="text-align:right;font-weight:600;color:var(--warn)">${fmt(r.amt)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delNc(${r.id})">🗑</button></td>
+  </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No non-cash entries yet.</td></tr>';
+}
+
+function delNc(id){
+  if(!confirm('Delete this entry?')) return;
+  DB.set('noncash', DB.get('noncash').filter(r=>r.id!==id));
+  renderNcTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  INVENTORY
+// ═══════════════════════════════════════════════════
+function addInventory(){
+  const name = document.getElementById('inv-name').value.trim();
+  const cat = document.getElementById('inv-cat').value;
+  const unit = document.getElementById('inv-unit').value.trim() || 'pcs';
+  const qty = parseFloat(document.getElementById('inv-qty').value) || 0;
+  const reorder = parseFloat(document.getElementById('inv-reorder').value) || 0;
+  const cost = parseFloat(document.getElementById('inv-cost').value) || 0;
+  if(!name){ alert('Please enter item name.'); return; }
+  const data = DB.get('inventory');
+  const existing = data.find(i=>i.name.toLowerCase()===name.toLowerCase());
+  if(existing){ alert('Item already exists. Use the stock update below to change quantity.'); return; }
+  data.push({ id: Date.now(), name, cat, unit, qty, reorder, cost });
+  DB.set('inventory', data);
+  ['inv-name','inv-qty','inv-reorder','inv-cost'].forEach(id=>document.getElementById(id).value='');
+  renderInventory();
+}
+
+function updateStock(){
+  const selId = parseInt(document.getElementById('inv-sel').value);
+  const action = document.getElementById('inv-action').value;
+  const qty = parseFloat(document.getElementById('inv-upd-qty').value);
+  const note = document.getElementById('inv-upd-note').value.trim();
+  if(!selId || !qty || qty<=0){ alert('Select item and enter quantity.'); return; }
+  const data = DB.get('inventory');
+  const item = data.find(i=>i.id===selId);
+  if(!item){ alert('Item not found.'); return; }
+  if(action==='sub'){
+    if(item.qty < qty){ alert('Insufficient stock!'); return; }
+    item.qty -= qty;
+  } else {
+    item.qty += qty;
+  }
+  // log movement
+  const logs = DB.get('invlog');
+  logs.push({ id: Date.now(), date: today(), itemId: selId, itemName: item.name, action, qty, note });
+  DB.set('invlog', logs);
+  DB.set('inventory', data);
+  document.getElementById('inv-upd-qty').value='';
+  document.getElementById('inv-upd-note').value='';
+  renderInventory();
+}
+
+function delInventory(id){
+  if(!confirm('Delete this inventory item?')) return;
+  DB.set('inventory', DB.get('inventory').filter(i=>i.id!==id));
+  renderInventory();
+}
+
+function renderInventory(){
+  const data = DB.get('inventory');
+  const tbody = document.getElementById('inv-tbody');
+  const sel = document.getElementById('inv-sel');
+  // rebuild dropdown
+  sel.innerHTML = data.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+
+  tbody.innerHTML = data.length ? data.map(i=>{
+    const low = i.qty <= i.reorder;
+    return `<tr>
+      <td><strong>${i.name}</strong></td>
+      <td>${i.cat}</td><td>${i.unit}</td>
+      <td style="text-align:center;font-weight:700;color:${low?'var(--danger)':'var(--accent)'};">${i.qty}</td>
+      <td style="text-align:center">${i.reorder}</td>
+      <td style="text-align:right">${fmt(i.cost)}</td>
+      <td style="text-align:right">${fmt(i.qty*i.cost)}</td>
+      <td>${low?'<span class="badge badge-red">⚠ Low Stock</span>':'<span class="badge badge-green">OK</span>'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="delInventory(${i.id})">🗑</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No inventory items yet. Add items above.</td></tr>';
+
+  // alerts
+  const lowItems = data.filter(i=>i.qty <= i.reorder);
+  const alertDiv = document.getElementById('inv-alerts');
+  alertDiv.innerHTML = lowItems.length ? `<div class="alert alert-warn">⚠️ <strong>Low Stock Alert:</strong> ${lowItems.map(i=>i.name+' ('+i.qty+' '+i.unit+' left)').join(' · ')}</div>` : '';
+}
+
+// ═══════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════
+let cfChart = null, expChart = null;
+
+function renderDashboard(){
+  const {m, y} = getFilter('dash-month','dash-year');
+  const mStr = `${y}-${String(m).padStart(2,'0')}`;
+
+  const inflows = DB.get('inflows').filter(r=>matchMY(r.date,m,y));
+  const outflows = DB.get('outflows').filter(r=>matchMY(r.date,m,y));
+  const noncash = DB.get('noncash').filter(r=>r.month===mStr);
+  const inventory = DB.get('inventory');
+
+  const totalIn = inflows.reduce((s,r)=>s+r.amt,0);
+  const totalOut = outflows.reduce((s,r)=>s+r.amt,0);
+  const totalNc = noncash.reduce((s,r)=>s+r.amt,0);
+  const netCash = totalIn - totalOut;
+  const netProfit = totalIn - totalOut - totalNc;
+  const invValue = inventory.reduce((s,i)=>s+i.qty*i.cost,0);
+
+  // Cards
+  document.getElementById('dash-cards').innerHTML = `
+    <div class="card green"><div class="label">Total Inflow</div><div class="value">${fmt(totalIn)}</div></div>
+    <div class="card red"><div class="label">Cash Outflow</div><div class="value">${fmt(totalOut)}</div></div>
+    <div class="card orange"><div class="label">Non-Cash Exp.</div><div class="value">${fmt(totalNc)}</div></div>
+    <div class="card ${netCash>=0?'blue':'red'}"><div class="label">Net Cash Flow</div><div class="value">${fmt(netCash)}</div></div>
+    <div class="card ${netProfit>=0?'blue':'red'}"><div class="label">Net Profit (P&L)</div><div class="value">${fmt(netProfit)}</div></div>
+    <div class="card blue"><div class="label">Inventory Value</div><div class="value">${fmt(invValue)}</div></div>
+  `;
+
+  // Alerts
+  const lowItems = inventory.filter(i=>i.qty<=i.reorder);
+  document.getElementById('dash-alerts').innerHTML = lowItems.length
+    ? `<div class="alert alert-warn">⚠️ Low Stock: ${lowItems.map(i=>i.name).join(', ')} — Check <a href="#" onclick="navigate('inventory')">Inventory</a></div>` : '';
+
+  // Chart 1: Cash flow bar chart (last 6 months)
+  const cfLabels = [], cfIn = [], cfOut = [];
+  for(let i=5; i>=0; i--){
+    const d = new Date(y, m-1-i, 1);
+    const mm = d.getMonth()+1, yy = d.getFullYear();
+    cfLabels.push(MONTHS[d.getMonth()].slice(0,3));
+    cfIn.push(DB.get('inflows').filter(r=>matchMY(r.date,mm,yy)).reduce((s,r)=>s+r.amt,0));
+    cfOut.push(DB.get('outflows').filter(r=>matchMY(r.date,mm,yy)).reduce((s,r)=>s+r.amt,0));
+  }
+  if(cfChart) cfChart.destroy();
+  cfChart = new Chart(document.getElementById('chartCashFlow'),{
+    type:'bar',
+    data:{ labels:cfLabels, datasets:[
+      {label:'Inflow', data:cfIn, backgroundColor:'rgba(14,159,110,.7)', borderRadius:6},
+      {label:'Outflow', data:cfOut, backgroundColor:'rgba(224,36,36,.6)', borderRadius:6}
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
+  });
+
+  // Chart 2: Expense breakdown pie
+  const cats = {};
+  outflows.forEach(r=>{ cats[r.cat]=(cats[r.cat]||0)+r.amt; });
+  if(expChart) expChart.destroy();
+  if(Object.keys(cats).length){
+    expChart = new Chart(document.getElementById('chartExpenses'),{
+      type:'doughnut',
+      data:{ labels:Object.keys(cats), datasets:[{ data:Object.values(cats),
+        backgroundColor:['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6','#06b6d4','#f97316','#6366f1','#14b8a6','#e11d48'],
+        borderWidth:1
+      }]},
+      options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+    });
+  } else {
+    const ctx = document.getElementById('chartExpenses');
+    ctx.parentElement.innerHTML = '<h4>Expense Breakdown</h4><p style="color:var(--muted);text-align:center;padding:40px">No outflow data for this month.</p>';
+  }
+
+  // Recent transactions
+  const all = [
+    ...DB.get('inflows').map(r=>({...r, _type:'Inflow'})),
+    ...DB.get('outflows').map(r=>({...r, _type:'Outflow'}))
+  ].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).slice(0,10);
+
+  document.getElementById('recent-tbody').innerHTML = all.length ? all.map(r=>`<tr>
+    <td>${r.date}</td>
+    <td>${r._type==='Inflow'?'<span class="badge badge-green">Inflow</span>':'<span class="badge badge-red">Outflow</span>'}</td>
+    <td>${r.cat}</td><td>${r.desc||'-'}</td>
+    <td style="text-align:right;font-weight:600;color:${r._type==='Inflow'?'var(--accent)':'var(--danger)'}">
+      ${r._type==='Inflow'?'+':'−'}${fmt(r.amt)}
+    </td>
+  </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No transactions recorded yet.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════
+//  REPORTS
+// ═══════════════════════════════════════════════════
+function generateReport(){
+  const m = parseInt(document.getElementById('rpt-month').value);
+  const y = parseInt(document.getElementById('rpt-year').value);
+  const mStr = `${y}-${String(m).padStart(2,'0')}`;
+  const monthName = `${MONTHS[m-1]} ${y}`;
+
+  const inflows = DB.get('inflows').filter(r=>matchMY(r.date,m,y));
+  const outflows = DB.get('outflows').filter(r=>matchMY(r.date,m,y));
+  const noncash = DB.get('noncash').filter(r=>r.month===mStr);
+
+  const totalIn = inflows.reduce((s,r)=>s+r.amt,0);
+  const totalOut = outflows.reduce((s,r)=>s+r.amt,0);
+  const totalNc = noncash.reduce((s,r)=>s+r.amt,0);
+
+  // Group inflows by category
+  const inCats={}, outCats={}, ncTypes={};
+  inflows.forEach(r=>{ inCats[r.cat]=(inCats[r.cat]||0)+r.amt; });
+  outflows.forEach(r=>{ outCats[r.cat]=(outCats[r.cat]||0)+r.amt; });
+  noncash.forEach(r=>{ ncTypes[r.type]=(ncTypes[r.type]||0)+r.amt; });
+
+  const renderCatRows = (obj) => Object.entries(obj).map(([k,v])=>`
+    <tr><td style="padding-left:30px;color:var(--muted)">${k}</td><td style="text-align:right">${fmt(v)}</td></tr>`).join('');
+
+  const netCash = totalIn - totalOut;
+  const netProfit = netCash - totalNc;
+
+  document.getElementById('report-content').innerHTML = `
+  <div style="font-family:serif">
+    <h2 style="text-align:center;margin-bottom:4px">Hotel Accounting Report</h2>
+    <p style="text-align:center;color:var(--muted);margin-bottom:24px">Period: ${monthName}</p>
+
+    <!-- CASH FLOW STATEMENT -->
+    <div class="box" style="margin-bottom:20px">
+      <div class="box-header"><h3>💰 Cash Flow Statement — ${monthName}</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <tbody>
+            <tr style="background:#f8fafc"><td colspan="2" style="font-weight:700;padding:12px 14px">A. CASH INFLOWS</td></tr>
+            ${renderCatRows(inCats)}
+            <tr style="background:#d1fae5"><td style="font-weight:700;padding:12px 14px">Total Cash Inflows</td><td style="text-align:right;font-weight:700;color:var(--accent)">${fmt(totalIn)}</td></tr>
+            <tr><td colspan="2" style="padding:4px"></td></tr>
+            <tr style="background:#f8fafc"><td colspan="2" style="font-weight:700;padding:12px 14px">B. CASH OUTFLOWS</td></tr>
+            ${renderCatRows(outCats)}
+            <tr style="background:#fee2e2"><td style="font-weight:700;padding:12px 14px">Total Cash Outflows</td><td style="text-align:right;font-weight:700;color:var(--danger)">${fmt(totalOut)}</td></tr>
+            <tr><td colspan="2" style="padding:4px"></td></tr>
+            <tr style="background:${netCash>=0?'#dbeafe':'#fef3c7'};font-size:1.05rem">
+              <td style="font-weight:700;padding:13px 14px">NET CASH FLOW (A − B)</td>
+              <td style="text-align:right;font-weight:700;color:${netCash>=0?'var(--primary)':'var(--danger)'}">${fmt(netCash)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- P&L STATEMENT -->
+    <div class="box">
+      <div class="box-header"><h3>📊 Profit & Loss Statement — ${monthName}</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <tbody>
+            <tr style="background:#f8fafc"><td colspan="2" style="font-weight:700;padding:12px 14px">INCOME</td></tr>
+            ${renderCatRows(inCats)}
+            <tr><td style="font-weight:600;padding:10px 14px;padding-left:30px">Total Income</td><td style="text-align:right;font-weight:600">${fmt(totalIn)}</td></tr>
+            <tr><td colspan="2" style="padding:4px"></td></tr>
+            <tr style="background:#f8fafc"><td colspan="2" style="font-weight:700;padding:12px 14px">CASH EXPENSES</td></tr>
+            ${renderCatRows(outCats)}
+            <tr><td style="font-weight:600;padding:10px 14px;padding-left:30px">Total Cash Expenses</td><td style="text-align:right;font-weight:600">${fmt(totalOut)}</td></tr>
+            <tr><td colspan="2" style="padding:4px"></td></tr>
+            <tr style="background:#f8fafc"><td colspan="2" style="font-weight:700;padding:12px 14px">NON-CASH EXPENSES</td></tr>
+            ${renderCatRows(ncTypes)}
+            <tr><td style="font-weight:600;padding:10px 14px;padding-left:30px">Total Non-Cash Expenses</td><td style="text-align:right;font-weight:600">${fmt(totalNc)}</td></tr>
+            <tr><td colspan="2" style="padding:4px"></td></tr>
+            <tr style="background:${netProfit>=0?'#d1fae5':'#fee2e2'};font-size:1.1rem">
+              <td style="font-weight:700;padding:14px 14px">NET PROFIT / (LOSS)</td>
+              <td style="text-align:right;font-weight:700;color:${netProfit>=0?'var(--accent)':'var(--danger)'}">${fmt(netProfit)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INVENTORY SNAPSHOT -->
+    <div class="box" style="margin-top:20px">
+      <div class="box-header"><h3>📦 Inventory Snapshot</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Item</th><th>Category</th><th>Stock</th><th>Unit</th><th style="text-align:right">Unit Cost</th><th style="text-align:right">Value</th><th>Status</th></tr></thead>
+          <tbody>${DB.get('inventory').map(i=>`<tr>
+            <td>${i.name}</td><td>${i.cat}</td>
+            <td style="text-align:center">${i.qty}</td><td>${i.unit}</td>
+            <td style="text-align:right">${fmt(i.cost)}</td>
+            <td style="text-align:right">${fmt(i.qty*i.cost)}</td>
+            <td>${i.qty<=i.reorder?'⚠ Low':'OK'}</td>
+          </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No inventory data.</td></tr>'}</tbody>
+          <tfoot><tr style="background:#f8fafc;font-weight:700"><td colspan="5">Total Inventory Value</td><td style="text-align:right">${fmt(DB.get('inventory').reduce((s,i)=>s+i.qty*i.cost,0))}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <p style="text-align:center;color:var(--muted);font-size:.8rem;margin-top:16px">Generated on ${new Date().toLocaleDateString('en-IN')} · Hotel Accounting System</p>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', ()=>{
+  // Set default dates
+  document.getElementById('in-date').value = today();
+  document.getElementById('out-date').value = today();
+  document.getElementById('nc-month').value = nowMonth();
+
+  // Build all selectors
+  buildSelectors('dash-month','dash-year', renderDashboard);
+  buildSelectors('inf-month','inf-year', renderInflowTable);
+  buildSelectors('outf-month','outf-year', renderOutflowTable);
+  buildSelectors('rpt-month','rpt-year', null);
+
+  // Initial renders
+  renderDashboard();
+  renderInflowTable();
+  renderOutflowTable();
+  renderNcTable();
+  renderInventory();
+});
+</script>
+</body>
+</html>

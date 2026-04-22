@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACR Hotel">
+<meta name="theme-color" content="#1e293b">
+<title>Amma Cheti Ruchulu — Inventory</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --primary-soft: #eef2ff;
+    --green: #10b981;
+    --green-soft: #d1fae5;
+    --red: #ef4444;
+    --red-soft: #fee2e2;
+    --orange: #f59e0b;
+    --orange-soft: #fef3c7;
+    --text: #0f172a;
+    --sub: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ─── HEADER ─── */
+  .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 22px 24px 70px; position: relative; overflow: hidden; }
+  .header::before { content:''; position:absolute; width:300px; height:300px; background:rgba(255,255,255,.06); border-radius:50%; top:-120px; right:-60px; }
+  .header::after  { content:''; position:absolute; width:200px; height:200px; background:rgba(255,255,255,.04); border-radius:50%; bottom:-80px; left:30px; }
+  .header-inner { display:flex; align-items:flex-start; justify-content:space-between; position:relative; z-index:1; max-width:1060px; margin:0 auto; }
+  .header h1 { font-size:1.35rem; font-weight:800; color:#fff; letter-spacing:-.02em; }
+  .header p  { font-size:.8rem; color:rgba(255,255,255,.7); margin-top:4px; }
+  .hbtn { padding:8px 16px; border-radius:999px; font-size:.8rem; font-weight:600; cursor:pointer; border:none; display:flex; align-items:center; gap:5px; transition:transform .15s,filter .15s; }
+  .hbtn:active { transform:scale(.96); }
+  .hbtn-ghost { background:rgba(255,255,255,.18); color:#fff; backdrop-filter:blur(8px); }
+  .hbtn-white { background:#fff; color:var(--primary-dark); }
+
+  /* ─── STATS ─── */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; max-width:1060px; margin:-46px auto 0; padding:0 20px; position:relative; z-index:10; }
+  .stat { background:var(--card); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:12px; }
+  .stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; }
+  .ic-purple { background:var(--primary-soft); }
+  .ic-green  { background:var(--green-soft); }
+  .ic-orange { background:var(--orange-soft); }
+  .ic-red    { background:var(--red-soft); }
+  .stat-val  { font-size:1.45rem; font-weight:800; line-height:1; color:var(--text); }
+  .stat-lbl  { font-size:.7rem; color:var(--sub); margin-top:3px; font-weight:500; }
+  .stat.alert-stat .stat-val { color:var(--red); }
+
+  /* ─── LOW STOCK BANNER ─── */
+  .low-banner {
+    background:linear-gradient(135deg,#fef3c7,#fde68a);
+    border:1.5px solid var(--orange); border-radius:var(--radius);
+    padding:14px 18px; margin-bottom:16px;
+    display:none; /* shown via JS */
+  }
+  .low-banner-title { font-size:.85rem; font-weight:800; color:#92400e; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .low-items-wrap   { display:flex; flex-wrap:wrap; gap:7px; }
+  .low-chip {
+    background:#fff; border:1.5px solid var(--orange); border-radius:999px;
+    padding:4px 12px; font-size:.76rem; font-weight:700; color:#92400e;
+    display:flex; align-items:center; gap:5px;
+  }
+  .low-chip .lc-stock { color:var(--red); font-weight:800; }
+
+  /* ─── CONTENT ─── */
+  .content { max-width:1060px; margin:0 auto; padding:20px; }
+
+  /* ─── TOOLBAR ─── */
+  .toolbar { background:var(--card); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .search-box { flex:1; min-width:200px; display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:var(--radius-sm); padding:0 12px; border:1.5px solid var(--border); transition:border .15s; }
+  .search-box:focus-within { border-color:var(--primary); background:#fff; }
+  .search-box input { flex:1; padding:9px 0; border:none; background:none; font-size:.9rem; font-family:inherit; outline:none; color:var(--text); }
+  .fselect { padding:9px 14px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:.83rem; font-family:inherit; background:var(--bg); outline:none; cursor:pointer; color:var(--text); font-weight:500; transition:border .15s; }
+  .fselect:focus { border-color:var(--primary); }
+
+  /* ─── PILLS ─── */
+  .pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; padding:0 2px; }
+  .pill { padding:6px 14px; border-radius:999px; font-size:.78rem; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:var(--card); color:var(--sub); transition:all .18s; white-space:nowrap; }
+  .pill:hover { border-color:var(--primary); color:var(--primary); }
+  .pill.active { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 2px 8px rgba(99,102,241,.35); }
+  .pill.low-pill { border-color:var(--orange); color:#92400e; background:var(--orange-soft); }
+  .pill.low-pill.active { background:var(--orange); color:#fff; border-color:var(--orange); }
+
+  /* ─── TABLE ─── */
+  .table-wrap { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); overflow-x:auto; overflow-y:hidden; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; }
+  thead { background:var(--bg); border-bottom:1.5px solid var(--border); }
+  th { padding:11px 14px; text-align:left; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sub); white-space:nowrap; }
+  td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr { transition:background .1s; }
+  tbody tr:hover td { background:#fafbff; }
+
+  /* ─── LOW STOCK ROW HIGHLIGHT ─── */
+  tbody tr.row-low td { background:#fffbeb !important; }
+  tbody tr.row-low:hover td { background:#fef3c7 !important; }
+  tbody tr.row-critical td { background:#fff1f1 !important; }
+  tbody tr.row-critical:hover td { background:#fee2e2 !important; }
+
+  /* ─── TAGS ─── */
+  .tag { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:.73rem; font-weight:600; white-space:nowrap; }
+  .tag-purple { background:var(--primary); color:#fff; font-size:.73rem; }
+  .tag-green  { background:var(--green-soft); color:#065f46; }
+  .tag-gray   { background:#f1f5f9; color:#475569; }
+  .tag-red    { background:var(--red-soft); color:#991b1b; }
+  .tag-orange { background:var(--orange-soft); color:#92400e; }
+
+  /* ─── STOCK INDICATOR ─── */
+  .stock-cell { display:flex; align-items:center; gap:8px; }
+  .stock-num  { font-size:.95rem; font-weight:800; }
+  .stock-ok       { color:var(--green); }
+  .stock-low      { color:var(--orange); }
+  .stock-critical { color:var(--red); }
+  .stock-none     { color:#94a3b8; }
+  .stock-bar-wrap { width:50px; height:5px; background:#e2e8f0; border-radius:999px; overflow:hidden; flex-shrink:0; }
+  .stock-bar      { height:100%; border-radius:999px; transition:width .3s; }
+  .bar-ok       { background:var(--green); }
+  .bar-low      { background:var(--orange); }
+  .bar-critical { background:var(--red); }
+
+  /* ─── INLINE EDITABLE CELL ─── */
+  .editable-val { cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:7px; font-weight:700; font-size:.88rem; transition:background .15s; }
+  .editable-val:hover { background:var(--primary-soft); }
+  .editable-val.zero  { color:#94a3b8; font-weight:500; }
+  .editable-val.zero:hover { background:var(--orange-soft); }
+  .edit-row { display:none; align-items:center; gap:6px; }
+  .edit-input { width:80px; padding:5px 9px; border:2px solid var(--primary); border-radius:7px; font-size:.88rem; font-weight:700; font-family:inherit; outline:none; color:var(--primary-dark); background:var(--primary-soft); }
+  .edit-ok { padding:5px 10px; border-radius:6px; border:none; background:var(--green); color:#fff; font-weight:700; font-size:.8rem; cursor:pointer; }
+  .edit-cancel { padding:5px 8px; border-radius:6px; border:none; background:#f1f5f9; color:var(--sub); font-weight:700; font-size:.8rem; cursor:pointer; }
+
+  /* ─── ACTION BUTTON ─── */
+  .act-btn { width:28px; height:28px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:.78rem; cursor:pointer; border:none; background:none; color:#cbd5e1; opacity:.5; transition:all .18s; }
+  .act-btn:hover { opacity:1; background:#f1f5f9; color:var(--sub); }
+
+  /* ─── MOBILE CARDS ─── */
+  .item-grid { display:none; gap:12px; flex-direction:column; }
+  .item-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; border:1px solid var(--border); transition:box-shadow .2s; }
+  .item-card.card-low      { border-left:4px solid var(--orange); background:#fffdf5; }
+  .item-card.card-critical { border-left:4px solid var(--red);    background:#fff5f5; }
+  .item-card:hover { box-shadow:var(--shadow-lg); }
+  .ic-top  { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .ic-name { font-size:1.05rem; font-weight:800; flex:1; color:#0f172a; letter-spacing:-.01em; }
+  .ic-meta { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .ic-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:12px; }
+  .ic-field { background:var(--bg); border-radius:8px; padding:9px 10px; }
+  .ic-field-lbl { font-size:.68rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+  .ic-field-val { font-size:.95rem; font-weight:800; }
+  .ic-actions { display:flex; gap:8px; margin-top:12px; }
+  .ic-act { flex:1; padding:8px; border-radius:var(--radius-sm); font-size:.8rem; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:none; color:var(--sub); display:flex; align-items:center; justify-content:center; gap:4px; transition:all .15s; }
+  .ic-act:hover { background:var(--bg); }
+
+  /* ─── MODAL ─── */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(4px); z-index:200; align-items:center; justify-content:center; padding:16px; }
+  .overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:20px; padding:26px; width:100%; max-width:440px; box-shadow:0 24px 80px rgba(0,0,0,.2); animation:pop .22s cubic-bezier(.34,1.56,.64,1); max-height:90vh; overflow-y:auto; }
+  @keyframes pop { from{transform:scale(.85);opacity:0} to{transform:scale(1);opacity:1} }
+  .modal h3 { font-size:1.1rem; font-weight:800; margin-bottom:20px; }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:.74rem; font-weight:700; color:var(--sub); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em; }
+  .field input, .field select { width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:.9rem; font-family:inherit; background:#f8fafc; outline:none; color:var(--text); transition:border .15s; }
+  .field input:focus, .field select:focus { border-color:var(--primary); background:#fff; }
+  .field .hint { font-size:.72rem; color:var(--sub); margin-top:4px; }
+  .field-row { display:flex; gap:12px; }
+  .field-row .field { flex:1; }
+  .modal-btns { display:flex; gap:10px; margin-top:20px; }
+  .mbtn { flex:1; padding:12px; border-radius:var(--radius-sm); font-size:.9rem; font-weight:700; cursor:pointer; border:none; font-family:inherit; transition:filter .15s; }
+  .mbtn:active { filter:brightness(.9); }
+  .mbtn-cancel { background:var(--bg); color:var(--sub); }
+  .mbtn-save   { background:var(--primary); color:#fff; }
+  .mbtn-del    { background:var(--red); color:#fff; }
+
+  /* ─── EMPTY ─── */
+  .empty { text-align:center; padding:52px 20px; color:var(--sub); }
+  .empty .ei { font-size:3rem; margin-bottom:12px; }
+
+  /* ─── TOAST ─── */
+  .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:12px 22px; border-radius:999px; font-size:.85rem; font-weight:600; z-index:999; opacity:0; transition:all .3s; pointer-events:none; white-space:nowrap; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width:700px) {
+    .header { padding:18px 18px 64px; }
+    .stats-row { grid-template-columns:repeat(2,1fr); margin-top:-42px; padding:0 14px; gap:10px; }
+    .stat { padding:12px; gap:8px; }
+    .stat-icon { width:36px; height:36px; font-size:1rem; }
+    .stat-val { font-size:1.2rem; }
+    .content { padding:14px; }
+    .table-wrap { display:none; }
+    .item-grid  { display:flex; }
+    .hbtn span  { display:none; }
+    .hbtn { padding:8px 10px; }
+  }
+  @media (min-width:701px) {
+    .table-wrap { display:block; }
+    .item-grid  { display:none; }
+  }
+</style>
+  <!-- ── Role Guard ── -->
+  <script>
+  (function(){
+    var role=sessionStorage.getItem('fc_role');
+    if(!role){window.location.href='index.html';return;}
+    if(role==='admin')return;
+    var mid='store';
+    var cfg={};
+    try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit'};
+    var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
+    if(access==='none'){window.location.href='index.html';return;}
+    if(access==='view'){
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add('fc-readonly');
+      });
+    }
+  })();
+  </script>
+  <style>
+  /* ── Read-only mode ── */
+  .fc-readonly .btn-save,.fc-readonly .btn-del-entry,.fc-readonly .btn-settings,
+  .fc-readonly .btn-add,.fc-readonly .btn-primary,.fc-readonly .btn-green,
+  .fc-readonly .btn-orange,.fc-readonly .icon-btn-del,.fc-readonly .hbtn-white,
+  .fc-readonly .mbtn-save,.fc-readonly .mbtn-del,.fc-readonly .submit-btn,
+  .fc-readonly .new-entry-btn,.fc-readonly .hist-del-btn,.fc-readonly .del-confirm,
+  .fc-readonly .exp-add-btn,.fc-readonly .exp-remove-btn{display:none!important;}
+  #fc-readonly-banner{display:none;background:#eff6ff;border-bottom:2px solid #bfdbfe;
+    padding:9px 16px;font-size:12px;color:#1d4ed8;text-align:center;font-weight:600;}
+  .fc-readonly #fc-readonly-banner{display:block!important;}
+  </style>
+</head>
+<body>
+<div id="fc-readonly-banner">👁 View-only mode — you can browse data but cannot make changes</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="index.html" style="color:rgba(255,255,255,.75);font-size:18px;text-decoration:none;line-height:1" title="Home">←</a>
+      <div>
+        <h1>🏪 Store Items</h1>
+        <p>Master item list · prices · stock levels</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="hbtn hbtn-ghost" onclick="exportCSV()">⬇ <span>Export</span></button>
+      <button class="hbtn hbtn-white" onclick="openAdd()">＋ <span>Add Item</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat">
+    <div class="stat-icon ic-purple">📦</div>
+    <div><div class="stat-val" id="s-total">—</div><div class="stat-lbl">Total Items</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon ic-orange">📏</div>
+    <div><div class="stat-val" id="s-reorder">—</div><div class="stat-lbl">Reorder Set</div></div>
+  </div>
+  <div class="stat alert-stat">
+    <div class="stat-icon ic-red">⚠️</div>
+    <div><div class="stat-val" id="s-low">—</div><div class="stat-lbl">Low Stock</div></div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content" style="margin-top:24px">
+
+  <!-- LOW STOCK BANNER -->
+  <div class="low-banner" id="low-banner">
+    <div class="low-banner-title">⚠️ Low Stock Alert — these items need restocking</div>
+    <div class="low-items-wrap" id="low-items-wrap"></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span style="color:var(--sub)">🔍</span>
+      <input type="text" id="q" placeholder="Search items…" oninput="render()">
+    </div>
+    <select class="fselect" id="fc" onchange="render()">
+      <option value="">All Categories</option>
+      <option>Flours & Grains</option>
+      <option>Dals & Legumes</option>
+      <option>Spices & Condiments</option>
+      <option>Masalas & Powders</option>
+      <option>Oils</option>
+      <option>Sauces & Liquids</option>
+      <option>Packaging</option>
+      <option>Water</option>
+      <option>Dairy Products</option>
+      <option>Vegetables</option>
+    </select>
+    <select class="fselect" id="fp" onchange="render()">
+      <option value="">All Items</option>
+      <option value="low">⚠ Low Stock</option>
+      <option value="ok">✅ In Stock</option>
+    </select>
+  </div>
+
+  <!-- PILLS -->
+  <div class="pills">
+    <div class="pill active"  onclick="setPill(this,'')">All</div>
+    <div class="pill low-pill" onclick="setPill(this,'__low__')">⚠️ Low Stock</div>
+    <div class="pill" onclick="setPill(this,'Flours & Grains')">🌾 Flours</div>
+    <div class="pill" onclick="setPill(this,'Dals & Legumes')">🫘 Dals</div>
+    <div class="pill" onclick="setPill(this,'Spices & Condiments')">🌶️ Spices</div>
+    <div class="pill" onclick="setPill(this,'Masalas & Powders')">🧂 Masalas</div>
+    <div class="pill" onclick="setPill(this,'Oils')">🛢️ Oils</div>
+    <div class="pill" onclick="setPill(this,'Sauces & Liquids')">🍶 Sauces</div>
+    <div class="pill" onclick="setPill(this,'Packaging')">🛍️ Packaging</div>
+    <div class="pill" onclick="setPill(this,'Water')">💧 Water</div>
+    <div class="pill" onclick="setPill(this,'Dairy Products')">🥛 Dairy</div>
+    <div class="pill" onclick="setPill(this,'Vegetables')">🥦 Vegetables</div>
+  </div>
+
+  <!-- DESKTOP TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Item Name</th>
+          <th>Category</th>
+          <th>Unit</th>
+          <th>Current Stock</th>
+          <th>Reorder Level <span style="font-weight:400;opacity:.6">· tap to edit</span></th>
+          <th>Markup % <span style="font-weight:400;opacity:.6">· tap to edit</span></th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- MOBILE CARDS -->
+  <div class="item-grid" id="cards"></div>
+
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="m-title">➕ Add New Item</h3>
+    <div class="field">
+      <label>Item Name *</label>
+      <input id="m-name" type="text" placeholder="e.g. Basmati Rice">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Category *</label>
+        <select id="m-cat">
+          <option>Flours & Grains</option>
+          <option>Dals & Legumes</option>
+          <option>Spices & Condiments</option>
+          <option>Masalas & Powders</option>
+          <option>Oils</option>
+          <option>Sauces & Liquids</option>
+          <option>Packaging</option>
+          <option>Water</option>
+          <option>Dairy Products</option>
+          <option>Vegetables</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Unit *</label>
+        <select id="m-unit">
+          <option>KG</option><option>PCS</option><option>BOTTLE</option>
+          <option>BOX</option><option>LITRE</option><option>GRAM</option><option>PACKET</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Reorder Level</label>
+        <input id="m-reorder" type="number" min="0" step="0.01" placeholder="e.g. 5">
+        <div class="hint">Alert when stock ≤ this</div>
+      </div>
+      <div class="field">
+        <label>Markup %</label>
+        <input id="m-markup" type="number" min="0" step="0.5" placeholder="0" style="max-width:120px">
+        <div class="hint">Applied on purchase rate for P&L</div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn mbtn-save"   onclick="saveItem()">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="del-modal" onclick="if(event.target===this)closeDelModal()">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:12px">🗑️</div>
+    <h3>Delete Item?</h3>
+    <p id="del-msg" style="color:var(--sub);font-size:.88rem;margin-top:8px;line-height:1.6"></p>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeDelModal()">Cancel</button>
+      <button class="mbtn mbtn-del"    onclick="confirmDelete()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  SEED DATA  (65 items, price=0, reorder=0, qty=0)
+// ══════════════════════════════════════════════
+const SEED = [
+  {id:1,  name:'Idly Rawa',             cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:2,  name:'Upma Rawa',             cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:3,  name:'Super Atta',            cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:4,  name:'Chikki Atta',           cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:5,  name:'Maida',                 cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:6,  name:'Besan',                 cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:7,  name:'Rice Atta',             cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:8,  name:'Corn Flour',            cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:12, name:'Meals Rice',            cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:13, name:'Tiffin Rice',           cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:39, name:'Barik Sev',             cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:40, name:'Kaju',                  cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:65, name:'Thil',                  cat:'Flours & Grains',     unit:'KG',     price:0, reorder:0, qty:0},
+  {id:9,  name:'Toor Dal',              cat:'Dals & Legumes',      unit:'KG',     price:0, reorder:0, qty:0},
+  {id:10, name:'Minapa Gundu',          cat:'Dals & Legumes',      unit:'KG',     price:0, reorder:0, qty:0},
+  {id:11, name:'Chana Dal',             cat:'Dals & Legumes',      unit:'KG',     price:0, reorder:0, qty:0},
+  {id:18, name:'Green Batana',          cat:'Dals & Legumes',      unit:'KG',     price:0, reorder:0, qty:0},
+  {id:19, name:'White Batana',          cat:'Dals & Legumes',      unit:'KG',     price:0, reorder:0, qty:0},
+  {id:20, name:'Kabuli Chana',          cat:'Dals & Legumes',      unit:'KG',     price:0, reorder:0, qty:0},
+  {id:14, name:'Jaggery',               cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:15, name:'Suka Mirchi',           cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:16, name:'Tenkaya',               cat:'Spices & Condiments', unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:17, name:'Palli',                 cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:21, name:'Sugar',                 cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:23, name:'Haldi',                 cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:25, name:'Inguva',                cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:26, name:'Copra Powder',          cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:27, name:'Daniya Powder',         cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:28, name:'Kasturi Methi',         cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:29, name:'Mirchi',                cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:30, name:'Imly',                  cat:'Spices & Condiments', unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:31, name:'Jeera',                 cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:32, name:'Rai',                   cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:42, name:'Nimbu Salt',            cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:43, name:'Tata Soda',             cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:44, name:'Black Salt',            cat:'Spices & Condiments', unit:'KG',     price:0, reorder:0, qty:0},
+  {id:24, name:'Chat Masala',           cat:'Masalas & Powders',   unit:'KG',     price:0, reorder:0, qty:0},
+  {id:33, name:'Swastik Samber Masala', cat:'Masalas & Powders',   unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:34, name:'MTR Samber Masala',     cat:'Masalas & Powders',   unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:35, name:'Pav Masala',            cat:'Masalas & Powders',   unit:'KG',     price:0, reorder:0, qty:0},
+  {id:36, name:'Garam Masala',          cat:'Masalas & Powders',   unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:37, name:'Jal Jeera Powder',      cat:'Masalas & Powders',   unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:38, name:'Dosa Masala Powder',    cat:'Masalas & Powders',   unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:41, name:'Idly Karam Powder',     cat:'Masalas & Powders',   unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:45, name:'Palm Oil 800ml',        cat:'Oils',                unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:46, name:'Palm Oil Loose',        cat:'Oils',                unit:'KG',     price:0, reorder:0, qty:0},
+  {id:47, name:'Groundnut Oil',         cat:'Oils',                unit:'KG',     price:0, reorder:0, qty:0},
+  {id:48, name:'Chilli Sauce',          cat:'Sauces & Liquids',    unit:'BOTTLE', price:0, reorder:0, qty:0},
+  {id:49, name:'Tomato Sauce',          cat:'Sauces & Liquids',    unit:'BOTTLE', price:0, reorder:0, qty:0},
+  {id:50, name:'Red Chilli Sauce',      cat:'Sauces & Liquids',    unit:'BOTTLE', price:0, reorder:0, qty:0},
+  {id:51, name:'Soya Sauce',            cat:'Sauces & Liquids',    unit:'BOTTLE', price:0, reorder:0, qty:0},
+  {id:52, name:'Vinegar',               cat:'Sauces & Liquids',    unit:'BOTTLE', price:0, reorder:0, qty:0},
+  {id:22, name:'Spoons Chat',           cat:'Packaging',           unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:53, name:'7×9 Silver Covers',     cat:'Packaging',           unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:54, name:'Dosa Box',              cat:'Packaging',           unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:55, name:'Samber Covers',         cat:'Packaging',           unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:56, name:'10×12 Covers',          cat:'Packaging',           unit:'KG',     price:0, reorder:0, qty:0},
+  {id:57, name:'13×16 Covers',          cat:'Packaging',           unit:'KG',     price:0, reorder:0, qty:0},
+  {id:58, name:'8×10 Covers',           cat:'Packaging',           unit:'KG',     price:0, reorder:0, qty:0},
+  {id:59, name:'250ml Manchuria Box',   cat:'Packaging',           unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:60, name:'250ml Chat Box',        cat:'Packaging',           unit:'BOX',    price:0, reorder:0, qty:0},
+  {id:61, name:'16×20 Covers',          cat:'Packaging',           unit:'KG',     price:0, reorder:0, qty:0},
+  {id:62, name:'Water 1 Litre',         cat:'Water',               unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:63, name:'Water 500ml',           cat:'Water',               unit:'PCS',    price:0, reorder:0, qty:0},
+  {id:64, name:'Bisleri 10 Litre',      cat:'Water',               unit:'PCS',    price:0, reorder:0, qty:0},
+];
+
+const KEY = 'fc_items_v2';
+let editId = null, _delId = null;
+
+// ── DB helpers
+const db = {
+  load(){ const d=localStorage.getItem(KEY); if(d) return JSON.parse(d); const s=[...SEED.map(i=>({...i}))]; this.save(s); return s; },
+  save(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
+};
+// Migrate old data that may lack reorder/qty/markup fields
+(function migrate(){
+  const arr = db.load();
+  let changed = false;
+  arr.forEach(i=>{
+    if(i.reorder===undefined){i.reorder=0;changed=true;}
+    if(i.qty===undefined){i.qty=0;changed=true;}
+    if(i.markup===undefined){i.markup=0;changed=true;}
+  });
+  if(changed) db.save(arr);
+})();
+
+// ── Stock status helper
+function stockStatus(item){
+  const qty = item.qty||0;
+  const rl  = item.reorder||0;
+  if(rl === 0) return 'noset';           // reorder not set yet
+  if(qty === 0) return 'critical';       // completely out
+  if(qty <= rl) return 'low';            // at or below reorder
+  if(qty <= rl * 1.5) return 'warning'; // within 50% of reorder — light warning
+  return 'ok';
+}
+
+const catEmoji = {'Flours & Grains':'🌾','Dals & Legumes':'🫘','Spices & Condiments':'🌶️','Masalas & Powders':'🧂','Oils':'🛢️','Sauces & Liquids':'🍶','Packaging':'🛍️','Water':'💧','Dairy Products':'🥛','Vegetables':'🥦'};
+
+// ══════════════════════════════════════════════
+//  FILTER
+// ══════════════════════════════════════════════
+let activePill = '';
+function filtered(){
+  const q   = document.getElementById('q').value.toLowerCase();
+  const cat = document.getElementById('fc').value;
+  const fp  = document.getElementById('fp').value;
+  return db.load().filter(item=>{
+    if(q && !item.name.toLowerCase().includes(q)) return false;
+    if(activePill === '__low__'){
+      const s = stockStatus(item);
+      if(s!=='low' && s!=='critical') return false;
+    } else if(activePill && item.cat!==activePill) return false;
+    if(cat && item.cat!==cat) return false;
+    if(fp==='low'){
+      const s=stockStatus(item); if(s!=='low'&&s!=='critical') return false;
+    }
+    if(fp==='ok'){ if(stockStatus(item)!=='ok') return false; }
+    return true;
+  });
+}
+
+// ══════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════
+function render(){
+  const all = db.load();
+  const items = filtered();
+
+  // Stats
+  const reordered = all.filter(i=>i.reorder>0).length;
+  const lowItems  = all.filter(i=>{ const s=stockStatus(i); return s==='low'||s==='critical'; });
+  document.getElementById('s-total').textContent   = all.length;
+  document.getElementById('s-reorder').textContent = reordered;
+  document.getElementById('s-low').textContent     = lowItems.length;
+
+  // Low stock banner
+  const banner = document.getElementById('low-banner');
+  const wrap   = document.getElementById('low-items-wrap');
+  if(lowItems.length){
+    banner.style.display = 'block';
+    wrap.innerHTML = lowItems.map(i=>{
+      const s = stockStatus(i);
+      const icon = s==='critical' ? '🔴' : '🟠';
+      return `<div class="low-chip">${icon} ${i.name} — <span class="lc-stock">${i.qty} ${i.unit}</span> left (reorder: ${i.reorder})</div>`;
+    }).join('');
+  } else {
+    banner.style.display = 'none';
+  }
+
+  renderTable(items);
+  renderCards(items);
+}
+
+// ── Stock cell HTML
+function stockCellHTML(item){
+  const qty = item.qty||0;
+  const rl  = item.reorder||0;
+  const s   = stockStatus(item);
+  const cls = s==='critical'?'stock-critical': s==='low'?'stock-low': s==='ok'||s==='warning'?'stock-ok':'stock-none';
+  const barCls = s==='critical'?'bar-critical': s==='low'?'bar-low':'bar-ok';
+  const pct = rl>0 ? Math.min(100, Math.round((qty/rl)*100)) : (qty>0?100:0);
+  return `<div class="stock-cell">
+    <span class="stock-num ${cls}">${qty}</span>
+    <span style="color:var(--sub);font-size:.78rem">${item.unit}</span>
+    ${rl>0?`<div class="stock-bar-wrap"><div class="stock-bar ${barCls}" style="width:${pct}%"></div></div>`:''}
+  </div>`;
+}
+
+// ── Inline editable cell
+function editableHTML(item, field, prefix, display){
+  const val = item[field]||0;
+  const isZero = val===0;
+  return `
+    <span class="editable-val ${isZero?'zero':''}" id="ev-${prefix}-${item.id}" onclick="startEdit(${item.id},'${field}','${prefix}')">
+      ${display}
+    </span>
+    <span class="edit-row" id="er-${prefix}-${item.id}">
+      <input class="edit-input" id="ei-${prefix}-${item.id}" type="number" min="0" step="0.01" value="${val}"
+        onkeydown="editKey(event,${item.id},'${field}','${prefix}')">
+      <button class="edit-ok"     onclick="saveEdit(${item.id},'${field}','${prefix}')">✓</button>
+      <button class="edit-cancel" onclick="cancelEdit('${prefix}',${item.id})">✕</button>
+    </span>`;
+}
+
+function statusTagHTML(item){
+  const s = stockStatus(item);
+  if(s==='critical') return '<span class="tag tag-red">🔴 Out / Critical</span>';
+  if(s==='low')      return '<span class="tag tag-orange">🟠 Low Stock</span>';
+  if(s==='warning')  return '<span class="tag tag-orange" style="background:#fef9c3;color:#854d0e">🟡 Watch</span>';
+  if(s==='ok')       return '<span class="tag tag-green">✅ In Stock</span>';
+  return '<span class="tag tag-gray">— Set Reorder</span>';
+}
+
+function renderTable(items){
+  const tbody = document.getElementById('tbody');
+  if(!items.length){
+    tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="ei">🔍</div><p>No items match.</p></div></td></tr>`;
+    return;
+  }
+  // Sort by category so items always group correctly after edits
+  const sorted = [...items].sort((a,b)=> a.cat.localeCompare(b.cat) || a.name.localeCompare(b.name));
+  let html='', lastCat='';
+  sorted.forEach((item,i)=>{
+    if(item.cat!==lastCat){
+      html+=`<tr><td colspan="9" style="padding:8px 14px 6px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);background:var(--bg);border-bottom:1px solid var(--border)">${catEmoji[item.cat]||''} ${item.cat}</td></tr>`;
+      lastCat=item.cat;
+    }
+    const s = stockStatus(item);
+    const rowCls = s==='critical'?'row-critical': s==='low'?'row-low':'';
+    const reorderDisp = item.reorder>0 ? item.reorder+' '+item.unit : 'Set ✏';
+    const markupDisp  = (item.markup||0) > 0 ? (item.markup)+'%' : '0% · Set ✏';
+    html+=`<tr class="${rowCls}">
+      <td><span class="tag tag-gray">${i+1}</span></td>
+      <td style="font-weight:800;font-size:.97rem;color:#0f172a;letter-spacing:-.01em">${item.name}</td>
+      <td><span class="tag tag-purple">${catEmoji[item.cat]||''} ${item.cat}</span></td>
+      <td><span class="tag tag-green">${item.unit}</span></td>
+      <td>${stockCellHTML(item)}</td>
+      <td>${editableHTML(item,'reorder','r', reorderDisp)}</td>
+      <td>${editableHTML(item,'markup','mk', markupDisp)}</td>
+      <td>${statusTagHTML(item)}</td>
+      <td style="white-space:nowrap">
+        <button class="act-btn" onclick="openEdit2(${item.id})" title="Edit item">✏️</button>
+        <button class="act-btn" onclick="askDelete(${item.id})" title="Delete">🗑</button>
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderCards(items){
+  const wrap = document.getElementById('cards');
+  if(!items.length){
+    wrap.innerHTML=`<div class="empty"><div class="ei">🔍</div><p>No items found.</p></div>`;
+    return;
+  }
+  const sorted = [...items].sort((a,b)=> a.cat.localeCompare(b.cat) || a.name.localeCompare(b.name));
+  wrap.innerHTML = sorted.map((item,i)=>{
+    const s = stockStatus(item);
+    const cardCls = s==='critical'?'card-critical': s==='low'?'card-low':'';
+    const reorderDisp = item.reorder>0?item.reorder+' '+item.unit:'Tap to set';
+    const markupDisp  = (item.markup||0)>0?(item.markup)+'%':'Tap to set';
+    return `<div class="item-card ${cardCls}">
+      <div class="ic-top">
+        <div class="ic-name">${item.name}</div>
+        <span class="tag tag-gray">#${i+1}</span>
+      </div>
+      <div class="ic-meta">
+        <span class="tag tag-purple">${catEmoji[item.cat]||''} ${item.cat}</span>
+        <span class="tag tag-green">${item.unit}</span>
+        ${statusTagHTML(item)}
+      </div>
+      <div class="ic-grid">
+        <div class="ic-field">
+          <div class="ic-field-lbl">Stock</div>
+          <div class="ic-field-val ${s==='critical'?'stock-critical':s==='low'?'stock-low':s==='ok'?'stock-ok':'stock-none'}">${item.qty||0}</div>
+        </div>
+        <div class="ic-field" onclick="startEdit(${item.id},'reorder','mr')" style="cursor:pointer">
+          <div class="ic-field-lbl">Reorder ✏</div>
+          <div class="ic-field-val" id="ev-mr-${item.id}" style="color:${item.reorder>0?'var(--orange)':'#94a3b8'}">${reorderDisp}</div>
+          <span class="edit-row" id="er-mr-${item.id}" style="margin-top:4px">
+            <input class="edit-input" id="ei-mr-${item.id}" type="number" min="0" step="0.01" value="${item.reorder||0}" style="width:70px"
+              onkeydown="editKey(event,${item.id},'reorder','mr')">
+            <button class="edit-ok" onclick="saveEdit(${item.id},'reorder','mr')">✓</button>
+          </span>
+        </div>
+        <div class="ic-field" onclick="startEdit(${item.id},'markup','mm')" style="cursor:pointer">
+          <div class="ic-field-lbl">Markup % ✏</div>
+          <div class="ic-field-val" id="ev-mm-${item.id}" style="color:${(item.markup||0)>0?'var(--purple)':'#94a3b8'}">${markupDisp}</div>
+          <span class="edit-row" id="er-mm-${item.id}" style="margin-top:4px">
+            <input class="edit-input" id="ei-mm-${item.id}" type="number" min="0" step="0.5" value="${item.markup||0}" style="width:70px"
+              onkeydown="editKey(event,${item.id},'markup','mm')">
+            <button class="edit-ok" onclick="saveEdit(${item.id},'markup','mm')">✓</button>
+          </span>
+        </div>
+      </div>
+      <div class="ic-actions">
+        <button class="ic-act" onclick="openEdit2(${item.id})">✏️ Edit</button>
+        <button class="ic-act" onclick="askDelete(${item.id})">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  INLINE EDIT (price / reorder)
+// ══════════════════════════════════════════════
+function startEdit(id, field, prefix){
+  // hide display, show input
+  const ev = document.getElementById(`ev-${prefix}-${id}`);
+  const er = document.getElementById(`er-${prefix}-${id}`);
+  if(ev) ev.style.display='none';
+  if(er){ er.style.display='inline-flex'; const inp=document.getElementById(`ei-${prefix}-${id}`); if(inp){inp.focus();inp.select();} }
+}
+function cancelEdit(prefix, id){
+  document.getElementById(`ev-${prefix}-${id}`).style.display='';
+  document.getElementById(`er-${prefix}-${id}`).style.display='none';
+}
+function saveEdit(id, field, prefix){
+  const val = parseFloat(document.getElementById(`ei-${prefix}-${id}`).value)||0;
+  const arr  = db.load();
+  const item = arr.find(i=>i.id===id);
+  if(item){ item[field]=val; db.save(arr); }
+  render();
+  toast(`✅ ${field==='markup'?'Markup %':'Reorder level'} updated — ${item?.name}`);
+}
+function editKey(e,id,field,prefix){ if(e.key==='Enter')saveEdit(id,field,prefix); if(e.key==='Escape')cancelEdit(prefix,id); }
+
+// ══════════════════════════════════════════════
+//  ADD / EDIT ITEM MODAL
+// ══════════════════════════════════════════════
+function openAdd(){
+  editId=null;
+  document.getElementById('m-title').textContent='➕ Add New Item';
+  ['m-name','m-reorder','m-markup'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>document.getElementById('m-name').focus(),120);
+}
+function openEdit2(id){
+  const item=db.load().find(i=>i.id===id); if(!item) return;
+  editId=id;
+  document.getElementById('m-title').textContent='✏️ Edit Item';
+  document.getElementById('m-name').value    = item.name;
+  document.getElementById('m-cat').value     = item.cat;
+  document.getElementById('m-unit').value    = item.unit;
+  document.getElementById('m-reorder').value = item.reorder||'';
+  document.getElementById('m-markup').value  = item.markup||'';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); editId=null; }
+function saveItem(){
+  const name    = document.getElementById('m-name').value.trim();
+  if(!name){ alert('Item name is required.'); return; }
+  const cat     = document.getElementById('m-cat').value;
+  const unit    = document.getElementById('m-unit').value;
+  const reorder = parseFloat(document.getElementById('m-reorder').value)||0;
+  const markup  = parseFloat(document.getElementById('m-markup').value)||0;
+  const arr = db.load();
+  if(editId){
+    const it=arr.find(i=>i.id===editId);
+    if(it){ it.name=name; it.cat=cat; it.unit=unit; it.reorder=reorder; it.markup=markup; }
+    toast('✅ Item updated');
+  } else {
+    arr.push({id:Date.now(), name, cat, unit, reorder, markup, qty:0});
+    toast('✅ Item added');
+  }
+  db.save(arr); closeModal(); render();
+}
+
+// ══════════════════════════════════════════════
+//  DELETE
+// ══════════════════════════════════════════════
+function askDelete(id){
+  const item=db.load().find(i=>i.id===id); if(!item)return;
+  _delId=id;
+  document.getElementById('del-msg').textContent=`"${item.name}" will be permanently removed from the master list.`;
+  document.getElementById('del-modal').classList.add('open');
+}
+function closeDelModal(){ document.getElementById('del-modal').classList.remove('open'); _delId=null; }
+function confirmDelete(){
+  if(!_delId)return;
+  const arr=db.load(), item=arr.find(i=>i.id===_delId);
+  db.save(arr.filter(i=>i.id!==_delId));
+  closeDelModal(); render();
+  toast(`🗑 "${item?.name}" deleted`);
+}
+
+// ══════════════════════════════════════════════
+//  PILLS
+// ══════════════════════════════════════════════
+function setPill(el, val){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  activePill = val;
+  document.getElementById('fc').value = (val===''||val==='__low__') ? '' : val;
+  render();
+}
+
+// ══════════════════════════════════════════════
+//  EXPORT CSV
+// ══════════════════════════════════════════════
+function exportCSV(){
+  const arr=db.load();
+  const rows=[['No','Item Name','Category','Unit','Current Stock','Reorder Level','Status']];
+  arr.forEach((it,i)=>rows.push([i+1,it.name,it.cat,it.unit,it.qty||0,it.reorder||0,stockStatus(it)]));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='store_items.csv'; a.click();
+  toast('📥 Exported to CSV');
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let _t; function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2600); }
+
+// ══════════════════════════════════════════════
+//  KEYBOARD
+// ══════════════════════════════════════════════
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); closeDelModal(); } });
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+fcInit(function(){ render(); });
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

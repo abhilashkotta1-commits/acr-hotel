@@ -474,12 +474,16 @@ const MODULES = [
     metaFn:()=>{ const e=getEmployees(); return e.length?`${e.length} employee${e.length>1?'s':''} on payroll`:'No employees added'; },
     badgeFn:()=>{ const e=getEmployees(); return{text:e.length+' Staff',bg:'#fce7f3',color:'#be185d'}; }
   },
+  { cfgId:'expenses',  file:'expenses.html',   icon:'💸', iconBg:'#fef3c7', name:'Expenses',
+    metaFn:()=>{ const fx=JSON.parse(localStorage.getItem('fc_fixed_costs')||'[]'); const misc=JSON.parse(localStorage.getItem('fc_misc_expenses')||'[]'); return `${fx.length} fixed · ${misc.length} variable entries`; },
+    badgeFn:()=>({text:'Expenses',bg:'#fef3c7',color:'#92400e'})
+  },
 ];
 
 const DEFAULT_CONFIG = {
-  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit' },
-  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit' },
-  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none' },
+  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit' },
+  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit' },
+  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none', expenses:'none' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────

@@ -241,7 +241,6 @@
       <div class="header-sub">Profit &amp; Loss — All Sections</div>
     </div>
   </div>
-  <a href="expenses.html" class="btn-settings" style="text-decoration:none">💸 Expenses</a>
 </div>
 
 <!-- Tabs -->
@@ -881,31 +880,37 @@ function renderYearly() {
     const ym = `${year}-${String(i+1).padStart(2,'0')}`;
     const dates = getDatesInMonth(ym);
     const p = pnlForDates(dates);
-    // Use full fixed cost for each month
-    const fxMonthly = getFixedCosts().reduce((s,c) => s + (c.amount||0), 0);
+    // Use full fixed cost for the specific month (respecting per-month overrides)
+    const fxMonthly   = fixedCostForMonth(ym);
+    const miscMonthly = miscExpForMonth(ym);
+    const transMonthly= transportCostForMonth(ym);
     return {
       ym, month: MONTHS[i],
       ...p,
       fixedCost:     fxMonthly,
-      totalExpenses: p.materialCost + p.helperWages + p.salary + fxMonthly,
-      netProfit:     p.revenue - (p.materialCost + p.helperWages + p.salary + fxMonthly),
+      miscExp:       miscMonthly,
+      transportCost: transMonthly,
+      totalExpenses: p.materialCost + p.helperWages + p.salary + fxMonthly + miscMonthly + transMonthly,
+      netProfit:     p.revenue - (p.materialCost + p.helperWages + p.salary + fxMonthly + miscMonthly + transMonthly),
     };
   });
 
   // Year totals
   const yr = monthlyPnl.reduce((agg, m) => {
-    agg.revenue      += m.revenue;
-    agg.materialCost += m.materialCost;
-    agg.helperWages  += m.helperWages;
-    agg.salary       += m.salary;
-    agg.fixedCost    += m.fixedCost;
-    agg.totalExpenses+= m.totalExpenses;
-    agg.netProfit    += m.netProfit;
+    agg.revenue       += m.revenue;
+    agg.materialCost  += m.materialCost;
+    agg.helperWages   += m.helperWages;
+    agg.salary        += m.salary;
+    agg.fixedCost     += m.fixedCost;
+    agg.miscExp       += m.miscExp;
+    agg.transportCost += m.transportCost;
+    agg.totalExpenses += m.totalExpenses;
+    agg.netProfit     += m.netProfit;
     for (const [k,v] of Object.entries(m.revBySection||{}))
       agg.revBySection[k] = (agg.revBySection[k]||0) + v;
     return agg;
   }, { revenue:0, materialCost:0, helperWages:0, salary:0,
-       fixedCost:0, totalExpenses:0, netProfit:0, revBySection:{} });
+       fixedCost:0, miscExp:0, transportCost:0, totalExpenses:0, netProfit:0, revBySection:{} });
   yr.grossProfit = yr.revenue - yr.materialCost;
 
   const curYear = new Date().getFullYear();

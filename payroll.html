@@ -309,35 +309,10 @@
 
   @media(min-width:600px){body{max-width:700px;margin:0 auto;}}
 
-  /* ── EMPLOYEE LEDGER ── */
-  .ledger-summary{background:linear-gradient(135deg,#1e293b,#334155);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-  .ledger-summary-item .lsv{font-size:1.2rem;font-weight:800;color:#fff;}
-  .ledger-summary-item .lsl{font-size:.7rem;color:rgba(255,255,255,.6);margin-top:2px;}
-  .ledger-card{background:var(--card);border-radius:var(--radius);border:1.5px solid var(--border);margin-bottom:12px;overflow:hidden;}
-  .ledger-card-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer;}
-  .ledger-card-head:hover{background:#fafbff;}
-  .ledger-emp-name{font-size:.95rem;font-weight:800;}
-  .ledger-emp-sub{font-size:.73rem;color:var(--sub);margin-top:2px;}
-  .ledger-balance{text-align:right;}
-  .ledger-balance .bal-val{font-size:1.1rem;font-weight:800;}
-  .ledger-balance .bal-lbl{font-size:.7rem;color:var(--sub);margin-top:2px;}
-  .bal-positive{color:var(--orange);}
-  .bal-negative{color:var(--green);}
-  .bal-zero{color:var(--sub);}
-  .ledger-body{display:none;border-top:1.5px solid var(--border);padding:14px 16px;}
-  .ledger-body.open{display:block;}
-  .ledger-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:.83rem;}
-  .ledger-row:last-child{border-bottom:none;}
-  .ledger-row .lr-lbl{color:var(--sub);font-weight:500;}
-  .ledger-row .lr-val{font-weight:700;}
-  .ledger-pay-hist{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-  .ledger-pay-hist-title{font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  /* ── PAYMENT HISTORY ROW ── */
   .pay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f8fafc;font-size:.8rem;}
   .pay-row:last-child{border-bottom:none;}
   .pay-type-badge{padding:2px 9px;border-radius:999px;font-size:.7rem;font-weight:700;}
-  .pt-advance{background:var(--orange-soft);color:#92400e;}
-  .pt-salary{background:var(--green-soft);color:#065f46;}
-  .btn-orange{background:var(--orange);color:#fff;}
 </style>
   <!-- ── Role Guard ── -->
   <script>
@@ -389,7 +364,6 @@
     <button class="tab-btn" onclick="switchTab('attendance')">📅 Attendance</button>
     <button class="tab-btn" onclick="switchTab('helpers')">🔧 Day Helpers</button>
     <button class="tab-btn" onclick="switchTab('salary')">💰 Salary</button>
-    <button class="tab-btn" onclick="switchTab('ledger')">📒 Ledger</button>
   </div>
 </div>
 
@@ -454,11 +428,6 @@
   </div>
 </div>
 
-<!-- ════════════ LEDGER TAB ════════════ -->
-<div class="page" id="page-ledger">
-  <div id="ledger-list"></div>
-</div>
-
 <!-- ════════════ SALARY TAB ════════════ -->
 <div class="page" id="page-salary">
   <div class="month-bar" style="margin:-14px -14px 14px;">
@@ -521,16 +490,16 @@
   </div>
 </div>
 
-<!-- ADD ADVANCE / SALARY MODAL -->
+<!-- RECORD PAYMENT MODAL -->
 <div class="modal-overlay" id="adv-modal" onclick="if(event.target===this)closeAdvModal()">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h3>💸 Record Payment — <span id="adv-emp-name"></span></h3>
+    <h3>💰 Record Payment — <span id="adv-emp-name"></span></h3>
     <div class="form-group" style="margin-bottom:12px">
-      <label>Payment Type</label>
+      <label>Payment Method</label>
       <div style="display:flex;gap:8px;margin-top:6px">
-        <button id="adv-type-advance" class="btn btn-orange" style="flex:1;font-size:.82rem" onclick="setAdvType('advance')">💸 Advance</button>
-        <button id="adv-type-salary"  class="btn btn-gray"   style="flex:1;font-size:.82rem" onclick="setAdvType('salary')">💰 Salary</button>
+        <button id="pay-method-cash"   class="btn btn-green" style="flex:1;font-size:.82rem" onclick="setPayMethod('cash')">💵 Cash</button>
+        <button id="pay-method-online" class="btn btn-gray"  style="flex:1;font-size:.82rem" onclick="setPayMethod('online')">📲 Online</button>
       </div>
     </div>
     <div class="form-row">
@@ -545,16 +514,12 @@
     </div>
     <div class="form-group">
       <label>Note (optional)</label>
-      <input type="text" id="adv-note" placeholder="e.g. Festival advance">
+      <input type="text" id="adv-note" placeholder="e.g. Monthly salary">
     </div>
     <input type="hidden" id="adv-emp-id">
-    <div id="adv-log-wrap" style="margin-bottom:14px;display:none;">
-      <div style="font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:6px;text-transform:uppercase;">Past Advances</div>
-      <div id="adv-log"></div>
-    </div>
     <div class="modal-btns">
       <button class="btn btn-gray" onclick="closeAdvModal()">Close</button>
-      <button class="btn" style="flex:1;background:var(--orange);color:#fff;" onclick="saveAdvance()">💸 Save Advance</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveAdvance()">💰 Record Payment</button>
     </div>
   </div>
 </div>
@@ -637,17 +602,16 @@ function closeConfirm(){ document.getElementById('confirm-modal').classList.remo
 // ══════════════════════════════════════════════════
 function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    const tabs=['employees','attendance','helpers','salary','ledger'];
+    const tabs=['employees','attendance','helpers','salary'];
     b.classList.toggle('active', tabs[i]===tab);
   });
-  ['employees','attendance','helpers','salary','ledger'].forEach(t=>{
+  ['employees','attendance','helpers','salary'].forEach(t=>{
     document.getElementById('page-'+t).classList.toggle('active', t===tab);
   });
   if(tab==='employees') renderEmployees();
   if(tab==='attendance') renderAttendance();
   if(tab==='helpers') renderHelpers();
   if(tab==='salary') renderSalary();
-  if(tab==='ledger') renderLedger();
 }
 
 // ══════════════════════════════════════════════════
@@ -956,47 +920,27 @@ function deleteHelper(id){
 }
 
 // ══════════════════════════════════════════════════
-//  ADVANCES
+//  PAYMENTS
 // ══════════════════════════════════════════════════
-let _advType = 'advance';
-function setAdvType(type){
-  _advType = type;
-  document.getElementById('adv-type-advance').className = 'btn ' + (type==='advance' ? 'btn-orange' : 'btn-gray');
-  document.getElementById('adv-type-salary').className  = 'btn ' + (type==='salary'  ? 'btn-green' : 'btn-gray');
+let _payMethod = 'cash';
+function setPayMethod(method){
+  _payMethod = method;
+  document.getElementById('pay-method-cash').className   = 'btn ' + (method==='cash'   ? 'btn-green'   : 'btn-gray');
+  document.getElementById('pay-method-online').className = 'btn ' + (method==='online' ? 'btn-primary' : 'btn-gray');
 }
 
 function openAdvModal(empId){
   const emp = db.get(K_EMP).find(e=>e.id===empId);
   if(!emp) return;
-  document.getElementById('adv-emp-id').value   = empId;
-  document.getElementById('adv-emp-name').textContent = emp.name;
-  document.getElementById('adv-amount').value   = '';
-  document.getElementById('adv-date').value     = today();
-  document.getElementById('adv-note').value     = '';
-  setAdvType('advance');
-  renderAdvLog(empId);
+  document.getElementById('adv-emp-id').value          = empId;
+  document.getElementById('adv-emp-name').textContent  = emp.name;
+  document.getElementById('adv-amount').value          = '';
+  document.getElementById('adv-date').value            = today();
+  document.getElementById('adv-note').value            = '';
+  setPayMethod('cash');
   document.getElementById('adv-modal').classList.add('open');
 }
 function closeAdvModal(){ document.getElementById('adv-modal').classList.remove('open'); }
-
-function renderAdvLog(empId){
-  const advs = db.get(K_ADV).filter(a=>a.empId===empId).sort((a,b)=>b.date.localeCompare(a.date));
-  const wrap = document.getElementById('adv-log-wrap');
-  const el   = document.getElementById('adv-log');
-  if(!advs.length){ wrap.style.display='none'; return; }
-  wrap.style.display='block';
-  el.innerHTML = advs.map(a=>`
-    <div class="adv-row">
-      <div>
-        <div style="font-weight:700;">${a.note||'Advance'}</div>
-        <div class="adv-date">${fmtDate(a.date)}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="adv-amt">₹${Number(a.amount).toLocaleString('en-IN')}</span>
-        <button class="adv-del" onclick="deleteAdvance('${a.id}')">🗑</button>
-      </div>
-    </div>`).join('');
-}
 
 function saveAdvance(){
   const empId  = document.getElementById('adv-emp-id').value;
@@ -1005,144 +949,35 @@ function saveAdvance(){
   const note   = document.getElementById('adv-note').value.trim();
   if(!amount){ toast('⚠ Enter amount'); return; }
   const advs = db.get(K_ADV);
-  advs.push({ id:'adv_'+Date.now(), empId, amount, date, note, type: _advType });
+  advs.push({ id:'adv_'+Date.now(), empId, amount, date, note, payMethod: _payMethod });
   db.set(K_ADV, advs);
-  document.getElementById('adv-amount').value='';
-  document.getElementById('adv-note').value='';
-  renderAdvLog(empId);
+  closeAdvModal();
   renderSalary();
-  toast(_advType==='salary' ? '💰 Salary recorded' : '💸 Advance recorded');
+  toast(`✅ ₹${amount.toLocaleString('en-IN')} recorded (${_payMethod==='online'?'Online':'Cash'})`);
 }
 
 function deleteAdvance(id){
   db.set(K_ADV, db.get(K_ADV).filter(a=>a.id!==id));
-  const empId = document.getElementById('adv-emp-id').value;
-  if(empId) renderAdvLog(empId);
   renderSalary();
-  if(document.getElementById('page-ledger').classList.contains('active')) renderLedger();
   toast('🗑 Deleted');
 }
 
 // ══════════════════════════════════════════════════
-//  EMPLOYEE LEDGER  (all-time running balance)
+//  SALARY SUMMARY  (all-time balance + monthly detail)
 // ══════════════════════════════════════════════════
-function renderLedger(){
-  const emps = db.get(K_EMP);
-  const allAtt  = db.get(K_ATT);
-  const allAdvs = db.get(K_ADV);
-  const div = document.getElementById('ledger-list');
-
-  if(!emps.length){
-    div.innerHTML=`<div style="text-align:center;padding:50px 20px;color:var(--sub)"><div style="font-size:2.5rem;margin-bottom:10px">📒</div><p>No employees added yet</p></div>`;
-    return;
-  }
-
-  let totalEarned=0, totalPaid=0;
-
-  const cards = emps.map(e=>{
-    const empAtt  = allAtt.filter(a=>a.empId===e.id);
-    const empAdvs = allAdvs.filter(a=>a.empId===e.id).sort((a,b)=>b.date.localeCompare(a.date));
-
-    // All-time earned (sum of all attendance wages)
-    const earned  = empAtt.reduce((s,a)=>s+(a.wage||0),0);
-    // All-time paid (advances + salary payments)
-    const paid    = empAdvs.reduce((s,a)=>s+Number(a.amount),0);
-    // Balance: positive = hotel owes employee, negative = employee took more than earned
-    const balance = earned - paid;
-
-    totalEarned += earned;
-    totalPaid   += paid;
-
-    // Breakdown by month for attendance
-    const monthMap = {};
-    empAtt.forEach(a=>{
-      const m = a.date.slice(0,7);
-      if(!monthMap[m]) monthMap[m]={earned:0,present:0,half:0,absent:0,extra:0};
-      monthMap[m].earned += (a.wage||0);
-      if(a.status==='present') monthMap[m].present++;
-      else if(a.status==='halfday') monthMap[m].half++;
-      else if(a.status==='absent') monthMap[m].absent++;
-      else if(a.status==='extra') monthMap[m].extra++;
-    });
-    const months = Object.keys(monthMap).sort().reverse();
-
-    const balClass = balance>0?'bal-positive':balance<0?'bal-negative':'bal-zero';
-    const balLabel = balance>0?'Hotel Owes':balance<0?'Advance Given':'Settled';
-
-    return `
-    <div class="ledger-card">
-      <div class="ledger-card-head" onclick="toggleLedger('ldb-${e.id}')">
-        <div>
-          <div class="ledger-emp-name">${e.name}</div>
-          <div class="ledger-emp-sub">${e.role} · ₹${getDailyWage(e).toLocaleString('en-IN')}/day</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="ledger-balance">
-            <div class="bal-val ${balClass}">₹${Math.abs(balance).toLocaleString('en-IN')}</div>
-            <div class="bal-lbl">${balLabel}</div>
-          </div>
-          <button class="btn btn-orange btn-sm" onclick="event.stopPropagation();openAdvModal('${e.id}')">💸 Pay</button>
-        </div>
-      </div>
-      <div class="ledger-body" id="ldb-${e.id}">
-        <div class="ledger-row"><span class="lr-lbl">Total Earned (all time)</span><span class="lr-val" style="color:var(--green)">₹${earned.toLocaleString('en-IN')}</span></div>
-        <div class="ledger-row"><span class="lr-lbl">Total Paid (all time)</span><span class="lr-val" style="color:var(--primary)">₹${paid.toLocaleString('en-IN')}</span></div>
-        <div class="ledger-row" style="background:${balance>0?'var(--orange-soft)':balance<0?'var(--green-soft)':'#f8fafc'};border-radius:8px;padding:8px;margin-top:4px">
-          <span class="lr-lbl" style="font-weight:800;color:var(--text)">${balance>0?'⏳ Balance to Pay':balance<0?'✅ Advance Excess':'✅ Fully Settled'}</span>
-          <span class="lr-val ${balClass}">₹${Math.abs(balance).toLocaleString('en-IN')}</span>
-        </div>
-
-        ${months.length ? `
-        <div style="margin-top:14px;font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Monthly Attendance</div>
-        ${months.map(m=>{
-          const md = monthMap[m];
-          return `<div class="ledger-row">
-            <span class="lr-lbl">${m} · ${md.present}P ${md.half?md.half+'H ':''} ${md.absent?md.absent+'A ':''} ${md.extra?md.extra+'E':''}</span>
-            <span class="lr-val">₹${md.earned.toLocaleString('en-IN')}</span>
-          </div>`;
-        }).join('')}` : ''}
-
-        ${empAdvs.length ? `
-        <div class="ledger-pay-hist">
-          <div class="ledger-pay-hist-title">Payment History</div>
-          ${empAdvs.map(a=>`
-            <div class="pay-row">
-              <span class="pay-type-badge ${a.type==='salary'?'pt-salary':'pt-advance'}">${a.type==='salary'?'💰 Salary':'💸 Advance'}</span>
-              <span style="flex:1;color:var(--sub)">${fmtDate(a.date)}${a.note?' · '+a.note:''}</span>
-              <span style="font-weight:700;color:var(--primary)">₹${Number(a.amount).toLocaleString('en-IN')}</span>
-              <button class="adv-del" onclick="deleteAdvance('${a.id}')">🗑</button>
-            </div>`).join('')}
-        </div>` : '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--sub)">No payments recorded yet</div>'}
-      </div>
-    </div>`;
-  }).join('');
-
-  const totalBalance = totalEarned - totalPaid;
-  div.innerHTML = `
-    <div class="ledger-summary">
-      <div class="ledger-summary-item"><div class="lsv" style="color:#4ade80">₹${totalEarned.toLocaleString('en-IN')}</div><div class="lsl">Total Earned</div></div>
-      <div class="ledger-summary-item"><div class="lsv" style="color:#60a5fa">₹${totalPaid.toLocaleString('en-IN')}</div><div class="lsl">Total Paid</div></div>
-      <div class="ledger-summary-item"><div class="lsv" style="color:#fb923c">₹${Math.abs(totalBalance).toLocaleString('en-IN')}</div><div class="lsl">${totalBalance>=0?'Still to Pay':'Advance Excess'}</div></div>
-    </div>
-    ${cards}`;
-}
-
-function toggleLedger(id){
+function toggleSalCard(id){
   const el = document.getElementById(id);
-  if(el) el.classList.toggle('open');
+  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
 }
 
-// ══════════════════════════════════════════════════
-//  SALARY SUMMARY  (daily wage based)
-// ══════════════════════════════════════════════════
 function renderSalary(){
   const monthEl = document.getElementById('sal-month');
   const month   = monthEl.value || thisMonth();
   if(!monthEl.value) monthEl.value = month;
 
   const emps    = db.get(K_EMP);
-  const att     = db.get(K_ATT).filter(a=>a.date.startsWith(month));
-  const advs    = db.get(K_ADV).filter(a=>a.date.startsWith(month));
+  const allAtt  = db.get(K_ATT);
+  const allAdvs = db.get(K_ADV);
   const helpers = db.get(K_HELP).filter(h=>h.date.startsWith(month));
 
   const listEl = document.getElementById('sal-list');
@@ -1154,73 +989,124 @@ function renderSalary(){
     return;
   }
 
-  let grandTotal = 0;
+  let grandEarned=0, grandPaid=0;
   const helperTotal = helpers.reduce((s,h)=>s+h.wage,0);
 
   const cards = emps.map(e=>{
-    const dw       = getDailyWage(e);
-    const empAtt   = att.filter(a=>a.empId===e.id);
-    const present  = empAtt.filter(a=>a.status==='present');
-    const halfdays = empAtt.filter(a=>a.status==='halfday');
-    const absents  = empAtt.filter(a=>a.status==='absent');
-    const extras   = empAtt.filter(a=>a.status==='extra');
+    const dw      = getDailyWage(e);
+    const empAtt  = allAtt.filter(a=>a.empId===e.id);
+    const empAdvs = allAdvs.filter(a=>a.empId===e.id).sort((a,b)=>b.date.localeCompare(a.date));
 
-    // Sum wages from individual attendance records (already computed at mark time)
-    const earned = empAtt.reduce((s,a) => s + (a.wage||0), 0);
-    const advTotal = advs.filter(a=>a.empId===e.id).reduce((s,a)=>s+Number(a.amount),0);
-    const net      = Math.max(0, earned - advTotal);
-    grandTotal    += net;
+    // ALL-TIME balance
+    const totalEarned = empAtt.reduce((s,a)=>s+(a.wage||0),0);
+    const totalPaid   = empAdvs.reduce((s,a)=>s+Number(a.amount),0);
+    const balance     = totalEarned - totalPaid; // positive = hotel owes, negative = advance excess
 
-    const daysWorked = present.length + halfdays.length * 0.5 + extras.length;
+    // Monthly attendance detail
+    const monthAtt = empAtt.filter(a=>a.date.startsWith(month));
+    const present  = monthAtt.filter(a=>a.status==='present');
+    const halfdays = monthAtt.filter(a=>a.status==='halfday');
+    const absents  = monthAtt.filter(a=>a.status==='absent');
+    const extras   = monthAtt.filter(a=>a.status==='extra');
+    const monthEarned = monthAtt.reduce((s,a)=>s+(a.wage||0),0);
+
+    grandEarned += totalEarned;
+    grandPaid   += totalPaid;
+
+    const balColor = balance>0 ? 'var(--orange)' : balance<0 ? 'var(--green)' : 'var(--sub)';
+    const balLabel = balance>0 ? 'Balance to Pay' : balance<0 ? 'Advance Given' : 'Settled';
+    const balBg    = balance>0 ? 'var(--orange-soft)' : balance<0 ? 'var(--green-soft)' : '#f8fafc';
+
+    // Payment history rows
+    const payHistHTML = empAdvs.length ? empAdvs.map(a=>{
+      const pm = a.payMethod || (a.type==='salary'?'salary':'advance');
+      const badge = pm==='online'?'📲 Online': pm==='cash'?'💵 Cash': pm==='salary'?'💰 Salary':'💸 Advance';
+      const bbg   = pm==='online'?'var(--purple-soft)':pm==='cash'?'var(--green-soft)':'var(--orange-soft)';
+      const btxt  = pm==='online'?'var(--purple)':pm==='cash'?'#065f46':'#92400e';
+      return `<div class="pay-row">
+        <span class="pay-type-badge" style="background:${bbg};color:${btxt}">${badge}</span>
+        <span style="flex:1;color:var(--sub);font-size:.78rem">${fmtDate(a.date)}${a.note?' · '+a.note:''}</span>
+        <span style="font-weight:800;color:var(--primary)">₹${Number(a.amount).toLocaleString('en-IN')}</span>
+        <button class="adv-del" onclick="deleteAdvance('${a.id}')">🗑</button>
+      </div>`;
+    }).join('') : `<div style="text-align:center;padding:8px 0;font-size:.8rem;color:var(--sub)">No payments recorded yet</div>`;
 
     return `
-      <div class="sal-card">
-        <div class="sal-head">
+    <div class="sal-card">
+      <div class="sal-head" style="cursor:pointer;padding:14px;" onclick="toggleSalCard('sc-${e.id}')">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="emp-avatar">${initials(e.name)}</div>
           <div>
             <div class="sal-name">${e.name}</div>
-            <div style="font-size:.73rem;color:var(--sub);margin-top:2px;">${e.role} · ${sectionLabel(e.section)}</div>
-          </div>
-          <div style="text-align:right;">
-            <div class="sal-net">₹${net.toLocaleString('en-IN')}</div>
-            <button class="adv-btn" onclick="openAdvModal('${e.id}')">💸 Advance</button>
+            <div style="font-size:.72rem;color:var(--sub);margin-top:2px;">${e.role} · ${sectionLabel(e.section)}</div>
           </div>
         </div>
-        <div class="sal-rows">
-          <div class="sal-row"><span class="lbl">Daily Wage</span><span class="val">₹${dw.toLocaleString('en-IN')}/day</span></div>
-          <div class="sal-row"><span class="lbl">✅ Present Days</span><span class="val green">${present.length} days × ₹${dw.toLocaleString('en-IN')}</span></div>
-          ${halfdays.length?`<div class="sal-row"><span class="lbl">½ Half Days</span><span class="val" style="color:var(--orange);">${halfdays.length} × ₹${Math.round(dw*0.5).toLocaleString('en-IN')}</span></div>`:''}
-          ${extras.length?`<div class="sal-row"><span class="lbl">⭐ Extra Work Days</span><span class="val" style="color:var(--purple);">${extras.length} day(s) · ₹${extras.reduce((s,a)=>s+(a.wage||0),0).toLocaleString('en-IN')}</span></div>`:''}
-          ${absents.length?`<div class="sal-row"><span class="lbl">❌ Absent Days</span><span class="val red">${absents.length} days</span></div>`:''}
-          <div class="sal-row"><span class="lbl">Total Days Worked</span><span class="val">${daysWorked}</span></div>
-          <div class="sal-row"><span class="lbl">Gross Earned</span><span class="val green">₹${earned.toLocaleString('en-IN')}</span></div>
-          ${advTotal>0?`<div class="sal-row"><span class="lbl">💸 Advance Deduction</span><span class="val red">− ₹${advTotal.toLocaleString('en-IN')}</span></div>`:''}
-          <div class="sal-row" style="background:var(--green-soft);">
-            <span class="lbl" style="font-weight:800;color:var(--text);">Net Payable</span>
-            <span class="val green" style="font-size:1rem;">₹${net.toLocaleString('en-IN')}</span>
+        <div style="text-align:right;">
+          <div style="font-size:1rem;font-weight:800;color:${balColor}">
+            ${balance===0?'✅ Settled':'₹'+Math.abs(balance).toLocaleString('en-IN')}
           </div>
+          <div style="font-size:.7rem;color:var(--sub);margin-top:2px;">${balLabel} ▾</div>
         </div>
-      </div>`;
+      </div>
+      <div id="sc-${e.id}" style="display:none;border-top:1.5px solid var(--border);padding:14px;">
+
+        <!-- All-time summary -->
+        <div class="sal-row"><span class="lbl">Total Earned (all time)</span><span class="val green">₹${totalEarned.toLocaleString('en-IN')}</span></div>
+        <div class="sal-row"><span class="lbl">Total Paid (all time)</span><span class="val" style="color:var(--primary)">₹${totalPaid.toLocaleString('en-IN')}</span></div>
+        <div class="sal-row" style="background:${balBg};border-radius:8px;padding:9px 12px;margin:6px 0;">
+          <span class="lbl" style="font-weight:800;color:var(--text)">${balance>0?'⏳ Balance to Pay':balance<0?'✅ Advance Given':'✅ Fully Settled'}</span>
+          <span style="font-weight:800;color:${balColor}">₹${Math.abs(balance).toLocaleString('en-IN')}</span>
+        </div>
+
+        <!-- Monthly attendance -->
+        <div style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px;">
+          Attendance — ${new Date(month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'})}
+        </div>
+        ${present.length?`<div class="sal-row"><span class="lbl">✅ Present</span><span class="val green">${present.length} days · ₹${present.reduce((s,a)=>s+(a.wage||0),0).toLocaleString('en-IN')}</span></div>`:''}
+        ${halfdays.length?`<div class="sal-row"><span class="lbl">½ Half Days</span><span class="val" style="color:var(--orange)">${halfdays.length} days · ₹${halfdays.reduce((s,a)=>s+(a.wage||0),0).toLocaleString('en-IN')}</span></div>`:''}
+        ${extras.length?`<div class="sal-row"><span class="lbl">⭐ Extra Work</span><span class="val" style="color:var(--purple)">${extras.length} day(s) · ₹${extras.reduce((s,a)=>s+(a.wage||0),0).toLocaleString('en-IN')}</span></div>`:''}
+        ${absents.length?`<div class="sal-row"><span class="lbl">❌ Absent</span><span class="val red">${absents.length} days</span></div>`:''}
+        ${monthAtt.length
+          ? `<div class="sal-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:9px;"><span class="lbl" style="font-weight:700;">This month earned</span><span class="val green" style="font-size:.95rem;">₹${monthEarned.toLocaleString('en-IN')}</span></div>`
+          : `<div style="text-align:center;padding:8px 0;font-size:.8rem;color:var(--sub);">No attendance recorded this month</div>`}
+
+        <!-- Payment history -->
+        <div style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;">Payment History</div>
+        ${payHistHTML}
+
+        <!-- Record Payment button -->
+        <button class="btn btn-primary btn-full" style="margin-top:14px;" onclick="openAdvModal('${e.id}')">💰 Record Payment</button>
+      </div>
+    </div>`;
   }).join('');
 
-  listEl.innerHTML = cards + (helperTotal>0?`
-    <div class="sal-card">
+  // Day helpers card
+  const helperCard = helperTotal>0 ? `
+    <div class="sal-card" style="margin-top:4px;">
       <div class="sal-head" style="background:var(--orange-soft);">
-        <div><div class="sal-name">🔧 Day Helpers</div><div style="font-size:.73rem;color:var(--sub);margin-top:2px;">All sections combined</div></div>
+        <div><div class="sal-name">🔧 Day Helpers</div><div style="font-size:.73rem;color:var(--sub);margin-top:2px;">All sections · ${new Date(month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</div></div>
         <div class="sal-net" style="color:var(--orange);">₹${helperTotal.toLocaleString('en-IN')}</div>
       </div>
       <div class="sal-rows">
-        ${helpers.map(h=>`<div class="sal-row"><span class="lbl">${fmtDate(h.date)} · ${sectionLabel(h.section)} ${h.note?'· '+h.note:''}</span><span class="val">₹${h.wage.toLocaleString('en-IN')}</span></div>`).join('')}
+        ${helpers.map(h=>`<div class="sal-row"><span class="lbl">${fmtDate(h.date)} · ${sectionLabel(h.section)}${h.note?' · '+h.note:''}</span><span class="val">₹${h.wage.toLocaleString('en-IN')}</span></div>`).join('')}
       </div>
-    </div>`:'');
+    </div>` : '';
 
-  const totalAll = grandTotal + helperTotal;
+  listEl.innerHTML = cards + helperCard;
+
+  const totalBalance = grandEarned - grandPaid;
   barEl.innerHTML = `
     <div class="sal-total-bar">
       <div>
-        <div class="lbl">Total Payroll — ${new Date(month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</div>
-        <div style="font-size:.75rem;color:rgba(255,255,255,.7);margin-top:2px;">Staff: ₹${grandTotal.toLocaleString('en-IN')} + Helpers: ₹${helperTotal.toLocaleString('en-IN')}</div>
+        <div class="lbl">Payroll Overview — All Staff</div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.7);margin-top:2px;">
+          Earned: ₹${grandEarned.toLocaleString('en-IN')} · Paid: ₹${grandPaid.toLocaleString('en-IN')}
+        </div>
       </div>
-      <div class="val">₹${totalAll.toLocaleString('en-IN')}</div>
+      <div style="text-align:right;">
+        <div class="val">₹${Math.abs(totalBalance).toLocaleString('en-IN')}</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:2px;">${totalBalance>0?'Still Owed':totalBalance<0?'Advance Excess':'All Settled'}</div>
+      </div>
     </div>`;
 }
 

@@ -12,6 +12,36 @@
   <meta name="theme-color" content="#1e293b">
   <title>Amma Cheti Ruchulu — Other Expenses</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- ── Role Guard ── -->
+  <script>
+  (function(){
+    var role=sessionStorage.getItem('fc_role');
+    if(!role){window.location.href='index.html';return;}
+    if(role==='admin')return;
+    var mid='expenses';
+    var cfg={};
+    try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit',expenses:'edit'};
+    var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
+    if(access==='none'){window.location.href='index.html';return;}
+    if(access==='view'){
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add('fc-readonly');
+      });
+    }
+  })();
+  </script>
+  <style>
+  .fc-readonly .btn-save,.fc-readonly .btn-del-entry,.fc-readonly .btn-settings,
+  .fc-readonly .btn-add,.fc-readonly .btn-primary,.fc-readonly .btn-green,
+  .fc-readonly .icon-btn-del,.fc-readonly .hbtn-white,.fc-readonly .mbtn-save,
+  .fc-readonly .mbtn-del,.fc-readonly .submit-btn,.fc-readonly .new-entry-btn,
+  .fc-readonly .hist-del-btn,.fc-readonly .del-confirm,
+  .fc-readonly .exp-add-btn,.fc-readonly .exp-remove-btn{display:none!important;}
+  #fc-readonly-banner{display:none;background:#eff6ff;border-bottom:2px solid #bfdbfe;
+    padding:9px 16px;font-size:12px;color:#1d4ed8;text-align:center;font-weight:600;}
+  .fc-readonly #fc-readonly-banner{display:block!important;}
+  </style>
   <style>
     :root {
       --bg: #f5f6fa;
@@ -157,6 +187,7 @@
   </style>
 </head>
 <body>
+<div id="fc-readonly-banner">👁 View-only mode — you can browse data but cannot make changes</div>
 
 <!-- HEADER -->
 <div class="header">

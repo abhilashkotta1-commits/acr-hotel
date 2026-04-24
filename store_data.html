@@ -220,7 +220,7 @@
     var mid='store';
     var cfg={};
     try{cfg=JSON.parse(localStorage.getItem('fc_role_config'))||{};}catch(e){}
-    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit'};
+    var DEF={revenue:'edit',pnl:'edit',store:'edit',purchases:'edit',usage:'edit',payroll:'edit',expenses:'edit'};
     var access=(cfg[role]&&cfg[role][mid])?cfg[role][mid]:(DEF[mid]||'none');
     if(access==='none'){window.location.href='index.html';return;}
     if(access==='view'){

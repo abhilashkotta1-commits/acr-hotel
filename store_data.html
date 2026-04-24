@@ -282,12 +282,6 @@
 <!-- CONTENT -->
 <div class="content" style="margin-top:24px">
 
-  <!-- LOW STOCK BANNER -->
-  <div class="low-banner" id="low-banner">
-    <div class="low-banner-title">⚠️ Low Stock Alert — these items need restocking</div>
-    <div class="low-items-wrap" id="low-items-wrap"></div>
-  </div>
-
   <!-- TOOLBAR -->
   <div class="toolbar">
     <div class="search-box">
@@ -352,6 +346,12 @@
 
   <!-- MOBILE CARDS -->
   <div class="item-grid" id="cards"></div>
+
+  <!-- LOW STOCK BANNER -->
+  <div class="low-banner" id="low-banner" style="margin-top:24px">
+    <div class="low-banner-title">⚠️ Low Stock Alert — these items need restocking</div>
+    <div class="low-items-wrap" id="low-items-wrap"></div>
+  </div>
 
 </div>
 
@@ -830,7 +830,16 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); clo
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
-fcInit(function(){ render(); });
+fcInit(function(){
+  render();
+  // If navigated here with #low-banner hash, scroll to the banner after render
+  if(window.location.hash==='#low-banner'){
+    setTimeout(function(){
+      var el=document.getElementById('low-banner');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },300);
+  }
+});
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
 </body>

@@ -383,7 +383,7 @@
         <div class="stat-val" id="stat-items" style="color:var(--primary)">—</div>
         <div class="stat-lbl">Items in Stock</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="window.location.href='store_data.html#low-banner'" style="cursor:pointer" title="View low stock items">
         <div class="stat-val" id="stat-lowstock" style="color:var(--red)">—</div>
         <div class="stat-lbl">Low Stock</div>
       </div>
@@ -673,7 +673,7 @@ function renderHome() {
   const alerts=[];
   if(!todayRev) alerts.push({type:'warn',msg:'⚠️ Today\'s revenue not entered. <a href="revenue.html">Enter now →</a>'});
   const low=getItems().filter(isLowStock);
-  if(low.length) alerts.push({type:'warn',msg:`⚠️ ${low.length} item${low.length>1?'s are':' is'} low on stock. <a href="store_data.html">View →</a>`});
+  if(low.length) alerts.push({type:'warn',msg:`⚠️ ${low.length} item${low.length>1?'s are':' is'} low on stock. <a href="store_data.html#low-banner">View →</a>`});
   if(!getDailyUsage().filter(u=>u.date===todayStr()).length)
     alerts.push({type:'info',msg:'ℹ️ Daily usage not recorded yet. <a href="daily_usage.html">Record →</a>'});
   if(!alerts.length) alerts.push({type:'ok',msg:'✅ All clear — revenue and usage entered for today.'});

@@ -606,6 +606,96 @@
   </div>
 </div>
 
+<!-- EDIT PURCHASE MODAL -->
+<div class="overlay" id="edit-modal" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal" style="max-width:480px;max-height:90vh;overflow-y:auto;">
+    <h3>✏️ Edit Purchase</h3>
+
+    <!-- Item name (read-only) -->
+    <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.2rem">📦</span>
+      <div>
+        <div id="edit-item-name" style="font-weight:800;font-size:.95rem;color:var(--text)"></div>
+        <div id="edit-item-unit" style="font-size:.75rem;color:var(--sub);margin-top:2px"></div>
+      </div>
+    </div>
+
+    <!-- Date + Vendor -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Date</label>
+        <input type="date" id="edit-date" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Vendor</label>
+        <select id="edit-vendor" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;"></select>
+      </div>
+    </div>
+
+    <!-- Qty + Rate + Markup -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Qty</label>
+        <input type="number" id="edit-qty" min="0.01" step="0.01" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Rate ₹</label>
+        <input type="number" id="edit-rate" min="0" step="0.01" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Markup %</label>
+        <input type="number" id="edit-markup" min="0" step="0.1" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+      </div>
+    </div>
+
+    <!-- Bill + Transport -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Bill #</label>
+        <input type="text" id="edit-bill" placeholder="Optional" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Transport ₹</label>
+        <input type="number" id="edit-transport" min="0" step="1" placeholder="0" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+      </div>
+    </div>
+
+    <!-- Payment type -->
+    <div style="margin-bottom:12px;">
+      <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:8px">Payment Type</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div id="et-cash"   class="type-btn active-pm-cash"   onclick="setEditType('cash')"   style="padding:10px 4px;font-size:.8rem;text-align:center;">💵 Cash</div>
+        <div id="et-credit" class="type-btn"                  onclick="setEditType('credit')" style="padding:10px 4px;font-size:.8rem;text-align:center;">📋 Credit</div>
+        <div id="et-mixed"  class="type-btn"                  onclick="setEditType('mixed')"  style="padding:10px 4px;font-size:.8rem;text-align:center;">🔀 Mixed</div>
+      </div>
+    </div>
+
+    <!-- Cash paid (mixed only) -->
+    <div id="edit-cash-row" style="display:none;margin-bottom:12px;">
+      <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Cash Paid ₹</label>
+      <input type="number" id="edit-cash-paid" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+    </div>
+
+    <!-- Due date (credit/mixed) -->
+    <div id="edit-due-row" style="display:none;margin-bottom:12px;">
+      <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Due Date</label>
+      <input type="date" id="edit-due" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+    </div>
+
+    <!-- Note -->
+    <div style="margin-bottom:6px;">
+      <label style="font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Note</label>
+      <input type="text" id="edit-note" placeholder="Optional" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-family:inherit;outline:none;background:#fff;">
+    </div>
+
+    <input type="hidden" id="edit-purchase-id">
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="mbtn mbtn-save" onclick="saveEditPurchase()" style="background:var(--primary);color:#fff;">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- MARK PAID MODAL -->
 <div class="overlay" id="paid-modal" onclick="if(event.target===this)closePaidModal()">
   <div class="modal">
@@ -1075,7 +1165,10 @@ function renderList(){
     <td style="color:var(--green);font-weight:600">${fmt(p.cashPaid)}</td>
     <td style="color:var(--orange);font-weight:600">${p.creditAmt>0?fmt(p.creditAmt):'—'}</td>
     <td>${statusTag(p)}${p.creditAmt>0&&p.paidStatus!=='paid'?`<button class="mark-paid-btn" style="margin-left:6px;padding:3px 10px;font-size:.72rem" onclick="openPaid(${p.id})">Pay</button>`:''}</td>
-    <td><button class="act-btn" onclick="deletePurchase(${p.id})" title="Delete">🗑</button></td>
+    <td style="white-space:nowrap">
+      <button class="act-btn" onclick="openEditPurchase(${p.id})" title="Edit" style="color:#6366f1;opacity:.7">✏️</button>
+      <button class="act-btn" onclick="deletePurchase(${p.id})" title="Delete">🗑</button>
+    </td>
   </tr>`).join('') : `<tr><td colspan="12"><div class="empty"><div class="ei">🛒</div><p>No purchases found.</p></div></td></tr>`;
 
   // Mobile cards
@@ -1102,6 +1195,7 @@ function renderList(){
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           ${p.creditAmt>0&&p.paidStatus!=='paid'?`<button class="mark-paid-btn" onclick="openPaid(${p.id})">💵 Pay</button>`:''}
+          <button class="act-btn" onclick="openEditPurchase(${p.id})" title="Edit" style="color:#6366f1;opacity:.8;font-size:.9rem">✏️</button>
           <button class="act-btn" onclick="deletePurchase(${p.id})">🗑</button>
         </div>
       </div>
@@ -1241,6 +1335,127 @@ function confirmPaid(){
 //  DELETE
 // ══════════════════════════════════════════
 let _delId = null;
+// ══════════════════════════════════════════
+//  EDIT PURCHASE
+// ══════════════════════════════════════════
+let _editType = 'cash';
+
+function setEditType(type){
+  _editType = type;
+  ['cash','credit','mixed'].forEach(t=>{
+    const el = document.getElementById('et-'+t);
+    if(!el) return;
+    el.className = 'type-btn' + (t===type ? (t==='cash'?' active-pm-cash':t==='credit'?' active-pm-credit':' active-pm-mixed') : '');
+  });
+  document.getElementById('edit-cash-row').style.display = type==='mixed'  ? 'block' : 'none';
+  document.getElementById('edit-due-row').style.display  = (type==='credit'||type==='mixed') ? 'block' : 'none';
+}
+
+function openEditPurchase(id){
+  const p = getPurchases().find(x=>x.id===id);
+  if(!p) return;
+
+  document.getElementById('edit-purchase-id').value = id;
+  document.getElementById('edit-item-name').textContent = p.itemName;
+  document.getElementById('edit-item-unit').textContent = `${p.qty} ${p.unit} · ₹${p.rate}/unit`;
+  document.getElementById('edit-date').value      = p.date;
+  document.getElementById('edit-qty').value       = p.qty;
+  document.getElementById('edit-rate').value      = p.rate;
+  document.getElementById('edit-markup').value    = p.markupPct || 0;
+  document.getElementById('edit-bill').value      = p.bill || '';
+  document.getElementById('edit-transport').value = p.transportCost || 0;
+  document.getElementById('edit-note').value      = p.note || '';
+  document.getElementById('edit-due').value       = p.dueDate || '';
+  document.getElementById('edit-cash-paid').value = p.type==='mixed' ? (p.cashPaid||0) : '';
+
+  // Vendor dropdown
+  const vSel = document.getElementById('edit-vendor');
+  const vendors = getVendors();
+  vSel.innerHTML = vendors.map(v=>`<option value="${v.name}">${v.name}</option>`).join('');
+  vSel.value = p.vendor || '';
+
+  // Payment type
+  const t = p.type==='opening_balance' ? 'cash' : (p.type || 'cash');
+  setEditType(t);
+
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeEditModal(){ document.getElementById('edit-modal').classList.remove('open'); }
+
+function saveEditPurchase(){
+  const id  = parseInt(document.getElementById('edit-purchase-id').value);
+  const arr = getPurchases();
+  const idx = arr.findIndex(x=>x.id===id);
+  if(idx<0){ toast('⚠ Purchase not found'); return; }
+
+  const p        = arr[idx];
+  const date     = document.getElementById('edit-date').value;
+  const vendor   = document.getElementById('edit-vendor').value;
+  const bill     = document.getElementById('edit-bill').value.trim();
+  const note     = document.getElementById('edit-note').value.trim();
+  const newQty   = parseFloat(document.getElementById('edit-qty').value)||0;
+  const newRate  = parseFloat(document.getElementById('edit-rate').value)||0;
+  const newMkup  = parseFloat(document.getElementById('edit-markup').value)||0;
+  const transCost= parseFloat(document.getElementById('edit-transport').value)||0;
+  const dueDate  = document.getElementById('edit-due').value;
+  const type     = _editType;
+
+  if(!date)   { toast('⚠ Select a date'); return; }
+  if(newQty<=0){ toast('⚠ Enter valid quantity'); return; }
+  if(newRate<=0){ toast('⚠ Enter purchase rate'); return; }
+
+  // Recalculate financials
+  const transferRate = newRate * (1 + newMkup/100);
+  const vendorTotal  = Math.round(newQty * newRate * 100)/100;
+  const total        = Math.round(newQty * transferRate * 100)/100;
+
+  let cashPaid=0, creditAmt=0, paidStatus='paid', paidDate=p.paidDate||null;
+
+  if(type==='cash'){
+    cashPaid=vendorTotal; creditAmt=0; paidStatus='paid'; paidDate=paidDate||date;
+  } else if(type==='credit'){
+    cashPaid=0; creditAmt=vendorTotal; paidStatus='unpaid'; paidDate=null;
+  } else { // mixed
+    cashPaid = Math.min(parseFloat(document.getElementById('edit-cash-paid').value)||0, vendorTotal);
+    creditAmt= Math.max(0, vendorTotal - cashPaid);
+    paidStatus= creditAmt>0 ? 'partial' : 'paid';
+    if(paidStatus==='paid') paidDate = paidDate||date;
+  }
+
+  // Update store stock by qty difference (only if not a direct-buy)
+  if(!p.directBuy){
+    const storeItems = getStoreItems();
+    const si = storeItems.find(i=>i.id===p.itemId);
+    if(si){
+      si.qty = Math.max(0, (si.qty||0) + (newQty - p.qty));
+      localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
+    }
+  }
+
+  // Preserve transport cost: only update on records that had it
+  const updatedTransport = (p.transportCost!==undefined) ? transCost : 0;
+
+  // Update remaining qty proportionally
+  const usedQty = p.qty - (p.remainingQty||0);
+  const newRemaining = Math.max(0, newQty - usedQty);
+
+  arr[idx] = {
+    ...p,
+    date, vendor, bill, note, dueDate,
+    qty: newQty, rate: newRate,
+    markupPct: newMkup, transferRate, vendorTotal, total,
+    remainingQty: newRemaining,
+    transportCost: updatedTransport,
+    type, cashPaid, creditAmt, paidStatus, paidDate,
+  };
+
+  savePurchases(arr);
+  closeEditModal();
+  updateStats(); renderList(); renderCreditTab();
+  toast('✅ Purchase updated');
+}
+
 function deletePurchase(id){
   const p = getPurchases().find(p=>p.id===id); if(!p) return;
   _delId = id;

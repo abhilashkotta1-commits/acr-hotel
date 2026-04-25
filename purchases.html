@@ -209,8 +209,8 @@
   .fsel:focus { border-color:var(--primary); }
 
   /* ─── TABLE ─── */
-  .table-wrap { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; border:1px solid var(--border); }
-  table { width:100%; border-collapse:collapse; }
+  .table-wrap { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); overflow-x:auto; border:1px solid var(--border); }
+  table { width:100%; min-width:860px; border-collapse:collapse; }
   thead { background:var(--bg); border-bottom:1.5px solid var(--border); }
   th { padding:11px 15px; text-align:left; font-size:.71rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sub); white-space:nowrap; }
   td { padding:13px 15px; border-bottom:1px solid #f1f5f9; vertical-align:middle; font-size:.88rem; }
@@ -398,7 +398,6 @@
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('add',this)">➕ New Purchase</button>
     <button class="tab" onclick="switchTab('list',this)">📋 All Purchases</button>
-    <button class="tab" onclick="switchTab('credit',this)">⏳ Credit Outstanding</button>
     <button class="tab" onclick="switchTab('vendor',this)">🏪 Vendor Ledger</button>
   </div>
 
@@ -579,11 +578,6 @@
 
     <!-- MOBILE CARDS -->
     <div class="m-cards" id="list-cards"></div>
-  </div>
-
-  <!-- ════════ TAB: CREDIT OUTSTANDING ════════ -->
-  <div id="tab-credit" style="display:none">
-    <div id="credit-outstanding"></div>
   </div>
 
   <!-- ════════ TAB: VENDOR LEDGER ════════ -->
@@ -1233,54 +1227,6 @@ function renderSummaryCards(arr){
     </div>` : ''}`;
 }
 
-// ══════════════════════════════════════════
-//  CREDIT OUTSTANDING TAB
-// ══════════════════════════════════════════
-function renderCreditTab(){
-  const arr = getPurchases().filter(p=>p.paidStatus!=='paid' && p.creditAmt>0)
-    .sort((a,b)=>a.date.localeCompare(b.date));
-  const totalDue = arr.reduce((s,p)=>s+p.creditAmt,0);
-  const div = document.getElementById('credit-outstanding');
-
-  if(!arr.length){
-    div.innerHTML = `<div class="empty"><div class="ei">✅</div><p>No outstanding credit. All paid up!</p></div>`;
-    return;
-  }
-
-  div.innerHTML = `
-    <div class="outstanding-card">
-      <div>
-        <div class="ov">${fmt(totalDue)}</div>
-        <div class="ol">Total credit outstanding across ${arr.length} purchase${arr.length!==1?'s':''}</div>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>#</th><th>Date</th><th>Item</th><th>Vendor</th><th>Total</th><th>Credit Due</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
-        <tbody>${arr.map((p,i)=>`<tr>
-          <td><span class="tag t-gray">${i+1}</span></td>
-          <td style="font-weight:600">${p.date}</td>
-          <td style="font-weight:800">${p.itemName}</td>
-          <td style="color:var(--sub)">${p.vendor}</td>
-          <td>${fmt(p.total)}</td>
-          <td style="font-weight:700;color:var(--orange)">${fmt(p.creditAmt)}</td>
-          <td>${p.dueDate||'—'}</td>
-          <td>${p.paidStatus==='partial'?'<span class="tag t-mixed">🔀 Partial</span>':'<span class="tag t-due">⏳ Unpaid</span>'}</td>
-          <td><button class="mark-paid-btn" onclick="openPaid(${p.id})">💵 Mark Paid</button></td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>
-    <div class="m-cards" style="display:flex;margin-top:0">
-      ${arr.map(p=>`<div class="m-card">
-        <div class="m-top"><div class="m-name">${p.itemName}</div><span style="font-size:.8rem;color:var(--sub)">${p.date}</span></div>
-        <div style="color:var(--sub);font-size:.83rem;margin:6px 0">${p.vendor} ${p.dueDate?'· Due: '+p.dueDate:''}</div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:1.1rem;font-weight:800;color:var(--orange)">${fmt(p.creditAmt)} due</div>
-          <button class="mark-paid-btn" onclick="openPaid(${p.id})">💵 Mark Paid</button>
-        </div>
-      </div>`).join('')}
-    </div>`;
-}
 
 // ══════════════════════════════════════════
 //  MARK AS PAID
@@ -1314,20 +1260,27 @@ function confirmPaid(){
   const arr = getPurchases();
   const p   = arr.find(p=>p.id===_paidId);
   if(p){
+    const creditAmtPaid = p.creditAmt; // capture before clearing
     p.paidStatus    = 'paid';
-    p.cashPaid      = p.total;
+    p.cashPaid      = p.vendorTotal || p.total;
     p.creditAmt     = 0;
     p.paidDate      = document.getElementById('paid-date').value;
     p.paidNote      = document.getElementById('paid-note').value;
     p.paidMethod    = currentPaidMethod;
     p.paidCashAmt   = currentPaidMethod==='mixed' ? (parseFloat(document.getElementById('paid-cash-amt').value)||0) : 0;
     p.paidOnlineAmt = currentPaidMethod==='mixed' ? (parseFloat(document.getElementById('paid-online-amt').value)||0) : 0;
+    // Record in vendor payment history so ledger stays in sync
+    if(p.vendor && creditAmtPaid > 0){
+      const pmts = getVendorPayments();
+      pmts.push({ id: Date.now(), vendor: p.vendor, amount: creditAmtPaid, date: p.paidDate, method: currentPaidMethod, note: p.paidNote });
+      saveVendorPayments(pmts);
+    }
   }
   savePurchases(arr);
   closePaidModal();
   updateStats();
   renderList();
-  renderCreditTab();
+  renderVendorLedger();
   toast(`✅ Payment marked — ${p?.itemName}`);
 }
 
@@ -1452,7 +1405,7 @@ function saveEditPurchase(){
 
   savePurchases(arr);
   closeEditModal();
-  updateStats(); renderList(); renderCreditTab();
+  updateStats(); renderList(); renderVendorLedger();
   toast('✅ Purchase updated');
 }
 
@@ -1469,7 +1422,7 @@ function confirmDelete(){
   const p   = arr.find(p=>p.id===_delId);
   savePurchases(arr.filter(p=>p.id!==_delId));
   closeDelModal();
-  updateStats(); renderList(); renderCreditTab();
+  updateStats(); renderList(); renderVendorLedger();
   toast(`🗑 Purchase deleted`);
 }
 
@@ -1477,13 +1430,12 @@ function confirmDelete(){
 //  TABS
 // ══════════════════════════════════════════
 function switchTab(tab, el){
-  ['add','list','credit','vendor'].forEach(t=>{
+  ['add','list','vendor'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
   });
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   if(tab==='list')   renderList();
-  if(tab==='credit') renderCreditTab();
   if(tab==='vendor') renderVendorLedger();
 }
 
@@ -1557,42 +1509,44 @@ function getVendorPayments(){ return JSON.parse(localStorage.getItem(VP_KEY)||'[
 function saveVendorPayments(arr){ localStorage.setItem(VP_KEY, JSON.stringify(arr)); }
 
 function renderVendorLedger(){
-  const purchases = getPurchases().filter(p => p.type === 'credit' || p.creditAmt > 0);
-  const payments  = getVendorPayments();
-  const div       = document.getElementById('vendor-ledger');
+  const creditPurchases = getPurchases().filter(p =>
+    p.type !== 'opening_balance' && (p.type === 'credit' || p.type === 'mixed')
+  );
+  const payments = getVendorPayments();
+  const div = document.getElementById('vendor-ledger');
 
-  // Group purchases by vendor
+  if(!creditPurchases.length){
+    div.innerHTML = `<div class="empty"><div class="ei">🏪</div><p>No credit purchases recorded yet.</p></div>`;
+    return;
+  }
+
+  // Build per-vendor data
   const vendors = {};
-  purchases.forEach(p => {
+  creditPurchases.forEach(p => {
     const v = p.vendor || 'Unknown';
-    if(!vendors[v]) vendors[v] = { bills:[], totalCredit:0, totalPaid:0 };
+    if(!vendors[v]) vendors[v] = { bills:[], billed:0, due:0 };
     vendors[v].bills.push(p);
-    vendors[v].totalCredit += (p.total || 0);
-    // outstanding = creditAmt remaining on each bill
-    vendors[v].totalPaid   += (p.total||0) - (p.creditAmt||0);
+    vendors[v].billed += (p.vendorTotal || p.total || 0);
+    vendors[v].due    += (p.creditAmt || 0);
   });
 
-  // Add payments history per vendor
   const payByVendor = {};
   payments.forEach(pmt => {
     if(!payByVendor[pmt.vendor]) payByVendor[pmt.vendor] = [];
     payByVendor[pmt.vendor].push(pmt);
   });
 
-  const vendorList = Object.keys(vendors).sort();
-  if(!vendorList.length){
-    div.innerHTML = `<div class="empty"><div class="ei">🏪</div><p>No credit purchases recorded yet.</p></div>`;
-    return;
-  }
-
-  const totalOutstanding = vendorList.reduce((s,v) => s + vendors[v].bills.reduce((ss,b)=>ss+(b.creditAmt||0),0), 0);
-  const totalCredit      = vendorList.reduce((s,v) => s + vendors[v].totalCredit, 0);
-  const totalPaid        = totalCredit - totalOutstanding;
+  const vendorList  = Object.keys(vendors).sort();
+  const dueVendors  = vendorList.filter(v => vendors[v].due > 0);
+  const totalDue    = dueVendors.reduce((s,v) => s + vendors[v].due, 0);
+  const totalBilled = vendorList.reduce((s,v) => s + vendors[v].billed, 0);
+  const totalPaid   = totalBilled - totalDue;
 
   div.innerHTML = `
+    <!-- Summary banner -->
     <div class="vl-summary">
       <div class="vl-summary-item">
-        <div class="vsv">${fmt(totalCredit)}</div>
+        <div class="vsv">${fmt(totalBilled)}</div>
         <div class="vsl">Total Credit Purchases</div>
       </div>
       <div class="vl-summary-item">
@@ -1600,20 +1554,53 @@ function renderVendorLedger(){
         <div class="vsl">Total Paid</div>
       </div>
       <div class="vl-summary-item">
-        <div class="vsv" style="color:#fb923c">${fmt(totalOutstanding)}</div>
+        <div class="vsv" style="color:#fb923c">${fmt(totalDue)}</div>
         <div class="vsl">Total Outstanding</div>
       </div>
       <div class="vl-summary-item">
-        <div class="vsv">${vendorList.length}</div>
-        <div class="vsl">Vendors</div>
+        <div class="vsv">${dueVendors.length}</div>
+        <div class="vsl">Vendors Due</div>
       </div>
     </div>
+
+    <!-- ── Vendors to Pay ── -->
+    <div style="font-size:.74rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">
+      ${dueVendors.length ? '🔴 Vendors to Pay' : '✅ All Vendors Cleared'}
+    </div>
+    ${dueVendors.length ? dueVendors.map(v => {
+      const due       = vendors[v].due;
+      const unpaidCnt = vendors[v].bills.filter(b=>(b.creditAmt||0)>0).length;
+      const oldestBill= vendors[v].bills.filter(b=>(b.creditAmt||0)>0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      return `
+      <div style="background:#fff7ed;border:1.5px solid var(--orange);border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800;font-size:.98rem;color:var(--text)">🏪 ${v}</div>
+          <div style="font-size:.78rem;color:#b45309;margin-top:3px">
+            ${unpaidCnt} unpaid bill${unpaidCnt!==1?'s':''}
+            ${oldestBill ? ' · oldest: '+oldestBill.date : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="text-align:right">
+            <div style="font-size:1.3rem;font-weight:800;color:#92400e">${fmt(due)}</div>
+            <div style="font-size:.72rem;color:#b45309">outstanding</div>
+          </div>
+          <button class="pay-vendor-btn" onclick="openVendorPayment('${v}',${due})">💳 Pay Now</button>
+        </div>
+      </div>`;
+    }).join('') : `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:16px 18px;margin-bottom:16px;text-align:center;color:#15803d;font-weight:600">
+      🎉 All paid up! No outstanding balance with any vendor.
+    </div>`}
+
+    <!-- ── Full Ledger ── -->
+    <div style="font-size:.74rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 10px">📋 Full Ledger</div>
     ${vendorList.map(v => {
-      const vd  = vendors[v];
-      const due = vd.bills.reduce((s,b)=>s+(b.creditAmt||0),0);
-      const paid= vd.totalCredit - due;
+      const vd      = vendors[v];
+      const due     = vd.due;
+      const paid    = vd.billed - due;
       const cleared = due === 0;
-      const pmts = payByVendor[v] || [];
+      const pmts    = (payByVendor[v] || []).sort((a,b)=>b.date.localeCompare(a.date));
       return `
       <div class="vendor-card">
         <div class="vendor-card-top">
@@ -1621,13 +1608,10 @@ function renderVendorLedger(){
             <div class="vendor-name">🏪 ${v}</div>
             <div style="font-size:.75rem;color:var(--sub);margin-top:3px">${vd.bills.length} bill${vd.bills.length!==1?'s':''}</div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-            <div class="vendor-stats">
-              <span class="vstat vstat-total">Total: ${fmt(vd.totalCredit)}</span>
-              <span class="vstat vstat-paid">Paid: ${fmt(paid)}</span>
-              <span class="vstat ${cleared?'vstat-cleared':'vstat-due'}">${cleared?'✅ Cleared':'⏳ Due: '+fmt(due)}</span>
-            </div>
-            ${!cleared ? `<button class="pay-vendor-btn" onclick="openVendorPayment('${v}',${due})">💳 Record Payment</button>` : ''}
+          <div class="vendor-stats">
+            <span class="vstat vstat-total">Billed: ${fmt(vd.billed)}</span>
+            <span class="vstat vstat-paid">Paid: ${fmt(paid)}</span>
+            <span class="vstat ${cleared?'vstat-cleared':'vstat-due'}">${cleared?'✅ Cleared':'⏳ Due: '+fmt(due)}</span>
           </div>
         </div>
         <div class="vendor-bills">
@@ -1635,16 +1619,18 @@ function renderVendorLedger(){
             <div class="vbill-row">
               <span class="vbill-date">${b.date}</span>
               <span class="vbill-item">${b.itemName||'—'}</span>
-              <span class="vbill-amt">${fmt(b.total)}</span>
-              <span class="${b.creditAmt>0?'vbill-status-unpaid':'vbill-status-paid'}">${b.creditAmt>0?'⏳ Due '+fmt(b.creditAmt):'✅ Paid'}</span>
+              <span class="vbill-amt">${fmt(b.vendorTotal||b.total)}</span>
+              <span class="${(b.creditAmt||0)>0?'vbill-status-unpaid':'vbill-status-paid'}">
+                ${(b.creditAmt||0)>0?'⏳ Due '+fmt(b.creditAmt):'✅ Paid'}
+              </span>
             </div>`).join('')}
         </div>
         ${pmts.length ? `
         <div class="pay-history-wrap">
           <div style="font-size:.75rem;font-weight:700;color:var(--sub);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Payment History</div>
-          ${pmts.sort((a,b)=>b.date.localeCompare(a.date)).map(pmt=>`
+          ${pmts.map(pmt=>`
             <div class="pay-hist-row">
-              <span>${pmt.date} · ${pmt.method||'cash'}${pmt.note?' · '+pmt.note:''}</span>
+              <span>${pmt.date} · ${pmt.method==='online'?'📱 Online':'💵 Cash'}${pmt.note?' · '+pmt.note:''}</span>
               <span>−${fmt(pmt.amount)}</span>
             </div>`).join('')}
         </div>` : ''}
@@ -1712,8 +1698,8 @@ function confirmVendorPayment(){
 
   closeVpModal();
   updateStats();
+  renderList();
   renderVendorLedger();
-  renderCreditTab();
   toast(`✅ Payment of ${fmt(amount)} recorded for ${_vpVendor}`);
 }
 </script>

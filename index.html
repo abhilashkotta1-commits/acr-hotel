@@ -591,8 +591,13 @@ function npEnter() {
   const entered = pinBuffer.join('');
 
   if (!stored) {
-    // No PIN set — allow anyone in
-    doLogin(pendingRole);
+    // No PIN set — only allow entry if ✓ pressed with empty buffer
+    if (entered.length === 0) {
+      doLogin(pendingRole);
+    } else {
+      document.getElementById('pinError').textContent = '⚠️ No PIN set for this role. Press ✓ to enter directly.';
+      pinBuffer = []; updatePinDots();
+    }
     return;
   }
   if (entered === stored) {

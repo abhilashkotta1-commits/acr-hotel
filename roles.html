@@ -256,6 +256,28 @@
     🔐 Set a PIN for each role and control exactly which modules they can access. Changes take effect on the next login.
   </div>
 
+  <!-- Admin PIN card -->
+  <div class="role-block" id="adminPinBlock" style="border:2px solid #fbbf24;margin-bottom:20px">
+    <div class="role-head" style="background:linear-gradient(135deg,#1e293b,#334155)">
+      <div class="role-icon-wrap" style="background:#fef3c7;font-size:26px">👑</div>
+      <div style="flex:1">
+        <div class="role-title" style="color:white">Admin</div>
+        <div class="role-desc" style="color:rgba(255,255,255,.55)">Full system access — set a PIN to secure this role</div>
+      </div>
+    </div>
+    <div class="pin-row" style="background:#fffbeb;border-top:2px solid #fbbf24">
+      <div class="pin-label">🔢 Admin PIN</div>
+      <input class="pin-input" type="password" inputmode="numeric"
+             maxlength="4" id="pin-admin"
+             placeholder="••••"
+             oninput="onPinInput(this)">
+      <span class="pin-saved" id="pinsaved-admin">✓ Set</span>
+    </div>
+    <div id="adminNoPinWarning" style="display:none;padding:10px 18px;background:#fef2f2;border-top:1px solid #fecaca;font-size:12px;color:#b91c1c;font-weight:600">
+      ⚠️ No Admin PIN is set — anyone can access the Admin dashboard! Set a 4-digit PIN above and save.
+    </div>
+  </div>
+
   <!-- Legend -->
   <div class="legend">
     <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>No Access — module hidden</div>
@@ -396,6 +418,12 @@ function render() {
   for (const r of ROLES) {
     if (pins[r.id]) document.getElementById('pinsaved-'+r.id)?.classList.add('show');
   }
+
+  // Admin PIN
+  const adminPinEl = document.getElementById('pin-admin');
+  if (adminPinEl) adminPinEl.value = pins['admin'] || '';
+  if (pins['admin']) document.getElementById('pinsaved-admin')?.classList.add('show');
+  document.getElementById('adminNoPinWarning').style.display = pins['admin'] ? 'none' : 'block';
 }
 
 // ── Toggle tap ───────────────────────────────────────────────────────
@@ -417,6 +445,18 @@ function onPinInput(inp) {
 
 // ── Save ─────────────────────────────────────────────────────────────
 function saveAll() {
+  // Validate & save admin PIN
+  const adminPinVal = (document.getElementById('pin-admin')?.value || '').trim();
+  if (adminPinVal && adminPinVal.length !== 4) {
+    showErr(`Admin PIN must be exactly 4 digits (you entered ${adminPinVal.length}).`);
+    return;
+  }
+  if (adminPinVal) {
+    pins['admin'] = adminPinVal;
+    document.getElementById('pinsaved-admin')?.classList.add('show');
+    document.getElementById('adminNoPinWarning').style.display = 'none';
+  }
+
   for (const r of ROLES) {
     const pinVal = (document.getElementById('pin-'+r.id)?.value || '').trim();
     if (pinVal && pinVal.length !== 4) {

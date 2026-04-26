@@ -635,6 +635,45 @@
   </div>
 </div>
 
+<!-- EDIT USAGE ROW MODAL -->
+<div class="del-modal-overlay" id="eu-modal" onclick="if(event.target===this)closeEuModal()">
+  <div class="del-modal" style="max-width:320px">
+    <h3 style="margin-bottom:4px">✏️ Edit Quantity</h3>
+    <p id="eu-item-name" style="font-weight:700;color:var(--primary);margin-bottom:14px;font-size:.95rem"></p>
+    <div style="margin-bottom:12px">
+      <label style="font-size:.75rem;font-weight:700;color:var(--sub);display:block;margin-bottom:4px">Quantity <span id="eu-unit" style="font-weight:500"></span></label>
+      <input id="eu-qty" type="number" min="0.01" step="0.01"
+        oninput="euRecalcTotal()"
+        style="width:100%;padding:11px 12px;border:2px solid var(--border);border-radius:10px;font-size:1.1rem;font-weight:700;font-family:inherit;outline:none">
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.8rem;font-weight:600;color:var(--sub)">New Total Cost</span>
+      <span id="eu-total" style="font-size:1.1rem;font-weight:800;color:#15803d"></span>
+    </div>
+    <div style="font-size:.73rem;color:#92400e;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;margin-bottom:14px">
+      ⚠️ Changing quantity will update the inventory stock count accordingly.
+    </div>
+    <div class="del-modal-btns">
+      <button class="del-cancel" onclick="closeEuModal()">Cancel</button>
+      <button class="del-confirm" onclick="confirmEditUsageRow()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE USAGE ROW MODAL -->
+<div class="del-modal-overlay" id="du-modal" onclick="if(event.target===this)closeDuModal()">
+  <div class="del-modal" style="max-width:320px;text-align:center">
+    <div style="font-size:40px;margin-bottom:10px">🗑</div>
+    <h3 style="margin-bottom:6px">Delete Item?</h3>
+    <p id="du-item-name" style="font-weight:700;color:var(--primary);margin-bottom:8px;font-size:.95rem"></p>
+    <p style="font-size:.8rem;color:var(--sub);margin-bottom:14px">Stock will be restored for this item.</p>
+    <div class="del-modal-btns">
+      <button class="del-cancel" onclick="closeDuModal()">Cancel</button>
+      <button class="del-confirm" onclick="confirmDeleteUsageRow()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -885,13 +924,26 @@ function renderHistoryInvoice(){
   const headerColor = isMulti ? 'var(--primary)' : (sectionColors[activeSecs[0]] || 'var(--primary)');
   const sectionsDisplay = activeSecs.filter(s=>bySection[s]).map(s=>sectionLabel[s]).join(' · ');
 
+  // Map filtered records to their index in the full log for edit/delete
+  const log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  const filteredWithIdx = filtered.map(r => {
+    const idx = log.findIndex(l =>
+      l.date === r.date && l.section === r.section &&
+      l.itemId === r.itemId && l.qty === r.qty && l.cost === r.cost &&
+      (l.sessionId === r.sessionId || (!l.sessionId && !r.sessionId))
+    );
+    return { ...r, _logIdx: idx };
+  });
+
+  // Total cols: # Item Qty [BuyRate Markup] Rate Total Actions
+  const totalCols = hideInternalCols ? 6 : 8;
+
   // Build table body rows, grouped by section if multiple
   let rowNum = 1;
   let rows = '';
   activeSecs.forEach(sec => {
     if(!bySection[sec]) return;
-    const secItems = bySection[sec];
-    const totalCols = hideInternalCols ? 5 : 7;
+    const secItemsWithIdx = filteredWithIdx.filter(r => r.section === sec);
     if(isMulti){
       rows += `<tr>
         <td colspan="${totalCols}" style="background:${sectionBg[sec]};padding:8px 12px;font-weight:800;font-size:.82rem;color:${sectionColors[sec]};border-bottom:1.5px solid ${sectionColors[sec]}">
@@ -899,7 +951,7 @@ function renderHistoryInvoice(){
         </td>
       </tr>`;
     }
-    secItems.forEach(r => {
+    secItemsWithIdx.forEach(r => {
       const itemData     = ALL_ITEMS.find(x => x.id === r.itemId);
       const markup       = itemData?.markup || 0;
       const transferRate = r.qty > 0 ? (r.cost||0) / r.qty : 0;
@@ -913,22 +965,23 @@ function renderHistoryInvoice(){
         <td>${markup>0 ? `<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700">+${markup}%</span>` : '<span style="color:var(--sub)">—</span>'}</td>`}
         <td style="font-weight:700;color:var(--primary)">${fmtI(transferRate)}</td>
         <td style="font-weight:800">${fmtI(r.cost)}</td>
+        <td style="white-space:nowrap">
+          <button onclick="openEditUsageRow(${r._logIdx})" style="background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-right:4px">✏️</button>
+          <button onclick="openDeleteUsageRow(${r._logIdx},'${r.itemName}')" style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer">🗑</button>
+        </td>
       </tr>`;
     });
     if(isMulti){
-      const secTotal = secItems.reduce((s,r)=>s+(r.cost||0),0);
-      const subCols  = hideInternalCols ? 4 : 6;
+      const secTotal = secItemsWithIdx.reduce((s,r)=>s+(r.cost||0),0);
       rows += `<tr>
-        <td colspan="${subCols}" style="text-align:right;padding:8px 12px;font-weight:700;font-size:.8rem;color:${sectionColors[sec]};background:${sectionBg[sec]}">
+        <td colspan="${totalCols-2}" style="text-align:right;padding:8px 12px;font-weight:700;font-size:.8rem;color:${sectionColors[sec]};background:${sectionBg[sec]}">
           ${sectionLabel[sec]} Subtotal
         </td>
         <td style="font-weight:800;color:${sectionColors[sec]};background:${sectionBg[sec]}">${fmtI(secTotal)}</td>
+        <td style="background:${sectionBg[sec]}"></td>
       </tr>`;
     }
   });
-
-  // Collect session IDs for delete buttons
-  const sessionIds = [...new Set(filtered.map(r => r.sessionId || (r.date+'__'+r.section)))];
 
   el.innerHTML = `
     <div class="invoice-card">
@@ -950,20 +1003,27 @@ function renderHistoryInvoice(){
           <span class="imv">${filtered.length}</span>
         </div>
       </div>
+      <div style="padding:10px 14px 0;display:flex;justify-content:flex-end">
+        <button onclick="hideInternalCols=!hideInternalCols;renderHistoryInvoice()"
+          style="padding:6px 14px;border-radius:999px;border:1.5px solid ${hideInternalCols?'#16a34a':'#94a3b8'};background:${hideInternalCols?'#f0fdf4':'#f8fafc'};color:${hideInternalCols?'#15803d':'#475569'};font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">
+          ${hideInternalCols ? '👁 Show Cost Details' : '🙈 Hide Cost Details'}
+        </button>
+      </div>
       <div class="inv-table-wrap">
         <table class="inv-table">
           <thead>
             <tr>
               <th>#</th><th>Item</th><th>Qty</th>
               ${hideInternalCols ? '' : '<th>Buy Rate</th><th>Markup</th>'}
-              <th>${hideInternalCols ? 'Rate' : 'Transfer Rate'}</th><th>Total</th>
+              <th>${hideInternalCols ? 'Rate' : 'Transfer Rate'}</th><th>Total</th><th></th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
           <tfoot>
             <tr class="inv-total-row">
-              <td colspan="${hideInternalCols ? 4 : 6}" style="text-align:right">Total</td>
+              <td colspan="${totalCols-2}" style="text-align:right">Total</td>
               <td style="font-size:1rem">${fmtI(totalCost)}</td>
+              <td></td>
             </tr>
           </tfoot>
         </table>
@@ -972,17 +1032,7 @@ function renderHistoryInvoice(){
         <span style="font-size:.74rem;color:var(--sub)">
           ${hideInternalCols ? '🔒 Cost details hidden' : '* Transfer rate = buy rate + markup applied'}
         </span>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button onclick="hideInternalCols=!hideInternalCols;renderHistoryInvoice()"
-            style="padding:8px 14px;border-radius:999px;border:1.5px solid ${hideInternalCols?'#16a34a':'#94a3b8'};background:${hideInternalCols?'#f0fdf4':'#f8fafc'};color:${hideInternalCols?'#15803d':'#475569'};font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">
-            ${hideInternalCols ? '👁 Show Cost Details' : '🙈 Hide Cost Details'}
-          </button>
-          <button onclick="downloadInvoicePDF()" style="padding:8px 16px;border-radius:999px;background:var(--primary);color:#fff;border:none;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit">⬇ Download PDF</button>
-          ${sessionIds.map(sid => {
-            const secForSession = filtered.find(r=>(r.sessionId||r.date+'__'+r.section)===sid)?.section||'';
-            return `<button class="hist-del-btn" onclick="askDeleteSession('${sid}','${histDate}','${secForSession}')">🗑 Delete</button>`;
-          }).join('')}
-        </div>
+        <button onclick="downloadInvoicePDF()" style="padding:8px 16px;border-radius:999px;background:var(--primary);color:#fff;border:none;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit">⬇ Download PDF</button>
       </div>
     </div>`;
 }
@@ -1112,6 +1162,98 @@ function confirmDeleteSession(){
 
   closeDelModal();
   toast('🗑 Entry deleted & stock restored');
+  renderHistoryInvoice();
+}
+
+// ── Edit individual usage row ─────────────────────────────────────────
+let _editUsageIdx  = -1;
+let _editUsageRate = 0;  // stored rate per unit — not editable
+
+function openEditUsageRow(idx) {
+  const log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  const r   = log[idx];
+  if (!r) return;
+  _editUsageIdx  = idx;
+  _editUsageRate = r.qty > 0 ? (r.cost||0) / r.qty : 0;
+  document.getElementById('eu-item-name').textContent = r.itemName;
+  document.getElementById('eu-qty').value             = r.qty;
+  document.getElementById('eu-unit').textContent      = r.unit || '';
+  document.getElementById('eu-total').textContent     = '₹' + Number(r.cost||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('eu-modal').classList.add('open');
+}
+
+function closeEuModal() {
+  document.getElementById('eu-modal').classList.remove('open');
+  _editUsageIdx = -1;
+}
+
+function euRecalcTotal() {
+  const qty = parseFloat(document.getElementById('eu-qty').value) || 0;
+  const tot = qty * _editUsageRate;
+  document.getElementById('eu-total').textContent = '₹' + tot.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function confirmEditUsageRow() {
+  const qty = parseFloat(document.getElementById('eu-qty').value) || 0;
+  if (qty <= 0) { alert('Quantity must be greater than 0.'); return; }
+  const cost = Math.round(qty * _editUsageRate * 100) / 100;
+
+  const log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  if (_editUsageIdx < 0 || _editUsageIdx >= log.length) return;
+
+  // Update stock qty difference
+  const oldQty = log[_editUsageIdx].qty;
+  const diff   = qty - oldQty;
+  if (diff !== 0) {
+    const storeItems = JSON.parse(localStorage.getItem(ITEMS_KEY)||'[]');
+    const si = storeItems.find(i => i.id === log[_editUsageIdx].itemId);
+    if (si) si.qty = Math.max(0, (si.qty||0) - diff);
+    localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
+  }
+
+  log[_editUsageIdx].qty  = qty;
+  log[_editUsageIdx].cost = cost;
+  localStorage.setItem(USAGE_KEY, JSON.stringify(log));
+
+  closeEuModal();
+  toast('✅ Row updated');
+  renderHistoryInvoice();
+}
+
+// ── Delete individual usage row ───────────────────────────────────────
+let _deleteUsageIdx = -1;
+
+function openDeleteUsageRow(idx, itemName) {
+  _deleteUsageIdx = idx;
+  document.getElementById('du-item-name').textContent = itemName;
+  document.getElementById('du-modal').classList.add('open');
+}
+
+function closeDuModal() {
+  document.getElementById('du-modal').classList.remove('open');
+  _deleteUsageIdx = -1;
+}
+
+function confirmDeleteUsageRow() {
+  const log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  if (_deleteUsageIdx < 0 || _deleteUsageIdx >= log.length) return;
+  const r = log[_deleteUsageIdx];
+
+  // Restore stock
+  const storeItems = JSON.parse(localStorage.getItem(ITEMS_KEY)||'[]');
+  const si = storeItems.find(i => i.id === r.itemId);
+  if (si) si.qty = (si.qty||0) + r.qty;
+  localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
+
+  // Restore FIFO purchase qty
+  fifoRestore([r]);
+
+  // Remove from log
+  log.splice(_deleteUsageIdx, 1);
+  localStorage.setItem(USAGE_KEY, JSON.stringify(log));
+
+  closeDuModal();
+  toast('🗑 Item deleted & stock restored');
   renderHistoryInvoice();
 }
 

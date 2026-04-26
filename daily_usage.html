@@ -773,7 +773,8 @@ const VENDORS_KEY  = 'fc_vendors';
 function getVendors(){ return JSON.parse(localStorage.getItem(VENDORS_KEY)||'[]'); }
 
 // History invoice state
-let histDate          = '';
+let histDateFrom      = '';        // synced with top date bar
+let histDateTo        = '';        // end of range (defaults to same as from)
 let histSections      = new Set(); // supports multiple selections
 let hideInternalCols  = false;     // hides Buy Rate & Markup for hotel invoice
 
@@ -836,8 +837,18 @@ function formatDate(d){
   const dt = new Date(d+'T00:00:00');
   return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
 }
-function onDateChange(){ /* date-input value used directly on submit */ }
+function onDateChange(){
+  const d = document.getElementById('date-input').value;
+  histDateFrom = d;
+  // If "To" is before "From", snap it forward
+  if(histDateTo && histDateTo < histDateFrom) histDateTo = histDateFrom;
+  const toEl = document.getElementById('hist-date-to');
+  if(toEl){ toEl.value = histDateTo || histDateFrom; toEl.min = histDateFrom; }
+  if(activeTab === 'history') renderHistoryInvoice();
+}
 document.getElementById('date-input').value = today();
+histDateFrom = today();
+histDateTo   = today();
 
 // ══════════════════════════════════════════════════
 //  TABS
@@ -849,8 +860,15 @@ function switchTab(tab){
   document.getElementById('tab-history').classList.toggle('active', tab==='history');
   document.getElementById('record-view').style.display  = tab==='record'  ? '' : 'none';
   document.getElementById('history-wrap').classList.toggle('visible', tab==='history');
-  document.querySelector('.sticky-footer').style.display = tab==='record' ? '' : 'none';
-  if(tab==='history'){ if(!histDate) histDate = today(); renderHistory(); }
+  // Only show sticky footer on record tab when a section is already selected
+  document.querySelector('.sticky-footer').style.display = (tab==='record' && !!selectedSection) ? '' : 'none';
+  if(tab==='history'){
+    // Sync from top date bar
+    const d = document.getElementById('date-input').value || today();
+    histDateFrom = d;
+    if(!histDateTo || histDateTo < histDateFrom) histDateTo = histDateFrom;
+    renderHistory();
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -862,9 +880,19 @@ function renderHistory(){
   const wrap = document.getElementById('history-wrap');
   wrap.innerHTML = `
     <div class="inv-filter">
-      <div class="inv-filter-label">📅 Date</div>
-      <input type="date" class="inv-date-input" id="hist-date-input"
-        value="${histDate}" onchange="histDate=this.value; renderHistoryInvoice()">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <div class="inv-filter-label">📅 From (top bar)</div>
+          <div style="padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-weight:700;background:#f8fafc;color:var(--text)">${histDateFrom ? formatDate(histDateFrom) : '—'}</div>
+        </div>
+        <div>
+          <div class="inv-filter-label">📅 To</div>
+          <input type="date" class="inv-date-input" id="hist-date-to"
+            value="${histDateTo || histDateFrom}" min="${histDateFrom}"
+            onchange="histDateTo=this.value; renderHistoryInvoice()"
+            style="margin-bottom:0">
+        </div>
+      </div>
       <div class="inv-filter-label" style="margin-bottom:4px">🏷 Section <span style="font-size:.68rem;font-weight:500;color:var(--sub);text-transform:none;letter-spacing:0">(tap to select one or more)</span></div>
       <div class="inv-sec-btns">
         <button class="inv-sec-btn ${histSections.has('tiffin')?'active-tiffin':''}" onclick="setHistSection('tiffin')">🍳<br>Tiffin</button>
@@ -880,15 +908,26 @@ function renderHistory(){
 function setHistSection(sec){
   if(histSections.has(sec)) histSections.delete(sec);
   else histSections.add(sec);
-  renderHistory();
+  // Update button styles without rebuilding the whole filter
+  ['tiffin','meals','chat','water'].forEach(s => {
+    const btn = document.querySelector(`.inv-sec-btn.active-${s},.inv-sec-btn[onclick*="'${s}'"]`);
+    document.querySelectorAll('.inv-sec-btn').forEach(b => {
+      if(b.getAttribute('onclick')===`setHistSection('${s}')`)
+        b.className = 'inv-sec-btn' + (histSections.has(s) ? ` active-${s}` : '');
+    });
+  });
+  renderHistoryInvoice();
 }
 
 function renderHistoryInvoice(){
   const el = document.getElementById('hist-invoice');
   if(!el) return;
 
-  if(!histDate){
-    el.innerHTML = `<div class="hist-empty"><div class="ei">📅</div><p>Select a date to view the invoice</p></div>`;
+  const dateFrom = histDateFrom || today();
+  const dateTo   = histDateTo   || dateFrom;
+
+  if(!dateFrom){
+    el.innerHTML = `<div class="hist-empty"><div class="ei">📅</div><p>Select a date using the top date bar</p></div>`;
     return;
   }
   if(histSections.size === 0){
@@ -902,32 +941,21 @@ function renderHistoryInvoice(){
   const sectionColors = { tiffin:'var(--tiffin)', meals:'var(--meals)', chat:'var(--chat)', water:'var(--water)' };
   const sectionBg     = { tiffin:'#fff7ed', meals:'#f0fdf4', chat:'#f5f3ff', water:'#f0f9ff' };
 
-  const log      = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
-  const filtered = log.filter(r => r.date === histDate && histSections.has(r.section));
+  const fullLog = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  const filtered = fullLog
+    .filter(r => r.date >= dateFrom && r.date <= dateTo && histSections.has(r.section));
+
   const activeSecs = sectionOrder.filter(s => histSections.has(s));
 
   if(!filtered.length){
-    const secNames = activeSecs.map(s=>sectionLabel[s]).join(', ');
-    el.innerHTML = `<div class="hist-empty"><div class="ei">📭</div><p>No entry found for <strong>${formatDate(histDate)}</strong><br>${secNames}</p></div>`;
+    const rangeLabel = dateFrom === dateTo ? formatDate(dateFrom) : `${formatDate(dateFrom)} → ${formatDate(dateTo)}`;
+    el.innerHTML = `<div class="hist-empty"><div class="ei">📭</div><p>No entries found for <strong>${rangeLabel}</strong></p></div>`;
     return;
   }
 
-  // Group by section
-  const bySection = {};
-  filtered.forEach(r => {
-    if(!bySection[r.section]) bySection[r.section] = [];
-    bySection[r.section].push(r);
-  });
-
-  const isMulti   = activeSecs.filter(s => bySection[s]).length > 1;
-  const totalCost = filtered.reduce((s,r) => s+(r.cost||0), 0);
-  const headerColor = isMulti ? 'var(--primary)' : (sectionColors[activeSecs[0]] || 'var(--primary)');
-  const sectionsDisplay = activeSecs.filter(s=>bySection[s]).map(s=>sectionLabel[s]).join(' · ');
-
-  // Map filtered records to their index in the full log for edit/delete
-  const log = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
+  // Attach log indices for edit/delete
   const filteredWithIdx = filtered.map(r => {
-    const idx = log.findIndex(l =>
+    const idx = fullLog.findIndex(l =>
       l.date === r.date && l.section === r.section &&
       l.itemId === r.itemId && l.qty === r.qty && l.cost === r.cost &&
       (l.sessionId === r.sessionId || (!l.sessionId && !r.sessionId))
@@ -935,68 +963,97 @@ function renderHistoryInvoice(){
     return { ...r, _logIdx: idx };
   });
 
-  // Total cols: # Item Qty [BuyRate Markup] Rate Total Actions
-  const totalCols = hideInternalCols ? 6 : 8;
+  const totalCols  = hideInternalCols ? 6 : 8;
+  const totalCost  = filtered.reduce((s,r) => s+(r.cost||0), 0);
+  const isMultiDay = dateFrom !== dateTo;
+  const isMultiSec = activeSecs.filter(s => filtered.some(r=>r.section===s)).length > 1;
 
-  // Build table body rows, grouped by section if multiple
+  // Get sorted unique dates in range that have data
+  const datesWithData = [...new Set(filtered.map(r=>r.date))].sort();
+
+  // Build rows — grouped by date (if range), then by section
   let rowNum = 1;
   let rows = '';
-  activeSecs.forEach(sec => {
-    if(!bySection[sec]) return;
-    const secItemsWithIdx = filteredWithIdx.filter(r => r.section === sec);
-    if(isMulti){
+  datesWithData.forEach(date => {
+    const dayRecords = filteredWithIdx.filter(r => r.date === date);
+    if(!dayRecords.length) return;
+    if(isMultiDay){
       rows += `<tr>
-        <td colspan="${totalCols}" style="background:${sectionBg[sec]};padding:8px 12px;font-weight:800;font-size:.82rem;color:${sectionColors[sec]};border-bottom:1.5px solid ${sectionColors[sec]}">
-          ${sectionLabel[sec]}
+        <td colspan="${totalCols}" style="background:#1e293b;padding:9px 14px;font-weight:800;font-size:.85rem;color:#fff;letter-spacing:.02em">
+          📅 ${formatDate(date)}
         </td>
       </tr>`;
     }
-    secItemsWithIdx.forEach(r => {
-      const itemData     = ALL_ITEMS.find(x => x.id === r.itemId);
-      const markup       = itemData?.markup || 0;
-      const transferRate = r.qty > 0 ? (r.cost||0) / r.qty : 0;
-      const purchRate    = markup > 0 ? transferRate / (1 + markup/100) : transferRate;
-      rows += `<tr>
-        <td style="color:var(--sub);font-size:.78rem">${rowNum++}</td>
-        <td style="font-weight:700">${itemData?.emoji||'📦'} ${r.itemName}</td>
-        <td style="font-weight:700;color:var(--primary)">${r.qty} ${r.unit}</td>
-        ${hideInternalCols ? '' : `
-        <td>${markup>0 ? fmtI(purchRate) : '<span style="color:var(--sub)">—</span>'}</td>
-        <td>${markup>0 ? `<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700">+${markup}%</span>` : '<span style="color:var(--sub)">—</span>'}</td>`}
-        <td style="font-weight:700;color:var(--primary)">${fmtI(transferRate)}</td>
-        <td style="font-weight:800">${fmtI(r.cost)}</td>
-        <td style="white-space:nowrap">
-          <button onclick="openEditUsageRow(${r._logIdx})" style="background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-right:4px">✏️</button>
-          <button onclick="openDeleteUsageRow(${r._logIdx},'${r.itemName}')" style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer">🗑</button>
-        </td>
-      </tr>`;
+    activeSecs.forEach(sec => {
+      const secRecs = dayRecords.filter(r => r.section === sec);
+      if(!secRecs.length) return;
+      if(isMultiSec || isMultiDay){
+        rows += `<tr>
+          <td colspan="${totalCols}" style="background:${sectionBg[sec]};padding:7px 14px;font-weight:800;font-size:.8rem;color:${sectionColors[sec]};border-bottom:1.5px solid ${sectionColors[sec]}">
+            ${sectionLabel[sec]}
+          </td>
+        </tr>`;
+      }
+      secRecs.forEach(r => {
+        const itemData     = ALL_ITEMS.find(x => x.id === r.itemId);
+        const markup       = itemData?.markup || 0;
+        const transferRate = r.qty > 0 ? (r.cost||0) / r.qty : 0;
+        const purchRate    = markup > 0 ? transferRate / (1 + markup/100) : transferRate;
+        rows += `<tr>
+          <td style="color:var(--sub);font-size:.78rem">${rowNum++}</td>
+          <td style="font-weight:700">${itemData?.emoji||'📦'} ${r.itemName}</td>
+          <td style="font-weight:700;color:var(--primary)">${r.qty} ${r.unit}</td>
+          ${hideInternalCols ? '' : `
+          <td>${markup>0 ? fmtI(purchRate) : '<span style="color:var(--sub)">—</span>'}</td>
+          <td>${markup>0 ? `<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700">+${markup}%</span>` : '<span style="color:var(--sub)">—</span>'}</td>`}
+          <td style="font-weight:700;color:var(--primary)">${fmtI(transferRate)}</td>
+          <td style="font-weight:800">${fmtI(r.cost)}</td>
+          <td style="white-space:nowrap">
+            <button onclick="openEditUsageRow(${r._logIdx})" style="background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-right:4px">✏️</button>
+            <button onclick="openDeleteUsageRow(${r._logIdx},'${r.itemName}')" style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer">🗑</button>
+          </td>
+        </tr>`;
+      });
+      if(isMultiSec || isMultiDay){
+        const secTotal = secRecs.reduce((s,r)=>s+(r.cost||0),0);
+        rows += `<tr>
+          <td colspan="${totalCols-2}" style="text-align:right;padding:7px 14px;font-weight:700;font-size:.78rem;color:${sectionColors[sec]};background:${sectionBg[sec]}">
+            ${sectionLabel[sec]} Subtotal
+          </td>
+          <td style="font-weight:800;color:${sectionColors[sec]};background:${sectionBg[sec]}">${fmtI(secTotal)}</td>
+          <td style="background:${sectionBg[sec]}"></td>
+        </tr>`;
+      }
     });
-    if(isMulti){
-      const secTotal = secItemsWithIdx.reduce((s,r)=>s+(r.cost||0),0);
+    if(isMultiDay){
+      const dayTotal = dayRecords.reduce((s,r)=>s+(r.cost||0),0);
       rows += `<tr>
-        <td colspan="${totalCols-2}" style="text-align:right;padding:8px 12px;font-weight:700;font-size:.8rem;color:${sectionColors[sec]};background:${sectionBg[sec]}">
-          ${sectionLabel[sec]} Subtotal
+        <td colspan="${totalCols-2}" style="text-align:right;padding:8px 14px;font-weight:800;font-size:.82rem;background:#f1f5f9;color:#334155">
+          ${formatDate(date)} Total
         </td>
-        <td style="font-weight:800;color:${sectionColors[sec]};background:${sectionBg[sec]}">${fmtI(secTotal)}</td>
-        <td style="background:${sectionBg[sec]}"></td>
+        <td style="font-weight:800;font-size:.95rem;background:#f1f5f9;color:#334155">${fmtI(dayTotal)}</td>
+        <td style="background:#f1f5f9"></td>
       </tr>`;
     }
   });
 
+  const rangeLabel   = dateFrom === dateTo ? formatDate(dateFrom) : `${formatDate(dateFrom)} → ${formatDate(dateTo)}`;
+  const secDisplay   = activeSecs.filter(s=>filtered.some(r=>r.section===s)).map(s=>sectionLabel[s]).join(' · ');
+
   el.innerHTML = `
     <div class="invoice-card">
-      <div class="inv-header" style="background:${headerColor}">
+      <div class="inv-header" style="background:var(--primary)">
         <div class="inv-hotel">🍽️ Amma Cheti Ruchulu</div>
         <div class="inv-sub">Daily Usage Invoice</div>
       </div>
       <div class="inv-meta">
         <div class="inv-meta-item">
-          <span class="iml">Date</span>
-          <span class="imv">${formatDate(histDate)}</span>
+          <span class="iml">${isMultiDay ? 'Date Range' : 'Date'}</span>
+          <span class="imv" style="font-size:${isMultiDay?'.78rem':'.9rem'}">${rangeLabel}</span>
         </div>
         <div class="inv-meta-item" style="text-align:center">
-          <span class="iml">Section${isMulti?'s':''}</span>
-          <span class="imv" style="font-size:.82rem">${sectionsDisplay}</span>
+          <span class="iml">Sections</span>
+          <span class="imv" style="font-size:.78rem">${secDisplay}</span>
         </div>
         <div class="inv-meta-item" style="text-align:right">
           <span class="iml">Items</span>
@@ -1021,7 +1078,7 @@ function renderHistoryInvoice(){
           <tbody>${rows}</tbody>
           <tfoot>
             <tr class="inv-total-row">
-              <td colspan="${totalCols-2}" style="text-align:right">Total</td>
+              <td colspan="${totalCols-2}" style="text-align:right">Grand Total</td>
               <td style="font-size:1rem">${fmtI(totalCost)}</td>
               <td></td>
             </tr>
@@ -1038,7 +1095,8 @@ function renderHistoryInvoice(){
 }
 
 function downloadInvoicePDF(){
-  if(!histDate || histSections.size===0){ toast('⚠ Select date and section first'); return; }
+  const histDate = histDateFrom; // legacy alias for PDF function
+  if(!histDateFrom || histSections.size===0){ toast('⚠ Select date and section first'); return; }
 
   const fmtP = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const sectionOrder  = ['tiffin','meals','chat','water'];
@@ -1047,7 +1105,8 @@ function downloadInvoicePDF(){
   const sectionBgPdf  = { tiffin:'#fff7ed', meals:'#f0fdf4', chat:'#f5f3ff', water:'#f0f9ff' };
 
   const log      = JSON.parse(localStorage.getItem(USAGE_KEY)||'[]');
-  const filtered = log.filter(r => r.date === histDate && histSections.has(r.section));
+  const dateTo   = histDateTo || histDateFrom;
+  const filtered = log.filter(r => r.date >= histDateFrom && r.date <= dateTo && histSections.has(r.section));
   if(!filtered.length){ toast('⚠ No data to download'); return; }
 
   const bySection  = {};
@@ -1087,10 +1146,11 @@ function downloadInvoicePDF(){
     }
   });
 
+  const rangeStr = histDateFrom === dateTo ? histDateFrom : `${histDateFrom}_to_${dateTo}`;
   const html = `<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
-<title>Invoice ${histDate} - ${sectionsDisplay}</title>
+<title>Invoice ${rangeStr} - ${sectionsDisplay}</title>
 <style>
   body{font-family:Arial,sans-serif;margin:24px;color:#0f172a;font-size:13px}
   .logo{font-size:1.1rem;font-weight:800;margin-bottom:2px}
@@ -1108,7 +1168,7 @@ function downloadInvoicePDF(){
 <div class="logo">🍽️ Amma Cheti Ruchulu</div>
 <div class="subtitle">Daily Usage Invoice</div>
 <div class="meta">
-  <div><div class="ml">Date</div><div class="mv">${formatDate(histDate)}</div></div>
+  <div><div class="ml">${histDateFrom===dateTo?'Date':'Date Range'}</div><div class="mv">${histDateFrom===dateTo ? formatDate(histDateFrom) : formatDate(histDateFrom)+' → '+formatDate(dateTo)}</div></div>
   <div><div class="ml">Section${isMulti?'s':''}</div><div class="mv">${sectionsDisplay}</div></div>
   <div><div class="ml">Total Items</div><div class="mv">${filtered.length}</div></div>
   <div><div class="ml">Total</div><div class="mv">${fmtP(totalCost)}</div></div>

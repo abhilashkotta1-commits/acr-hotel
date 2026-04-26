@@ -511,14 +511,13 @@ function monthPnl() {
   const ym=currentMonthStr(), dim=daysInMonth(ym);
   const dates=Array.from({length:dim},(_,i)=>`${ym}-${String(i+1).padStart(2,'0')}`);
   const revAll=getRevenue(), usageAll=getDailyUsage();
-  const itemMap={}; for(const it of getItems()) itemMap[it.id]=it;
   const helpers=ls('fc_day_helpers'), emps=getEmployees(), attAll=getAttendance();
   const fixedMonthly=getFixedCosts().reduce((s,c)=>s+(c.amount||0),0);
   let revenue=0,matCost=0,helperWages=0,salary=0;
   for(const date of dates){
     const r=revAll.find(e=>e.date===date); if(r) revenue+=r.grandTotal||0;
     for(const b of usageAll.filter(u=>u.date===date))
-      for(const used of(b.items||[])){const it=itemMap[used.itemId||used.id];matCost+=(used.qty||0)*(it?.price||0);}
+      matCost+=(b.cost||(b.qty||0)*(b.transferRate||0));
     for(const h of helpers.filter(h=>h.date===date)) helperWages+=h.wage||0;
     for(const emp of emps){
       const perDay=(emp.salary||0)/dim;

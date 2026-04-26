@@ -858,7 +858,7 @@ function switchTab(tab){
   activeTab = tab;
   document.getElementById('tab-record').classList.toggle('active', tab==='record');
   document.getElementById('tab-history').classList.toggle('active', tab==='history');
-  document.getElementById('record-view').style.display  = tab==='record'  ? '' : 'none';
+  document.getElementById('record-view').style.display    = tab==='record'  ? '' : 'none';
   document.getElementById('history-wrap').classList.toggle('visible', tab==='history');
   // Only show sticky footer on record tab when a section is already selected
   document.querySelector('.sticky-footer').style.display = (tab==='record' && !!selectedSection) ? '' : 'none';

@@ -501,6 +501,7 @@ function getPurchases()  { return ls('fc_purchases'); }
 function getEmployees()  { return ls('fc_employees'); }
 function getAttendance() { return ls('fc_attendance'); }
 function getFixedCosts() { return ls('fc_fixed_costs'); }
+function getMiscExp()    { return ls('fc_misc_expenses'); }
 function getRevEntry(d)  { return getRevenue().find(r=>r.date===d)||null; }
 function isLowStock(it)  { return it.reorder>0 && (it.qty||0)<=it.reorder; }
 function getRoleConfig()  { try{return JSON.parse(localStorage.getItem('fc_role_config'))||DEFAULT_CONFIG;}catch{return DEFAULT_CONFIG;} }
@@ -512,22 +513,42 @@ function monthPnl() {
   const dates=Array.from({length:dim},(_,i)=>`${ym}-${String(i+1).padStart(2,'0')}`);
   const revAll=getRevenue(), usageAll=getDailyUsage();
   const helpers=ls('fc_day_helpers'), emps=getEmployees(), attAll=getAttendance();
-  const fixedMonthly=getFixedCosts().reduce((s,c)=>s+(c.amount||0),0);
+  const purAll=getPurchases();
+  // Fixed costs — honour per-month overrides
+  const fixedMonthly=getFixedCosts().reduce((s,c)=>s+((c.monthly&&c.monthly[ym]!=null)?c.monthly[ym]:(c.amount||0)),0);
+  // Misc expenses for month
+  const miscAll=getMiscExp();
+  const miscMonthly=miscAll.filter(e=>e.scope==='daily'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0)
+                  +miscAll.filter(e=>e.scope==='monthly'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0);
+  // Transport from purchases (deduplicated by batchId)
+  const seenBatch=new Set();
+  let transportMonthly=0;
+  purAll.filter(p=>p.date&&p.date.slice(0,7)===ym&&(p.transportCost||0)>0).forEach(p=>{
+    const k=p.batchId||p.id; if(!seenBatch.has(k)){seenBatch.add(k);transportMonthly+=Number(p.transportCost);}
+  });
   let revenue=0,matCost=0,helperWages=0,salary=0;
   for(const date of dates){
     const r=revAll.find(e=>e.date===date); if(r) revenue+=r.grandTotal||0;
     for(const b of usageAll.filter(u=>u.date===date))
       matCost+=(b.cost||(b.qty||0)*(b.transferRate||0));
     for(const h of helpers.filter(h=>h.date===date)) helperWages+=h.wage||0;
+    // Attendance: new model = per-date records with wage; legacy = monthly record with days map
+    for(const rec of attAll.filter(a=>a.date===date)){
+      if(rec.wage!=null){salary+=Number(rec.wage);}
+      else{const emp=emps.find(e=>e.id===rec.empId);if(emp){const dv=rec.status==='present'?1:rec.status==='halfday'?.5:0;salary+=(emp.salary||0)/dim*dv;}}
+    }
+  }
+  // Legacy monthly attendance format fallback (if no per-date records found)
+  if(salary===0){
     for(const emp of emps){
       const perDay=(emp.salary||0)/dim;
       const rec=attAll.find(a=>a.empId===emp.id&&a.month===ym);
       if(!rec?.days) continue;
-      const st=rec.days[date]; salary+=perDay*(st==='present'?1:st==='half'?.5:0);
+      for(const date of dates){const st=rec.days[date];salary+=perDay*(st==='present'?1:st==='half'?.5:0);}
     }
   }
-  const totalExpenses=matCost+helperWages+salary+fixedMonthly;
-  return{revenue,totalExpenses,netProfit:revenue-totalExpenses};
+  const totalExpenses=matCost+helperWages+salary+fixedMonthly+miscMonthly+transportMonthly;
+  return{revenue,totalExpenses,netProfit:revenue-totalExpenses,matCost,helperWages,salary,fixedMonthly,miscMonthly,transportMonthly};
 }
 
 // ═══════════════════════════════════════════════

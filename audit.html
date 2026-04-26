@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Audit — Health Check</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;min-height:100vh;}
+  h1{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;}
+  .subtitle{font-size:12px;color:#64748b;margin-bottom:20px;}
+  .section{margin-bottom:24px;}
+  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+  .card{background:#1e293b;border-radius:10px;padding:12px 14px;border:1px solid #334155;}
+  .card.ok{border-color:#166534;background:#14532d22;}
+  .card.warn{border-color:#92400e;background:#78350f22;}
+  .card.error{border-color:#991b1b;background:#7f1d1d22;}
+  .card-label{font-size:10px;color:#94a3b8;margin-bottom:6px;font-weight:600;}
+  .card-val{font-size:22px;font-weight:800;color:#fff;}
+  .card-sub{font-size:10px;color:#64748b;margin-top:3px;}
+  .card.ok .card-val{color:#4ade80;}
+  .card.warn .card-val{color:#fbbf24;}
+  .card.error .card-val{color:#f87171;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  thead tr{background:#1e293b;}
+  th{padding:8px 10px;text-align:left;color:#94a3b8;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #334155;}
+  td{padding:8px 10px;border-bottom:1px solid #1e293b;color:#cbd5e1;}
+  tr:hover td{background:#1e293b55;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;}
+  .badge.ok{background:#14532d;color:#4ade80;}
+  .badge.warn{background:#78350f;color:#fbbf24;}
+  .badge.error{background:#7f1d1d;color:#f87171;}
+  .badge.info{background:#1e3a5f;color:#60a5fa;}
+  .table-wrap{background:#1e293b;border-radius:10px;border:1px solid #334155;overflow:hidden;margin-top:4px;}
+  .pnl-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .pnl-col{background:#1e293b;border-radius:10px;padding:14px;border:1px solid #334155;}
+  .pnl-col h3{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+  .pnl-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #334155;}
+  .pnl-row:last-child{border-bottom:none;font-weight:700;font-size:13px;padding-top:8px;}
+  .pnl-row span:last-child{font-weight:600;color:#e2e8f0;}
+  .pnl-row.green span:last-child{color:#4ade80;}
+  .pnl-row.red span:last-child{color:#f87171;}
+  .pnl-row.yellow span:last-child{color:#fbbf24;}
+  .issues-list{list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .issue-item{background:#1e293b;border-radius:8px;padding:10px 14px;border-left:3px solid #f87171;font-size:12px;color:#cbd5e1;}
+  .issue-item.warn{border-color:#fbbf24;}
+  .issue-item.ok{border-color:#4ade80;}
+  .issue-title{font-weight:700;color:#fff;margin-bottom:2px;}
+  .run-btn{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:20px;}
+  .run-btn:hover{background:#2563eb;}
+  #loading{text-align:center;padding:40px;color:#64748b;font-size:13px;}
+  #results{display:none;}
+  .chip{display:inline-flex;align-items:center;gap:4px;background:#334155;border-radius:6px;padding:2px 8px;font-size:10px;color:#94a3b8;margin:2px;}
+  .score-bar{height:8px;border-radius:99px;background:#334155;overflow:hidden;margin-top:6px;}
+  .score-fill{height:100%;border-radius:99px;transition:width .5s;}
+  .month-sel{background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:6px 10px;font-size:13px;margin-left:8px;}
+</style>
+</head>
+<body>
+
+<h1>🔍 App Audit Dashboard</h1>
+<p class="subtitle">Full data health check — storage, P&L accuracy, costs, vendor ledger</p>
+
+<label style="font-size:12px;color:#94a3b8;">Audit Month:
+  <input type="month" id="auditMonth" class="month-sel">
+</label>
+<br><br>
+<button class="run-btn" onclick="runAudit()">▶ Run Audit</button>
+
+<div id="loading" style="display:none;">Running audit… reading all records…</div>
+<div id="results">
+
+  <!-- Summary Score -->
+  <div class="section">
+    <div class="section-title">📊 Overall Health Score</div>
+    <div class="cards" id="scoreCards"></div>
+  </div>
+
+  <!-- Storage Overview -->
+  <div class="section">
+    <div class="section-title">🗄️ Storage — Record Counts</div>
+    <div class="cards" id="storageCounts"></div>
+  </div>
+
+  <!-- P&L Comparison -->
+  <div class="section">
+    <div class="section-title">💰 P&L Components This Month</div>
+    <div class="pnl-compare" id="pnlCompare"></div>
+  </div>
+
+  <!-- Data Quality Issues -->
+  <div class="section">
+    <div class="section-title">⚠️ Data Quality Issues</div>
+    <ul class="issues-list" id="issuesList"></ul>
+  </div>
+
+  <!-- Daily Usage Detail -->
+  <div class="section">
+    <div class="section-title">🍽️ Daily Usage — Cost Coverage</div>
+    <div class="table-wrap">
+      <table id="usageTable">
+        <thead><tr><th>Date</th><th>Section</th><th>Item</th><th>Qty</th><th>Cost</th><th>Status</th></tr></thead>
+        <tbody id="usageTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Vendor Ledger Health -->
+  <div class="section">
+    <div class="section-title">🏪 Vendor Ledger Health</div>
+    <div class="table-wrap">
+      <table id="vendorTable">
+        <thead><tr><th>Vendor</th><th>Total Bills</th><th>Total Paid</th><th>Outstanding</th><th>Status</th></tr></thead>
+        <tbody id="vendorTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Inventory Health -->
+  <div class="section">
+    <div class="section-title">📦 Inventory — Items with Zero/Missing Cost</div>
+    <div class="table-wrap">
+      <table id="inventoryTable">
+        <thead><tr><th>Item</th><th>Current Stock</th><th>Unit</th><th>Sell Price</th><th>Purchase Records</th><th>Status</th></tr></thead>
+        <tbody id="inventoryTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function ls(k){try{return JSON.parse(localStorage.getItem(k))||[];}catch{return[];}}
+function fmt(n){return '₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:0});}
+function fmtN(n){return Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});}
+
+function daysInMonth(ym){const[y,m]=ym.split('-').map(Number);return new Date(y,m,0).getDate();}
+
+function currentYM(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+window.onload=()=>{
+  document.getElementById('auditMonth').value=currentYM();
+};
+
+function runAudit(){
+  document.getElementById('loading').style.display='block';
+  document.getElementById('results').style.display='none';
+  setTimeout(()=>{
+    try{ doAudit(); }catch(e){ alert('Audit error: '+e.message); console.error(e); }
+    document.getElementById('loading').style.display='none';
+    document.getElementById('results').style.display='block';
+  },100);
+}
+
+function doAudit(){
+  const ym = document.getElementById('auditMonth').value || currentYM();
+  const dim = daysInMonth(ym);
+  const dates = Array.from({length:dim},(_,i)=>`${ym}-${String(i+1).padStart(2,'0')}`);
+
+  // ── Load all data ──
+  const items       = ls('fc_items_v2');
+  const purchases   = ls('fc_purchases');
+  const vendors     = ls('fc_vendors');
+  const vendorPmts  = ls('fc_vendor_payments');
+  const usage       = ls('fc_daily_usage');
+  const revenue     = ls('fc_revenue_v2');
+  const employees   = ls('fc_employees');
+  const attendance  = ls('fc_attendance');
+  const helpers     = ls('fc_day_helpers');
+  const fixedCosts  = ls('fc_fixed_costs');
+  const miscExp     = ls('fc_misc_expenses');
+  const advances    = ls('fc_advances');
+
+  const issues = [];
+  let totalIssues=0, totalWarns=0;
+
+  // ── Storage counts ──
+  const counts = [
+    {label:'Items (Store)',   key:'fc_items_v2',       count:items.length},
+    {label:'Purchases',       key:'fc_purchases',      count:purchases.length},
+    {label:'Vendors',         key:'fc_vendors',        count:vendors.length},
+    {label:'Vendor Payments', key:'fc_vendor_payments',count:vendorPmts.length},
+    {label:'Daily Usage',     key:'fc_daily_usage',    count:usage.length},
+    {label:'Revenue',         key:'fc_revenue_v2',     count:revenue.length},
+    {label:'Employees',       key:'fc_employees',      count:employees.length},
+    {label:'Attendance',      key:'fc_attendance',     count:attendance.length},
+    {label:'Day Helpers',     key:'fc_day_helpers',    count:helpers.length},
+    {label:'Fixed Costs',     key:'fc_fixed_costs',    count:fixedCosts.length},
+    {label:'Misc Expenses',   key:'fc_misc_expenses',  count:miscExp.length},
+    {label:'Advances',        key:'fc_advances',       count:advances.length},
+  ];
+  const countEl = document.getElementById('storageCounts');
+  countEl.innerHTML = counts.map(c=>{
+    const cls = c.count===0?'warn':'ok';
+    return `<div class="card ${cls}">
+      <div class="card-label">${c.label}</div>
+      <div class="card-val">${c.count}</div>
+      <div class="card-sub">${c.key}</div>
+    </div>`;
+  }).join('');
+
+  // ── P&L Calculation (Full — same as pnl.html) ──
+  let rev=0, matCost=0, helperWages=0, salary=0;
+  let fixedMonthly = fixedCosts.reduce((s,c)=>s+((c.monthly&&c.monthly[ym]!=null)?c.monthly[ym]:(c.amount||0)),0);
+  let miscMonthly  = miscExp.filter(e=>e.scope==='daily'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0)
+                   + miscExp.filter(e=>e.scope==='monthly'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0);
+  let miscDailyEntries = miscExp.filter(e=>e.scope==='daily'&&e.date&&e.date.slice(0,7)===ym).reduce((s,e)=>s+(e.amt||0),0);
+  if(miscDailyEntries>0) miscMonthly=miscDailyEntries + miscExp.filter(e=>e.scope==='monthly'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0);
+
+  const seenBatch=new Set();
+  let transportMonthly=0;
+  purchases.filter(p=>p.date&&p.date.slice(0,7)===ym&&(p.transportCost||0)>0).forEach(p=>{
+    const k=p.batchId||p.id; if(!seenBatch.has(k)){seenBatch.add(k);transportMonthly+=Number(p.transportCost);}
+  });
+
+  // Revenue
+  revenue.filter(r=>r.date&&r.date.slice(0,7)===ym).forEach(r=>rev+=r.grandTotal||0);
+
+  // Material cost from usage
+  const monthUsage = usage.filter(u=>u.date&&u.date.slice(0,7)===ym);
+  monthUsage.forEach(b=>{
+    matCost+=(b.cost||(b.qty||0)*(b.transferRate||0));
+  });
+
+  // Helper wages
+  helpers.filter(h=>h.date&&h.date.slice(0,7)===ym).forEach(h=>helperWages+=h.wage||0);
+
+  // Salary (new per-date model)
+  attendance.filter(a=>a.date&&a.date.slice(0,7)===ym).forEach(rec=>{
+    if(rec.wage!=null){salary+=Number(rec.wage);}
+    else{
+      const emp=employees.find(e=>e.id===rec.empId);
+      if(emp){const dv=rec.status==='present'?1:rec.status==='halfday'?.5:0;salary+=(emp.salary||0)/dim*dv;}
+    }
+  });
+  // Legacy fallback
+  if(salary===0){
+    employees.forEach(emp=>{
+      const perDay=(emp.salary||0)/dim;
+      const rec=attendance.find(a=>a.empId===emp.id&&a.month===ym);
+      if(!rec?.days) return;
+      dates.forEach(date=>{const st=rec.days[date];salary+=perDay*(st==='present'?1:st==='half'?.5:0);});
+    });
+  }
+
+  const totalExpenses=matCost+helperWages+salary+fixedMonthly+miscMonthly+transportMonthly;
+  const netProfit=rev-totalExpenses;
+  const grossProfit=rev-matCost;
+
+  // ── P&L Display ──
+  const pnlEl=document.getElementById('pnlCompare');
+  pnlEl.innerHTML=`
+    <div class="pnl-col">
+      <h3>📊 Revenue</h3>
+      <div class="pnl-row green"><span>Total Revenue</span><span>${fmt(rev)}</span></div>
+      <div class="pnl-row"><span>Revenue Entries</span><span>${revenue.filter(r=>r.date&&r.date.slice(0,7)===ym).length} days</span></div>
+    </div>
+    <div class="pnl-col">
+      <h3>💸 Expenses Breakdown</h3>
+      <div class="pnl-row ${matCost>0?'yellow':''}"><span>Raw Materials (Usage)</span><span>${fmt(matCost)}</span></div>
+      <div class="pnl-row"><span>Day Helper Wages</span><span>${fmt(helperWages)}</span></div>
+      <div class="pnl-row"><span>Staff Salary</span><span>${fmt(salary)}</span></div>
+      <div class="pnl-row"><span>Fixed Overheads</span><span>${fmt(fixedMonthly)}</span></div>
+      <div class="pnl-row"><span>Misc Expenses</span><span>${fmt(miscMonthly)}</span></div>
+      <div class="pnl-row"><span>Transport / Travel</span><span>${fmt(transportMonthly)}</span></div>
+      <div class="pnl-row ${totalExpenses>0?'red':''}"><span>Total Expenses</span><span>${fmt(totalExpenses)}</span></div>
+    </div>
+    <div class="pnl-col">
+      <h3>📈 Profitability</h3>
+      <div class="pnl-row"><span>Gross Profit</span><span style="color:${grossProfit>=0?'#4ade80':'#f87171'}">${fmt(grossProfit)}</span></div>
+      <div class="pnl-row"><span>Gross Margin</span><span>${rev>0?Math.round(grossProfit/rev*100)+'%':'—'}</span></div>
+      <div class="pnl-row ${netProfit>=0?'green':'red'}"><span>Net Profit</span><span>${fmt(netProfit)}</span></div>
+      <div class="pnl-row"><span>Net Margin</span><span>${rev>0?Math.round(netProfit/rev*100)+'%':'—'}</span></div>
+    </div>
+    <div class="pnl-col">
+      <h3>📦 Usage Records This Month</h3>
+      <div class="pnl-row"><span>Total Records</span><span>${monthUsage.length}</span></div>
+      <div class="pnl-row"><span>With Cost > 0</span><span style="color:#4ade80">${monthUsage.filter(u=>(u.cost||0)>0).length}</span></div>
+      <div class="pnl-row ${monthUsage.filter(u=>(u.cost||0)===0).length>0?'red':'green'}">
+        <span>Zero Cost Records</span>
+        <span>${monthUsage.filter(u=>(u.cost||0)===0).length}</span>
+      </div>
+      <div class="pnl-row"><span>Unique Dates</span><span>${new Set(monthUsage.map(u=>u.date)).size} days</span></div>
+    </div>
+  `;
+
+  // ── Daily Usage Table ──
+  const zeroCostUsage = usage.filter(u=>u.date&&u.date.slice(0,7)===ym&&(u.cost||0)===0);
+  const okUsage       = monthUsage.filter(u=>(u.cost||0)>0).slice(0,20); // show up to 20 ok rows
+  const tbody=document.getElementById('usageTbody');
+  if(monthUsage.length===0){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#64748b;padding:20px;">No usage records for this month</td></tr>';
+  } else {
+    // Show zero-cost first, then sample of good records
+    const rowsToShow = [...zeroCostUsage, ...okUsage];
+    tbody.innerHTML=rowsToShow.map(u=>{
+      const hasCost=(u.cost||0)>0;
+      return `<tr>
+        <td>${u.date||'—'}</td>
+        <td>${u.section||'—'}</td>
+        <td>${u.itemName||u.itemId||'—'}</td>
+        <td>${fmtN(u.qty)} ${u.unit||''}</td>
+        <td>${hasCost?fmt(u.cost):'<span style="color:#f87171">₹0</span>'}</td>
+        <td><span class="badge ${hasCost?'ok':'error'}">${hasCost?'✓ OK':'⚠ Zero Cost'}</span></td>
+      </tr>`;
+    }).join('');
+    if(zeroCostUsage.length>0){
+      totalIssues++;
+      issues.push({type:'error',title:`${zeroCostUsage.length} usage record(s) have zero cost this month`,detail:'These items will not show up as expenses in P&L. Run the cost-fix console script for these items.'});
+    }
+    if(monthUsage.length>rowsToShow.length){
+      tbody.innerHTML+=`<tr><td colspan="6" style="text-align:center;color:#64748b;padding:10px;">… and ${monthUsage.length-rowsToShow.length} more OK records not shown</td></tr>`;
+    }
+  }
+
+  // ── Vendor Ledger ──
+  const vendorNames=[...new Set([...purchases.map(p=>p.vendor),...vendorPmts.map(p=>p.vendor)].filter(Boolean))];
+  const vtbody=document.getElementById('vendorTbody');
+  let vendorRows='';
+  vendorNames.forEach(name=>{
+    const bills=purchases.filter(p=>p.vendor===name&&p.type!=='opening_balance'&&(p.type==='credit'||p.type==='mixed'));
+    const totalBilled=bills.reduce((s,b)=>s+(b.origCreditAmt!=null?b.origCreditAmt:(b.creditAmt||0)),0);
+    const totalPaid=vendorPmts.filter(p=>p.vendor===name).reduce((s,p)=>s+(p.amount||0),0);
+    const outstanding=bills.reduce((s,b)=>s+(b.creditAmt||0),0);
+    const overpaid=totalPaid>totalBilled+1;
+    const status=outstanding<0.5?'ok':outstanding<totalBilled*.1?'warn':'error';
+    vendorRows+=`<tr>
+      <td>${name}</td>
+      <td>${fmt(totalBilled)}</td>
+      <td>${fmt(totalPaid)}</td>
+      <td style="color:${outstanding>0?'#fbbf24':'#4ade80'}">${fmt(outstanding)}</td>
+      <td><span class="badge ${status}">${outstanding<0.5?'✓ Settled':overpaid?'⚠ Overpaid':'Pending'}</span></td>
+    </tr>`;
+    if(overpaid){totalWarns++;issues.push({type:'warn',title:`Vendor "${name}": payments exceed bills`,detail:`Total billed ${fmt(totalBilled)}, total paid ${fmt(totalPaid)}. Check for duplicate payments.`});}
+  });
+  vtbody.innerHTML=vendorRows||'<tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">No vendor records</td></tr>';
+
+  // ── Inventory Health ──
+  const purRateMap={};
+  purchases.filter(p=>p.type!=='opening_balance').sort((a,b)=>a.date?.localeCompare(b.date)).forEach(p=>{if(p.itemId)purRateMap[p.itemId]=p.transferRate||p.rate||0;});
+  const obMap={};
+  purchases.filter(p=>p.type==='opening_balance').forEach(p=>{if(p.itemId&&!obMap[p.itemId])obMap[p.itemId]={rate:p.transferRate||p.rate||0,qty:p.qty||0};});
+
+  const itbody=document.getElementById('inventoryTbody');
+  let itemRows='',zeroCostItems=0;
+  items.forEach(it=>{
+    const purCount=purchases.filter(p=>p.itemId===it.id||p.itemName===it.en).length;
+    const hasRate=(purRateMap[it.id]||0)>0||(obMap[it.id]?.rate||0)>0;
+    const status=purCount===0?'warn':hasRate?'ok':'warn';
+    if(!hasRate) zeroCostItems++;
+    itemRows+=`<tr>
+      <td>${it.en||it.id}</td>
+      <td>${fmtN(it.qty||0)} ${it.unit||''}</td>
+      <td>${it.unit||'—'}</td>
+      <td>${fmt(it.price||0)}</td>
+      <td>${purCount}</td>
+      <td><span class="badge ${status}">${purCount===0?'No Purchase':hasRate?'✓ Has Cost':'⚠ Zero Cost'}</span></td>
+    </tr>`;
+  });
+  itbody.innerHTML=itemRows||'<tr><td colspan="6" style="text-align:center;color:#64748b;padding:20px;">No items</td></tr>';
+  if(zeroCostItems>0){totalWarns++;issues.push({type:'warn',title:`${zeroCostItems} item(s) have no purchase cost rate`,detail:'Usage of these items will record zero material cost in P&L until a purchase is entered.'});}
+
+  // ── Extra checks ──
+  if(fixedCosts.length===0){totalWarns++;issues.push({type:'warn',title:'No fixed costs configured',detail:'Go to Expenses → Fixed Costs to set up monthly overheads (rent, electricity, etc.)'});}
+  if(employees.length>0&&attendance.filter(a=>a.date&&a.date.slice(0,7)===ym).length===0&&!attendance.find(a=>a.month===ym)){
+    totalWarns++;issues.push({type:'warn',title:'No attendance records for this month',detail:`${employees.length} employees found but no attendance recorded for ${ym}. Staff salary will be ₹0 in P&L.`});
+  }
+  if(rev===0){issues.push({type:'warn',title:'No revenue recorded this month',detail:'No revenue entries found for '+ym+'. Go to Revenue to add daily income.'});}
+  if(matCost===0&&monthUsage.length>0){
+    totalIssues++;
+    issues.push({type:'error',title:'Usage records exist but material cost is ₹0',detail:'All usage records this month have zero cost. The P&L will not reflect material expenses.'});
+  }
+  if(matCost>0&&monthUsage.filter(u=>(u.cost||0)===0).length===0){
+    issues.push({type:'ok',title:'✓ All usage records have cost data',detail:'Material cost is flowing correctly into P&L.'});
+  }
+  if(zeroCostItems===0&&items.length>0){
+    issues.push({type:'ok',title:'✓ All items have purchase cost rates',detail:'Inventory cost tracking looks complete.'});
+  }
+
+  // ── Issues List ──
+  const issEl=document.getElementById('issuesList');
+  issEl.innerHTML=issues.map(i=>`
+    <li class="issue-item ${i.type}">
+      <div class="issue-title">${i.title}</div>
+      <div>${i.detail}</div>
+    </li>
+  `).join('');
+
+  // ── Score ──
+  const totalChecks=10;
+  const passed=totalChecks-totalIssues-totalWarns;
+  const score=Math.max(0,Math.round(passed/totalChecks*100));
+  const scoreColor=score>=80?'ok':score>=50?'warn':'error';
+  document.getElementById('scoreCards').innerHTML=`
+    <div class="card ${scoreColor}" style="grid-column:span 2">
+      <div class="card-label">Health Score</div>
+      <div class="card-val">${score}%</div>
+      <div class="score-bar"><div class="score-fill" style="width:${score}%;background:${score>=80?'#4ade80':score>=50?'#fbbf24':'#f87171'}"></div></div>
+      <div class="card-sub">${issues.filter(i=>i.type==='error').length} errors · ${issues.filter(i=>i.type==='warn').length} warnings · ${issues.filter(i=>i.type==='ok').length} passed</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Revenue (${ym})</div>
+      <div class="card-val ${rev>0?'':''}">  ${fmt(rev)}</div>
+      <div class="card-sub">${revenue.filter(r=>r.date&&r.date.slice(0,7)===ym).length} entries</div>
+    </div>
+    <div class="card ${matCost>0?'ok':'error'}">
+      <div class="card-label">Material Cost</div>
+      <div class="card-val">${fmt(matCost)}</div>
+      <div class="card-sub">${monthUsage.length} usage records</div>
+    </div>
+    <div class="card ${totalExpenses>0?'ok':'warn'}">
+      <div class="card-label">Total Expenses</div>
+      <div class="card-val">${fmt(totalExpenses)}</div>
+      <div class="card-sub">All categories</div>
+    </div>
+    <div class="card ${netProfit>=0?'ok':'error'}">
+      <div class="card-label">Net Profit</div>
+      <div class="card-val">${fmt(netProfit)}</div>
+      <div class="card-sub">${rev>0?Math.round(netProfit/rev*100)+'% margin':'—'}</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

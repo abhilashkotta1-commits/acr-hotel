@@ -734,8 +734,9 @@ const VENDORS_KEY  = 'fc_vendors';
 function getVendors(){ return JSON.parse(localStorage.getItem(VENDORS_KEY)||'[]'); }
 
 // History invoice state
-let histDate     = '';
-let histSections = new Set(); // supports multiple selections
+let histDate          = '';
+let histSections      = new Set(); // supports multiple selections
+let hideInternalCols  = false;     // hides Buy Rate & Markup for hotel invoice
 
 // ══════════════════════════════════════════════════
 //  FIFO HELPERS
@@ -890,9 +891,10 @@ function renderHistoryInvoice(){
   activeSecs.forEach(sec => {
     if(!bySection[sec]) return;
     const secItems = bySection[sec];
+    const totalCols = hideInternalCols ? 5 : 7;
     if(isMulti){
       rows += `<tr>
-        <td colspan="7" style="background:${sectionBg[sec]};padding:8px 12px;font-weight:800;font-size:.82rem;color:${sectionColors[sec]};border-bottom:1.5px solid ${sectionColors[sec]}">
+        <td colspan="${totalCols}" style="background:${sectionBg[sec]};padding:8px 12px;font-weight:800;font-size:.82rem;color:${sectionColors[sec]};border-bottom:1.5px solid ${sectionColors[sec]}">
           ${sectionLabel[sec]}
         </td>
       </tr>`;
@@ -906,16 +908,18 @@ function renderHistoryInvoice(){
         <td style="color:var(--sub);font-size:.78rem">${rowNum++}</td>
         <td style="font-weight:700">${itemData?.emoji||'📦'} ${r.itemName}</td>
         <td style="font-weight:700;color:var(--primary)">${r.qty} ${r.unit}</td>
+        ${hideInternalCols ? '' : `
         <td>${markup>0 ? fmtI(purchRate) : '<span style="color:var(--sub)">—</span>'}</td>
-        <td>${markup>0 ? `<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700">+${markup}%</span>` : '<span style="color:var(--sub)">—</span>'}</td>
+        <td>${markup>0 ? `<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700">+${markup}%</span>` : '<span style="color:var(--sub)">—</span>'}</td>`}
         <td style="font-weight:700;color:var(--primary)">${fmtI(transferRate)}</td>
         <td style="font-weight:800">${fmtI(r.cost)}</td>
       </tr>`;
     });
     if(isMulti){
       const secTotal = secItems.reduce((s,r)=>s+(r.cost||0),0);
+      const subCols  = hideInternalCols ? 4 : 6;
       rows += `<tr>
-        <td colspan="6" style="text-align:right;padding:8px 12px;font-weight:700;font-size:.8rem;color:${sectionColors[sec]};background:${sectionBg[sec]}">
+        <td colspan="${subCols}" style="text-align:right;padding:8px 12px;font-weight:700;font-size:.8rem;color:${sectionColors[sec]};background:${sectionBg[sec]}">
           ${sectionLabel[sec]} Subtotal
         </td>
         <td style="font-weight:800;color:${sectionColors[sec]};background:${sectionBg[sec]}">${fmtI(secTotal)}</td>
@@ -951,22 +955,28 @@ function renderHistoryInvoice(){
           <thead>
             <tr>
               <th>#</th><th>Item</th><th>Qty</th>
-              <th>Buy Rate</th><th>Markup</th>
-              <th>Transfer Rate</th><th>Total Cost</th>
+              ${hideInternalCols ? '' : '<th>Buy Rate</th><th>Markup</th>'}
+              <th>${hideInternalCols ? 'Rate' : 'Transfer Rate'}</th><th>Total</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
           <tfoot>
             <tr class="inv-total-row">
-              <td colspan="6" style="text-align:right">Total Material Cost</td>
+              <td colspan="${hideInternalCols ? 4 : 6}" style="text-align:right">Total</td>
               <td style="font-size:1rem">${fmtI(totalCost)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
       <div class="inv-footer">
-        <span style="font-size:.74rem;color:var(--sub)">* Transfer rate = buy rate + markup applied</span>
+        <span style="font-size:.74rem;color:var(--sub)">
+          ${hideInternalCols ? '🔒 Cost details hidden' : '* Transfer rate = buy rate + markup applied'}
+        </span>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button onclick="hideInternalCols=!hideInternalCols;renderHistoryInvoice()"
+            style="padding:8px 14px;border-radius:999px;border:1.5px solid ${hideInternalCols?'#16a34a':'#94a3b8'};background:${hideInternalCols?'#f0fdf4':'#f8fafc'};color:${hideInternalCols?'#15803d':'#475569'};font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">
+            ${hideInternalCols ? '👁 Show Cost Details' : '🙈 Hide Cost Details'}
+          </button>
           <button onclick="downloadInvoicePDF()" style="padding:8px 16px;border-radius:999px;background:var(--primary);color:#fff;border:none;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit">⬇ Download PDF</button>
           ${sessionIds.map(sid => {
             const secForSession = filtered.find(r=>(r.sessionId||r.date+'__'+r.section)===sid)?.section||'';
@@ -997,12 +1007,15 @@ function downloadInvoicePDF(){
   const totalCost  = filtered.reduce((s,r) => s+(r.cost||0), 0);
   const sectionsDisplay = activeSecs.map(s=>sectionLabel[s]).join(' + ');
 
+  const hide    = hideInternalCols;
+  const numCols = hide ? 5 : 7;
+
   let rowNum = 1;
   let tableRows = '';
   activeSecs.forEach(sec => {
     if(!bySection[sec]) return;
     if(isMulti){
-      tableRows += `<tr style="background:${sectionBgPdf[sec]}"><td colspan="7" style="padding:7px 10px;font-weight:800;color:${sectionColors[sec]};border-bottom:2px solid ${sectionColors[sec]}">${sectionLabel[sec]}</td></tr>`;
+      tableRows += `<tr style="background:${sectionBgPdf[sec]}"><td colspan="${numCols}" style="padding:7px 10px;font-weight:800;color:${sectionColors[sec]};border-bottom:2px solid ${sectionColors[sec]}">${sectionLabel[sec]}</td></tr>`;
     }
     bySection[sec].forEach(r => {
       const itemData     = ALL_ITEMS.find(x => x.id === r.itemId);
@@ -1013,15 +1026,14 @@ function downloadInvoicePDF(){
         <td>${rowNum++}</td>
         <td style="font-weight:600">${r.itemName}</td>
         <td>${r.qty} ${r.unit}</td>
-        <td>${markup>0 ? fmtP(purchRate) : '—'}</td>
-        <td>${markup>0 ? '+'+markup+'%' : '—'}</td>
+        ${hide ? '' : `<td>${markup>0 ? fmtP(purchRate) : '—'}</td><td>${markup>0 ? '+'+markup+'%' : '—'}</td>`}
         <td style="font-weight:600">${fmtP(transferRate)}</td>
         <td style="font-weight:800">${fmtP(r.cost)}</td>
       </tr>`;
     });
     if(isMulti){
       const secTotal = bySection[sec].reduce((s,r)=>s+(r.cost||0),0);
-      tableRows += `<tr style="background:${sectionBgPdf[sec]}"><td colspan="6" style="text-align:right;font-weight:700;color:${sectionColors[sec]}">${sectionLabel[sec]} Subtotal</td><td style="font-weight:800;color:${sectionColors[sec]}">${fmtP(secTotal)}</td></tr>`;
+      tableRows += `<tr style="background:${sectionBgPdf[sec]}"><td colspan="${numCols-1}" style="text-align:right;font-weight:700;color:${sectionColors[sec]}">${sectionLabel[sec]} Subtotal</td><td style="font-weight:800;color:${sectionColors[sec]}">${fmtP(secTotal)}</td></tr>`;
     }
   });
 
@@ -1049,14 +1061,14 @@ function downloadInvoicePDF(){
   <div><div class="ml">Date</div><div class="mv">${formatDate(histDate)}</div></div>
   <div><div class="ml">Section${isMulti?'s':''}</div><div class="mv">${sectionsDisplay}</div></div>
   <div><div class="ml">Total Items</div><div class="mv">${filtered.length}</div></div>
-  <div><div class="ml">Total Cost</div><div class="mv">${fmtP(totalCost)}</div></div>
+  <div><div class="ml">Total</div><div class="mv">${fmtP(totalCost)}</div></div>
 </div>
 <table>
-  <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Buy Rate</th><th>Markup</th><th>Transfer Rate</th><th>Total Cost</th></tr></thead>
+  <thead><tr><th>#</th><th>Item</th><th>Qty</th>${hide ? '' : '<th>Buy Rate</th><th>Markup</th>'}<th>${hide?'Rate':'Transfer Rate'}</th><th>Total</th></tr></thead>
   <tbody>${tableRows}</tbody>
-  <tfoot><tr class="tfoot"><td colspan="6" style="text-align:right;padding:8px 10px">Total Material Cost</td><td style="padding:8px 10px">${fmtP(totalCost)}</td></tr></tfoot>
+  <tfoot><tr class="tfoot"><td colspan="${numCols-1}" style="text-align:right;padding:8px 10px">Total</td><td style="padding:8px 10px">${fmtP(totalCost)}</td></tr></tfoot>
 </table>
-<div class="footer">Generated on ${new Date().toLocaleDateString('en-IN')} · Amma Cheti Ruchulu · * Transfer rate = buy rate + markup</div>
+<div class="footer">Generated on ${new Date().toLocaleDateString('en-IN')} · Amma Cheti Ruchulu${hide ? '' : ' · * Transfer rate = buy rate + markup'}</div>
 <script>window.onload=function(){window.print();}<\/script>
 </body></html>`;
 

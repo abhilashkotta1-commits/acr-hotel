@@ -983,8 +983,9 @@ function savePurchase(){
     const item   = storeItems.find(i=>i.id===itemId);
 
     if(!itemId) { showErr(`Row has no item selected — please select an item or remove the row.`); return; }
-    if(qty<=0)  { showErr(`"${item?.name||'Item'}" — enter a valid quantity (> 0).`); return; }
-    if(rate<=0) { showErr(`"${item?.name||'Item'}" — enter the cost price.`); return; }
+    if(qty<=0)  { showErr(`"${item?.en||item?.name||'Item'}" — enter a valid quantity (> 0).`); return; }
+    if(currentType !== 'opening_balance' && rate<=0) { showErr(`"${item?.en||item?.name||'Item'}" — purchase price cannot be zero. Please enter the cost price.`); return; }
+    if(currentType === 'opening_balance' && rate<=0) { showErr(`"${item?.en||item?.name||'Item'}" — enter the cost price for opening balance. This is needed for accurate P&L.`); return; }
 
     itemEntries.push({ itemId, itemName: item?.name||'—', unit, qty, rate, mkup });
   }
@@ -1062,6 +1063,12 @@ function savePurchase(){
   savePurchases(arr);
   localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
 
+  // Backfill zero-cost usage records for each item just purchased
+  itemEntries.forEach(e => {
+    const transferRate = e.rate * (1 + e.mkup/100);
+    backfillZeroCostUsage(e.itemId, transferRate);
+  });
+
   // Auto-save vendor if new
   if(vendor && vendor !== '__new__'){
     const vendors = getVendors();
@@ -1087,6 +1094,32 @@ function savePurchase(){
 
   const names = itemEntries.map(e=>e.itemName).join(', ');
   toast(`✅ ${itemEntries.length} item${itemEntries.length>1?'s':''} saved — ${vendor||'Opening Balance'}`);
+}
+
+// ══════════════════════════════════════════
+//  BACKFILL ZERO-COST USAGE RECORDS
+//  Called after any purchase is saved/edited.
+//  Finds daily usage records for the same item
+//  that have zero cost and fills them in using
+//  the purchase's transferRate.
+// ══════════════════════════════════════════
+function backfillZeroCostUsage(itemId, transferRate) {
+  if(!itemId || !(transferRate > 0)) return;
+  const USAGE_KEY = 'fc_daily_usage';
+  const log = JSON.parse(localStorage.getItem(USAGE_KEY) || '[]');
+  let updated = 0;
+  for(const rec of log) {
+    if((rec.itemId !== itemId) || rec.directBuy) continue;
+    if((rec.cost || 0) > 0) continue; // already has cost, skip
+    rec.cost = Math.round((rec.qty || 0) * transferRate * 100) / 100;
+    rec._costBackfilled = true; // mark so we know it was auto-filled
+    updated++;
+  }
+  if(updated > 0) {
+    localStorage.setItem(USAGE_KEY, JSON.stringify(log));
+    const itemName = getStoreItems().find(i=>i.id===itemId)?.en || 'item';
+    toast(`✅ ${updated} past usage record${updated>1?'s':''} for "${itemName}" updated with cost`);
+  }
 }
 
 // ══════════════════════════════════════════
@@ -1404,6 +1437,10 @@ function saveEditPurchase(){
   };
 
   savePurchases(arr);
+
+  // Backfill any zero-cost usage records for this item
+  backfillZeroCostUsage(p.itemId, transferRate);
+
   closeEditModal();
   updateStats(); renderList(); renderVendorLedger();
   toast('✅ Purchase updated');

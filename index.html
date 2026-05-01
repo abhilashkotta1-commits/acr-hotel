@@ -277,37 +277,22 @@
 ══════════════════════════════════════════════ -->
 <div class="login-overlay" id="loginOverlay">
 
-  <div class="login-logo">
+  <!-- Logo — long-press 3s for admin backdoor -->
+  <div class="login-logo" id="loginLogo"
+       onmousedown="startBackdoor()" onmouseup="cancelBackdoor()" onmouseleave="cancelBackdoor()"
+       ontouchstart="startBackdoor()" ontouchend="cancelBackdoor()" ontouchcancel="cancelBackdoor()"
+       style="cursor:pointer;user-select:none;">
     <div class="ll-te">🏨 అమ్మ చేతి రుచులు</div>
     <div class="ll-en">Amma Cheti Ruchulu · Food Court</div>
+    <!-- Subtle hold-progress ring -->
+    <div id="backdoorRing" style="height:3px;width:0;background:#3b82f6;border-radius:99px;margin:10px auto 0;transition:width .05s linear;max-width:120px;opacity:0"></div>
   </div>
 
-  <!-- Phase 1: Role selection -->
-  <div id="phaseRoles" style="width:100%;max-width:380px">
-    <div class="phase-title">Select your role to continue</div>
-    <div class="role-grid">
-      <div class="role-card" onclick="selectRole('admin')">
-        <div class="rc-icon">👑</div>
-        <div class="rc-name">Admin</div>
-      </div>
-      <div class="role-card" onclick="selectRole('manager')">
-        <div class="rc-icon">👨‍💼</div>
-        <div class="rc-name">Manager</div>
-      </div>
-      <div class="role-card" onclick="selectRole('partner')">
-        <div class="rc-icon">🤝</div>
-        <div class="rc-name">Partner</div>
-      </div>
-      <div class="role-card" onclick="selectRole('storekeeper')">
-        <div class="rc-icon">📦</div>
-        <div class="rc-name">Store Manager</div>
-      </div>
-    </div>
-  </div>
+  <!-- Phase 1: PIN entry (shown by default — no role revealed) -->
+  <div id="phasePin" class="pin-phase">
 
-  <!-- Phase 2: PIN entry -->
-  <div id="phasePin" class="pin-phase" style="display:none">
-    <div class="pin-role-badge">
+    <!-- Role badge — hidden in normal mode, shown in backdoor role-select flow -->
+    <div class="pin-role-badge" id="pinRoleBadge" style="display:none">
       <span class="prb-icon" id="pinRoleIcon">👑</span>
       <span class="prb-name" id="pinRoleName">Admin</span>
     </div>
@@ -341,7 +326,27 @@
     </div>
 
     <button class="np-btn enter" style="width:100%;margin-bottom:12px;border-radius:12px;padding:14px" onclick="npEnter()">✓ Enter</button>
-    <button class="btn-back-login" onclick="backToRoles()">← Choose different role</button>
+    <button class="btn-back-login" id="btnBackRoles" onclick="backToRoles()" style="display:none">← Back to roles</button>
+  </div>
+
+  <!-- Phase 2: Role selector (HIDDEN — only revealed via backdoor long-press) -->
+  <div id="phaseRoles" style="display:none;width:100%;max-width:380px">
+    <div class="phase-title">Select role</div>
+    <div class="role-grid">
+      <div class="role-card" onclick="selectRole('admin')">
+        <div class="rc-icon">👑</div><div class="rc-name">Admin</div>
+      </div>
+      <div class="role-card" onclick="selectRole('manager')">
+        <div class="rc-icon">👨‍💼</div><div class="rc-name">Manager</div>
+      </div>
+      <div class="role-card" onclick="selectRole('partner')">
+        <div class="rc-icon">🤝</div><div class="rc-name">Partner</div>
+      </div>
+      <div class="role-card" onclick="selectRole('storekeeper')">
+        <div class="rc-icon">📦</div><div class="rc-name">Store Manager</div>
+      </div>
+    </div>
+    <button class="btn-back-login" style="margin-top:12px;width:100%" onclick="hideBackdoor()">← Cancel</button>
   </div>
 
 </div>
@@ -554,32 +559,13 @@ function monthPnl() {
 // ═══════════════════════════════════════════════
 //  LOGIN LOGIC
 // ═══════════════════════════════════════════════
-let pendingRole = null;
-let pinBuffer   = [];
+let pendingRole    = null; // null = smart PIN mode, set = specific role (backdoor)
+let pinBuffer      = [];
+let _backdoorTimer = null;
+let _backdoorMs    = 0;
+let _backdoorRAF   = null;
 
-function selectRole(roleId) {
-  pendingRole = roleId;
-  const meta = ROLE_META[roleId];
-  const pins = getRolePins();
-  const hasPin = !!pins[roleId];
-
-  document.getElementById('pinRoleIcon').textContent = meta.icon;
-  document.getElementById('pinRoleName').textContent = meta.name;
-  document.getElementById('noPinNote').style.display = hasPin ? 'none' : 'block';
-  document.getElementById('pinError').textContent = '';
-  pinBuffer = [];
-  updatePinDots();
-
-  document.getElementById('phaseRoles').style.display = 'none';
-  document.getElementById('phasePin').style.display   = 'block';
-}
-
-function backToRoles() {
-  pendingRole = null; pinBuffer = [];
-  document.getElementById('phasePin').style.display   = 'none';
-  document.getElementById('phaseRoles').style.display = 'block';
-}
-
+// ── Smart single-PIN login ──────────────────────
 function npPress(digit) {
   if (pinBuffer.length >= 4) return;
   pinBuffer.push(digit);
@@ -607,49 +593,125 @@ function updatePinDots() {
 
 function npEnter() {
   const pins   = getRolePins();
-  const stored = pins[pendingRole] || '';
   const entered = pinBuffer.join('');
 
-  if (!stored) {
-    // No PIN set — only allow entry if ✓ pressed with empty buffer
-    if (entered.length === 0) {
-      doLogin(pendingRole);
-    } else {
-      document.getElementById('pinError').textContent = '⚠️ No PIN set for this role. Press ✓ to enter directly.';
-      pinBuffer = []; updatePinDots();
+  // ── Backdoor specific-role mode ──
+  if (pendingRole) {
+    const stored = pins[pendingRole] || '';
+    if (!stored) {
+      if (entered.length === 0) { doLogin(pendingRole); return; }
+      showPinError('⚠️ No PIN set for this role. Press ✓ to enter directly.'); return;
     }
-    return;
+    if (entered === stored) { doLogin(pendingRole); return; }
+    showPinError('❌ Wrong PIN. Try again.'); return;
   }
-  if (entered === stored) {
-    doLogin(pendingRole);
+
+  // ── Normal mode: match PIN against all roles ──
+  const roles = ['admin','manager','partner','storekeeper'];
+  const matched = roles.find(r => pins[r] && pins[r] === entered);
+  if (matched) {
+    doLogin(matched);
   } else {
-    document.getElementById('pinError').textContent = '❌ Wrong PIN. Try again.';
-    pinBuffer = []; updatePinDots();
-    // Re-animate error
-    const el = document.getElementById('pinError');
-    el.style.animation = 'none';
-    el.offsetHeight; // reflow
-    el.style.animation = '';
+    showPinError('❌ Incorrect PIN. Please try again.');
   }
+}
+
+function showPinError(msg) {
+  pinBuffer = []; updatePinDots();
+  const el = document.getElementById('pinError');
+  el.textContent = msg;
+  el.style.animation = 'none';
+  el.offsetHeight;
+  el.style.animation = '';
 }
 
 function doLogin(roleId) {
   sessionStorage.setItem('fc_role', roleId);
   const overlay = document.getElementById('loginOverlay');
   overlay.classList.add('fade-out');
-  setTimeout(() => {
-    overlay.classList.add('hidden');
-    showHome();
-  }, 350);
+  setTimeout(() => { overlay.classList.add('hidden'); showHome(); }, 350);
 }
 
 function switchRole() {
   sessionStorage.removeItem('fc_role');
+  pendingRole = null; pinBuffer = [];
   const overlay = document.getElementById('loginOverlay');
-  overlay.classList.remove('hidden', 'fade-out');
+  overlay.classList.remove('hidden','fade-out');
   document.getElementById('homePage').classList.remove('show');
-  // Reset to role selection
-  backToRoles();
+  // Return to clean single-PIN screen
+  document.getElementById('phaseRoles').style.display = 'none';
+  document.getElementById('phasePin').style.display   = 'block';
+  document.getElementById('pinRoleBadge').style.display = 'none';
+  document.getElementById('btnBackRoles').style.display = 'none';
+  document.getElementById('pinError').textContent = '';
+  updatePinDots();
+}
+
+// ── Backdoor: long-press logo 3s → role selector ─
+function startBackdoor() {
+  _backdoorMs = 0;
+  const ring = document.getElementById('backdoorRing');
+  ring.style.opacity = '1'; ring.style.width = '0';
+  const start = performance.now();
+  function step(now) {
+    _backdoorMs = now - start;
+    const pct = Math.min(_backdoorMs / 3000, 1);
+    ring.style.width = (pct * 120) + 'px';
+    if (pct < 1) { _backdoorRAF = requestAnimationFrame(step); }
+    else { triggerBackdoor(); }
+  }
+  _backdoorRAF = requestAnimationFrame(step);
+}
+
+function cancelBackdoor() {
+  if (_backdoorRAF) { cancelAnimationFrame(_backdoorRAF); _backdoorRAF = null; }
+  const ring = document.getElementById('backdoorRing');
+  ring.style.width = '0'; ring.style.opacity = '0';
+}
+
+function triggerBackdoor() {
+  cancelBackdoor();
+  // Show role selector, hide PIN pad
+  document.getElementById('phasePin').style.display   = 'none';
+  document.getElementById('phaseRoles').style.display = 'block';
+  pinBuffer = []; pendingRole = null;
+  document.getElementById('pinError').textContent = '';
+  updatePinDots();
+}
+
+function hideBackdoor() {
+  document.getElementById('phaseRoles').style.display = 'none';
+  document.getElementById('phasePin').style.display   = 'block';
+  document.getElementById('pinRoleBadge').style.display = 'none';
+  document.getElementById('btnBackRoles').style.display = 'none';
+  pendingRole = null; pinBuffer = [];
+  document.getElementById('pinError').textContent = '';
+  updatePinDots();
+}
+
+// ── Called from backdoor role selector ──────────
+function selectRole(roleId) {
+  pendingRole = roleId;
+  const meta  = ROLE_META[roleId];
+  document.getElementById('pinRoleIcon').textContent    = meta.icon;
+  document.getElementById('pinRoleName').textContent    = meta.name;
+  document.getElementById('pinRoleBadge').style.display = 'flex';
+  document.getElementById('btnBackRoles').style.display = 'block';
+  document.getElementById('noPinNote').style.display    = getRolePins()[roleId] ? 'none' : 'block';
+  document.getElementById('pinError').textContent       = '';
+  pinBuffer = []; updatePinDots();
+  document.getElementById('phaseRoles').style.display = 'none';
+  document.getElementById('phasePin').style.display   = 'block';
+}
+
+function backToRoles() {
+  pendingRole = null; pinBuffer = [];
+  document.getElementById('pinRoleBadge').style.display = 'none';
+  document.getElementById('btnBackRoles').style.display = 'none';
+  document.getElementById('phasePin').style.display   = 'none';
+  document.getElementById('phaseRoles').style.display = 'block';
+  document.getElementById('pinError').textContent = '';
+  updatePinDots();
 }
 
 // ═══════════════════════════════════════════════

@@ -1410,9 +1410,9 @@ function renderGrid(){
           <div class="direct-buy-rate ${directBuy[item.id] !== undefined ? 'show' : ''}" id="dbr-${item.id}">
             <div class="direct-buy-rate-row">
               <label>Purchase Rate ₹</label>
-              <input type="number" id="db-rate-${item.id}" min="0" step="0.01" placeholder="0.00"
+              <input type="number" id="db-rate-${item.id}" min="0" step="0.01" placeholder="⚠ Required"
                 value="${directBuy[item.id]?.rate || ''}"
-                oninput="directBuy[${item.id}].rate = parseFloat(this.value)||0">
+                oninput="directBuy[${item.id}].rate = parseFloat(this.value)||0; this.style.borderColor=parseFloat(this.value)>0?'#f97316':''">
             </div>
             <div class="direct-buy-rate-row" style="margin-top:5px">
               <label>Vendor</label>
@@ -1603,6 +1603,22 @@ function submitUsage(){
   const keys = Object.keys(usage);
   if(!keys.length){ toast('⚠ Add at least one item'); return; }
   if(!selectedSection){ toast('⚠ Please select a section first'); return; }
+
+  // Validate: direct-buy items must have a price entered
+  const missingPrice = keys.filter(id => {
+    const db = directBuy[parseInt(id)];
+    return db !== undefined && !(db.rate > 0);
+  });
+  if(missingPrice.length){
+    const names = missingPrice.map(id => ALL_ITEMS.find(i=>i.id===parseInt(id))?.en || id).join(', ');
+    toast(`⚠ Enter buy price for: ${names}`);
+    // Highlight the missing rate inputs
+    missingPrice.forEach(id => {
+      const el = document.getElementById(`db-rate-${id}`);
+      if(el){ el.style.borderColor='#ef4444'; el.focus(); }
+    });
+    return;
+  }
 
   const date      = document.getElementById('date-input').value;
   const sessionId = 'sess_' + Date.now();

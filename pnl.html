@@ -136,6 +136,23 @@
     .cost-table td:last-child { text-align: right; font-weight: 600; }
     .cost-table .total-row td { font-weight: 700; font-size: 13px; border-top: 2px solid var(--border); padding-top: 9px; }
 
+    /* ── Drill-down rows ── */
+    .drill-row { cursor: pointer; user-select: none; transition: background .15s; border-radius: 6px; }
+    .drill-row:hover { background: #f8fafc; }
+    .drill-row td:first-child { display: flex; align-items: center; gap: 6px; }
+    .drill-chevron { font-size: 10px; color: var(--muted); transition: transform .2s; display: inline-block; }
+    .drill-chevron.open { transform: rotate(90deg); }
+    .drill-badge { font-size: 10px; background: #f1f5f9; color: var(--muted); padding: 1px 6px; border-radius: 99px; font-weight: 600; }
+    .drill-detail { display: none; background: #f8fafc; border-radius: 8px; margin: 2px 0 6px; overflow: hidden; }
+    .drill-detail.open { display: block; }
+    .drill-detail table { width: 100%; border-collapse: collapse; }
+    .drill-detail td { padding: 5px 10px; font-size: 11.5px; color: var(--muted); border-bottom: 1px solid #f1f5f9; }
+    .drill-detail td:last-child { text-align: right; font-weight: 600; color: var(--text); }
+    .drill-detail tr:last-child td { border-bottom: none; }
+    .drill-detail .dd-header td { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; background: #f1f5f9; padding: 4px 10px; }
+    .drill-detail .dd-sub td:first-child { padding-left: 18px; color: #94a3b8; font-size: 11px; }
+    .drill-empty { padding: 10px; text-align: center; color: #94a3b8; font-size: 11px; }
+
     /* ── Daily/monthly data table ── */
     .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .data-table th {
@@ -438,35 +455,49 @@ function materialCostForDate(date) {
   const items   = getItems();
   const itemMap = {};
   for (const it of items) itemMap[it.id] = it;
-
-  // Fallback rate map: most recent purchase price per item
-  // (used for old daily-usage records that predate FIFO cost tracking)
   const purRates = buildPurchaseRateMap();
 
   let total = 0;
   const bySection = {};
+  const detail = []; // item-level drill-down
 
   for (const rec of records) {
     const sid  = rec.section || 'other';
     let cost;
-
     if (rec.cost != null && rec.cost > 0) {
-      // Best case: FIFO cost stored directly on the record
       cost = rec.cost;
     } else {
-      // Fallback 1: item.price (legacy store-level price)
       const itm = itemMap[rec.itemId];
       const itemPrice = itm ? (itm.price || 0) : 0;
-      // Fallback 2: most recent purchase rate for this item
       const purRate = purRates[rec.itemId] || 0;
       const rate = purRate || itemPrice;
       cost = rate * (rec.qty || 0);
     }
-
     bySection[sid] = (bySection[sid] || 0) + cost;
     total += cost;
+    detail.push({ name: rec.itemName || '—', qty: rec.qty || 0, unit: rec.unit || '', cost, section: sid });
   }
-  return { total, bySection };
+  return { total, bySection, detail };
+}
+
+/* Aggregate material detail across multiple dates */
+function materialCostForDates(dates) {
+  const itemTotals = {};
+  let total = 0;
+  const bySection = {};
+  for (const d of dates) {
+    const r = materialCostForDate(d);
+    total += r.total;
+    for (const [s, v] of Object.entries(r.bySection)) bySection[s] = (bySection[s]||0)+v;
+    for (const it of r.detail) {
+      const k = it.name + '||' + it.unit;
+      if (!itemTotals[k]) itemTotals[k] = { name: it.name, unit: it.unit, qty: 0, cost: 0 };
+      itemTotals[k].qty  += it.qty;
+      itemTotals[k].cost += it.cost;
+    }
+  }
+  const detail = Object.values(itemTotals).sort((a,b) => b.cost - a.cost);
+  return { total, bySection, detail };
 }
 
 /* Day-helper wages */
@@ -474,39 +505,75 @@ function helperWagesForDate(date) {
   const helpers = getDayHelpers().filter(h => h.date === date);
   let total = 0;
   const bySection = {};
+  const detail = [];
   for (const h of helpers) {
     const w = h.wage || 0;
     total += w;
     const sid = h.section || 'other';
     bySection[sid] = (bySection[sid] || 0) + w;
+    detail.push({ name: h.name || 'Helper', section: sid, wage: w, date });
   }
-  return { total, bySection };
+  return { total, bySection, detail };
 }
 
-/* Daily-wage salary for a specific date
-   Reads wage stored in each attendance record (present/halfday/extra/absent).
-   Falls back to prorated monthly salary for legacy records. */
+function helperWagesForDates(dates) {
+  const detail = [];
+  let total = 0;
+  const bySection = {};
+  for (const d of dates) {
+    const r = helperWagesForDate(d);
+    total += r.total;
+    for (const [s,v] of Object.entries(r.bySection)) bySection[s]=(bySection[s]||0)+v;
+    detail.push(...r.detail);
+  }
+  // aggregate by name
+  const nameMap = {};
+  for (const it of detail) {
+    if (!nameMap[it.name]) nameMap[it.name] = { name: it.name, days: 0, wage: 0 };
+    nameMap[it.name].days++;
+    nameMap[it.name].wage += it.wage;
+  }
+  return { total, bySection, detail: Object.values(nameMap).sort((a,b)=>b.wage-a.wage) };
+}
+
+/* Daily-wage salary for a specific date */
 function salaryForDate(date) {
   const ym         = date.substring(0,7);
   const employees  = getEmployees();
   const attendance = getAttendance();
   let total = 0;
+  const detail = [];
 
-  // New model: each attendance record carries a wage field
   const dayRecs = attendance.filter(a => a.date === date);
   for (const rec of dayRecs) {
+    const emp = employees.find(e => e.id === rec.empId);
+    let wage = 0;
     if (rec.wage != null) {
-      total += Number(rec.wage);
-    } else {
-      // Legacy fallback: prorate monthly salary
-      const emp    = employees.find(e => e.id === rec.empId);
-      if (!emp) continue;
+      wage = Number(rec.wage);
+    } else if (emp) {
       const perDay = (emp.salary || 0) / daysInMonth(ym);
-      const dv     = rec.status === 'present' ? 1 : rec.status === 'halfday' ? 0.5 : 0;
-      total       += perDay * dv;
+      const dv = rec.status === 'present' ? 1 : rec.status === 'halfday' ? 0.5 : 0;
+      wage = perDay * dv;
+    }
+    total += wage;
+    detail.push({ name: emp?.name || rec.empId || '—', status: rec.status || '—', wage });
+  }
+  return { total, detail };
+}
+
+function salaryForDates(dates) {
+  const empMap = {};
+  let total = 0;
+  for (const d of dates) {
+    const r = salaryForDate(d);
+    total += r.total;
+    for (const it of r.detail) {
+      if (!empMap[it.name]) empMap[it.name] = { name: it.name, days: 0, wage: 0 };
+      empMap[it.name].days++;
+      empMap[it.name].wage += it.wage;
     }
   }
-  return { total };
+  return { total, detail: Object.values(empMap).sort((a,b)=>b.wage-a.wage) };
 }
 
 /* Fixed costs — prorated for a single date */
@@ -529,19 +596,47 @@ function fixedCostForMonth(ym) {
   }, 0);
 }
 
-/* Transport costs from purchases on a given date (stored once per batch, first item only) */
+/* Transport costs from purchases on a given date */
 function transportCostForDate(date) {
   const purchases = getPurchases();
   const seen = new Set();
   let total = 0;
+  const detail = [];
   purchases.filter(p => p.date === date && (p.transportCost||0) > 0).forEach(p => {
     const key = p.batchId || p.id;
     if(!seen.has(key)){
       seen.add(key);
-      total += Number(p.transportCost);
+      const amt = Number(p.transportCost);
+      total += amt;
+      detail.push({ vendor: p.vendor || '—', date, cost: amt });
     }
   });
-  return { total };
+  return { total, detail };
+}
+
+function transportCostForDates(dates) {
+  const purchases = getPurchases();
+  const seen = new Set();
+  let total = 0;
+  const detail = [];
+  const dateSet = new Set(dates);
+  purchases.filter(p => p.date && dateSet.has(p.date) && (p.transportCost||0) > 0).forEach(p => {
+    const key = p.batchId || p.id;
+    if(!seen.has(key)){
+      seen.add(key);
+      const amt = Number(p.transportCost);
+      total += amt;
+      detail.push({ vendor: p.vendor || '—', date: p.date, cost: amt });
+    }
+  });
+  // Aggregate by vendor
+  const vMap = {};
+  for (const it of detail) {
+    if (!vMap[it.vendor]) vMap[it.vendor] = { vendor: it.vendor, trips: 0, cost: 0 };
+    vMap[it.vendor].trips++;
+    vMap[it.vendor].cost += it.cost;
+  }
+  return { total, detail: Object.values(vMap).sort((a,b)=>b.cost-a.cost) };
 }
 
 function transportCostForMonth(ym) {
@@ -550,10 +645,7 @@ function transportCostForMonth(ym) {
   let total = 0;
   purchases.filter(p => p.date && p.date.slice(0,7) === ym && (p.transportCost||0) > 0).forEach(p => {
     const key = p.batchId || p.id;
-    if(!seen.has(key)){
-      seen.add(key);
-      total += Number(p.transportCost);
-    }
+    if(!seen.has(key)){ seen.add(key); total += Number(p.transportCost); }
   });
   return total;
 }
@@ -564,13 +656,40 @@ function miscExpForDate(date) {
   const dim = daysInMonth(ym);
   const all = getMiscExp();
   let total = 0;
-  // Daily entries that match exact date
-  all.filter(e => e.scope === 'daily' && e.date === date)
-     .forEach(e => total += Number(e.amt||0));
-  // Monthly entries prorated across days in month
-  all.filter(e => e.scope === 'monthly' && e.month === ym)
-     .forEach(e => total += Number(e.amt||0) / dim);
-  return { total };
+  const detail = [];
+  all.filter(e => e.scope === 'daily' && e.date === date).forEach(e => {
+    const amt = Number(e.amt||0);
+    total += amt;
+    detail.push({ desc: e.desc || '—', amt, scope: 'Daily' });
+  });
+  all.filter(e => e.scope === 'monthly' && e.month === ym).forEach(e => {
+    const amt = Number(e.amt||0) / dim;
+    total += amt;
+    detail.push({ desc: e.desc || '—', amt, scope: 'Monthly (prorated)' });
+  });
+  return { total, detail };
+}
+
+function miscExpForDates(dates) {
+  const dateSet = new Set(dates);
+  const all = getMiscExp();
+  const months = [...new Set(dates.map(d=>d.slice(0,7)))];
+  let total = 0;
+  const descMap = {};
+  all.filter(e => e.scope === 'daily' && e.date && dateSet.has(e.date)).forEach(e => {
+    const amt = Number(e.amt||0);
+    total += amt;
+    descMap[e.desc] = (descMap[e.desc]||0) + amt;
+  });
+  for (const ym of months) {
+    all.filter(e => e.scope === 'monthly' && e.month === ym).forEach(e => {
+      const amt = Number(e.amt||0);
+      total += amt;
+      descMap[e.desc] = (descMap[e.desc]||0) + amt;
+    });
+  }
+  const detail = Object.entries(descMap).map(([desc,amt])=>({desc,amt})).sort((a,b)=>b.amt-a.amt);
+  return { total, detail };
 }
 
 /* Misc expenses total for a full month */
@@ -588,13 +707,13 @@ function pnlForDate(date) {
   const mat  = materialCostForDate(date);
   const hlp  = helperWagesForDate(date);
   const sal  = salaryForDate(date);
-  const fix   = fixedCostForDate(date);
-  const misc  = miscExpForDate(date);
-  const trans = transportCostForDate(date);
+  const fix  = fixedCostForDate(date);
+  const misc = miscExpForDate(date);
+  const trans= transportCostForDate(date);
 
-  const grossProfit    = rev.total - mat.total;
-  const totalExpenses  = mat.total + hlp.total + sal.total + fix.total + misc.total + trans.total;
-  const netProfit      = rev.total - totalExpenses;
+  const grossProfit   = rev.total - mat.total;
+  const totalExpenses = mat.total + hlp.total + sal.total + fix.total + misc.total + trans.total;
+  const netProfit     = rev.total - totalExpenses;
 
   return {
     date,
@@ -607,9 +726,14 @@ function pnlForDate(date) {
     fixedCost:     fix.total,
     miscExp:       misc.total,
     transportCost: trans.total,
-    grossProfit,
-    totalExpenses,
-    netProfit,
+    grossProfit, totalExpenses, netProfit,
+    // drill-down detail
+    _matDetail:   mat.detail,
+    _hlpDetail:   hlp.detail,
+    _salDetail:   sal.detail,
+    _miscDetail:  misc.detail,
+    _transDetail: trans.detail,
+    _fixItems:    fix.items,
   };
 }
 
@@ -714,17 +838,127 @@ function renderSectionBars(revBySection) {
   return `<div class="section-card"><h3>📊 Revenue by Section</h3>${rows}</div>`;
 }
 
-function renderCostBreak(p) {
+// ── Drill-down toggle ────────────────────────────────────────────────
+function toggleDrill(id) {
+  const detail  = document.getElementById('dd-' + id);
+  const chevron = document.getElementById('ch-' + id);
+  if (!detail) return;
+  const open = detail.classList.toggle('open');
+  if (chevron) chevron.classList.toggle('open', open);
+}
+
+// ── Build drill-down detail HTML ─────────────────────────────────────
+function ddMaterial(detail) {
+  if (!detail || !detail.length) return `<div class="drill-empty">No usage records found</div>`;
+  return `<table>
+    <tr class="dd-header"><td>Item</td><td>Qty</td><td>Cost</td></tr>
+    ${detail.map(it=>`<tr>
+      <td>${it.name}</td>
+      <td style="text-align:right">${Number(it.qty).toLocaleString('en-IN',{maximumFractionDigits:2})} ${it.unit||''}</td>
+      <td>${fmt(it.cost)}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function ddHelpers(detail, isAgg) {
+  if (!detail || !detail.length) return `<div class="drill-empty">No day helpers recorded</div>`;
+  return `<table>
+    <tr class="dd-header"><td>Name</td>${isAgg?'<td>Days</td>':''}<td>Wages</td></tr>
+    ${detail.map(it=>`<tr>
+      <td>${it.name}</td>
+      ${isAgg?`<td style="text-align:right">${it.days}d</td>`:''}
+      <td>${fmt(it.wage)}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function ddSalary(detail, isAgg) {
+  if (!detail || !detail.length) return `<div class="drill-empty">No attendance records found</div>`;
+  return `<table>
+    <tr class="dd-header"><td>Employee</td>${isAgg?'<td>Days</td>':'<td>Status</td>'}<td>Wages</td></tr>
+    ${detail.map(it=>`<tr>
+      <td>${it.name}</td>
+      <td style="text-align:right">${isAgg ? it.days+'d' : (it.status||'—')}</td>
+      <td>${fmt(it.wage)}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function ddFixed(costs, ym) {
+  if (!costs || !costs.length) return `<div class="drill-empty">No fixed costs configured</div>`;
+  return `<table>
+    <tr class="dd-header"><td>Item</td><td>Monthly</td><td>This Period</td></tr>
+    ${costs.map(c=>{
+      const monthly = (c.monthly&&c.monthly[ym]!=null)?c.monthly[ym]:(c.amount||0);
+      return `<tr><td>${c.name||'—'}</td><td>${fmt(monthly)}</td><td>${fmt(monthly)}</td></tr>`;
+    }).join('')}
+  </table>`;
+}
+
+function ddMisc(detail) {
+  if (!detail || !detail.length) return `<div class="drill-empty">No misc expenses recorded</div>`;
+  return `<table>
+    <tr class="dd-header"><td>Description</td><td>Type</td><td>Amount</td></tr>
+    ${detail.map(it=>`<tr>
+      <td>${it.desc}</td>
+      <td style="text-align:right;color:var(--muted);font-size:11px">${it.scope||''}</td>
+      <td>${fmt(it.amt)}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function ddTransport(detail, isAgg) {
+  if (!detail || !detail.length) return `<div class="drill-empty">No transport charges found</div>`;
+  return `<table>
+    <tr class="dd-header"><td>Vendor</td>${isAgg?'<td>Trips</td>':''}<td>Amount</td></tr>
+    ${detail.map(it=>`<tr>
+      <td>${it.vendor}</td>
+      ${isAgg?`<td style="text-align:right">${it.trips}</td>`:''}
+      <td>${fmt(it.cost)}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+// ── Main cost breakdown renderer ─────────────────────────────────────
+function renderCostBreak(p, dates) {
+  const isAgg  = dates && dates.length > 1;
+  const ym     = dates ? dates[0].slice(0,7) : '';
+  const costs  = getFixedCosts();
+
+  // Collect drilldown data
+  const matDD   = isAgg ? materialCostForDates(dates)    : { detail: p._matDetail   || [] };
+  const hlpDD   = isAgg ? helperWagesForDates(dates)     : { detail: p._hlpDetail   || [] };
+  const salDD   = isAgg ? salaryForDates(dates)          : { detail: p._salDetail   || [] };
+  const trDD    = isAgg ? transportCostForDates(dates)   : { detail: p._transDetail || [] };
+  const miscDD  = isAgg ? miscExpForDates(dates)         : { detail: p._miscDetail  || [] };
+
+  function drillRow(id, label, amount, ddHtml, count) {
+    if ((amount||0) === 0) return `<tr><td><div style="display:flex;align-items:center;gap:6px">${label}</div></td><td>${fmt(0)}</td></tr>
+      <tr><td colspan="2" style="padding:0"></td></tr>`;
+    return `
+      <tr class="drill-row" onclick="toggleDrill('${id}')">
+        <td><div style="display:flex;align-items:center;gap:6px">
+          <span class="drill-chevron" id="ch-${id}">▶</span>
+          ${label}
+          ${count>0?`<span class="drill-badge">${count}</span>`:''}
+        </div></td>
+        <td>${fmt(amount)}</td>
+      </tr>
+      <tr><td colspan="2" style="padding:0">
+        <div class="drill-detail" id="dd-${id}">${ddHtml}</div>
+      </td></tr>`;
+  }
+
   return `
     <div class="section-card">
-      <h3>💸 Cost Breakdown</h3>
+      <h3>💸 Cost Breakdown <span style="font-size:11px;color:var(--muted);font-weight:500">· tap a row to expand</span></h3>
       <table class="cost-table">
-        <tr><td>Raw Materials</td><td>${fmt(p.materialCost)}</td></tr>
-        <tr><td>Day Helper Wages</td><td>${fmt(p.helperWages)}</td></tr>
-        <tr><td>Staff Wages (daily)</td><td>${fmt(p.salary)}</td></tr>
-        <tr><td>Fixed Overheads</td><td>${fmt(p.fixedCost)}</td></tr>
-        ${(p.miscExp||0)>0?`<tr><td>Misc Expenses</td><td>${fmt(p.miscExp)}</td></tr>`:''}
-        ${(p.transportCost||0)>0?`<tr><td>🚛 Transport & Travel</td><td>${fmt(p.transportCost)}</td></tr>`:''}
+        ${drillRow('mat',   '🥬 Raw Materials',      p.materialCost,  ddMaterial(matDD.detail),                       matDD.detail?.length||0)}
+        ${drillRow('hlp',   '👷 Day Helper Wages',   p.helperWages,   ddHelpers(hlpDD.detail, isAgg),                 hlpDD.detail?.length||0)}
+        ${drillRow('sal',   '👨‍💼 Staff Salary',       p.salary,        ddSalary(salDD.detail, isAgg),                  salDD.detail?.length||0)}
+        ${drillRow('fix',   '🏢 Fixed Overheads',    p.fixedCost,     ddFixed(costs, ym),                             costs.length)}
+        ${(p.miscExp||0)>0 ? drillRow('misc','📋 Misc Expenses', p.miscExp, ddMisc(miscDD.detail), miscDD.detail?.length||0) : ''}
+        ${(p.transportCost||0)>0 ? drillRow('trans','🚛 Transport & Travel', p.transportCost, ddTransport(trDD.detail, isAgg), trDD.detail?.length||0) : ''}
         <tr class="total-row"><td>Total Expenses</td><td>${fmt(p.totalExpenses)}</td></tr>
       </table>
     </div>`;
@@ -755,7 +989,7 @@ function renderDaily() {
   } else {
     html += renderCards(p, 'Prorated for today');
     html += renderSectionBars(p.revBySection);
-    html += renderCostBreak(p);
+    html += renderCostBreak(p, [date]);
   }
 
   document.getElementById('content').innerHTML = html;
@@ -805,7 +1039,7 @@ function renderWeekly() {
 
   if (hasData) {
     html += renderSectionBars(p.revBySection);
-    html += renderCostBreak(p);
+    html += renderCostBreak(p, dates);
   }
 
   document.getElementById('content').innerHTML = html;
@@ -866,7 +1100,7 @@ function renderMonthly() {
 
   if (hasData) {
     html += renderSectionBars(p.revBySection);
-    html += renderCostBreak(pDisplay);
+    html += renderCostBreak(pDisplay, dates);
   }
 
   document.getElementById('content').innerHTML = html;
@@ -950,8 +1184,12 @@ function renderYearly() {
   html += `</tbody></table></div></div>`;
 
   if (yr.revenue > 0) {
+    const yearDates = Array.from({length:12},(_,i)=>{
+      const ym=`${year}-${String(i+1).padStart(2,'0')}`;
+      return getDatesInMonth(ym);
+    }).flat();
     html += renderSectionBars(yr.revBySection);
-    html += renderCostBreak(yr);
+    html += renderCostBreak(yr, yearDates);
   }
 
   document.getElementById('content').innerHTML = html;
@@ -1015,7 +1253,7 @@ function renderRange() {
       html += `<div class="section-card" style="text-align:center;color:var(--muted);font-size:12px;padding:14px">📋 Day-by-day table hidden for ranges over 62 days</div>`;
     }
     html += renderSectionBars(p.revBySection);
-    html += renderCostBreak(p);
+    html += renderCostBreak(p, dates);
   }
 
   document.getElementById('content').innerHTML = html;

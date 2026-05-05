@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+  <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ACR Hotel">
+  <meta name="theme-color" content="#1e293b">
+  <title>Amma Cheti Ruchulu — Cash Book</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Role Guard: admin & manager only -->
+  <script>
+  (function(){
+    var role = sessionStorage.getItem('fc_role');
+    if (!role) { window.location.href = 'index.html'; return; }
+    if (role === 'admin' || role === 'manager') return;
+    window.location.href = 'index.html';
+  })();
+  </script>
+  <style>
+    :root {
+      --bg: #f5f6fa; --card: #fff;
+      --primary: #2563eb; --primary-dark: #1d4ed8; --primary-soft: #dbeafe;
+      --green: #10b981; --green-soft: #d1fae5; --green-dark: #065f46;
+      --red: #ef4444; --red-soft: #fee2e2;
+      --orange: #f59e0b; --orange-soft: #fef3c7;
+      --purple: #8b5cf6; --purple-soft: #ede9fe;
+      --text: #0f172a; --sub: #64748b; --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+      --radius: 14px; --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ─── HEADER ─── */
+    .header {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 60%, #047857 100%);
+      padding: 20px 20px 72px; position: relative; overflow: hidden;
+    }
+    .header::before { content:''; position:absolute; width:260px; height:260px; background:rgba(255,255,255,.06); border-radius:50%; top:-90px; right:-40px; }
+    .header::after  { content:''; position:absolute; width:160px; height:160px; background:rgba(255,255,255,.04); border-radius:50%; bottom:-60px; left:30px; }
+    .header-inner { display:flex; align-items:flex-start; justify-content:space-between; position:relative; z-index:1; max-width:760px; margin:0 auto; }
+    .header h1 { font-size:1.3rem; font-weight:800; color:#fff; letter-spacing:-.02em; }
+    .header p  { font-size:.78rem; color:rgba(255,255,255,.65); margin-top:4px; }
+    .hbtn { padding:8px 14px; border-radius:999px; font-size:.78rem; font-weight:600; cursor:pointer; border:none; display:flex; align-items:center; gap:5px; transition:all .15s; text-decoration:none; }
+    .hbtn-ghost { background:rgba(255,255,255,.15); color:#fff; backdrop-filter:blur(8px); }
+    .hbtn-ghost:hover { background:rgba(255,255,255,.25); }
+
+    /* ─── BALANCE CARDS ─── */
+    .balance-wrap { max-width:760px; margin:-50px auto 0; padding:0 16px; position:relative; z-index:10; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .bal-card { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 16px; }
+    .bal-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sub); margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+    .bal-amount { font-size:1.5rem; font-weight:800; letter-spacing:-.02em; line-height:1; }
+    .bal-amount.positive { color:var(--green-dark); }
+    .bal-amount.negative { color:var(--red); }
+    .bal-since { font-size:.68rem; color:var(--sub); margin-top:5px; }
+
+    /* ─── MAIN ─── */
+    .main { max-width:760px; margin:18px auto 40px; padding:0 16px; }
+
+    /* ─── CARDS ─── */
+    .section-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:18px; overflow:hidden; }
+    .section-head { padding:14px 20px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .section-head h2 { font-size:.92rem; font-weight:700; }
+    .section-body { padding:16px 20px; }
+
+    /* ─── OPENING BALANCE FORM ─── */
+    .ob-setup { background:linear-gradient(135deg,#ecfdf5,#d1fae5); border:1.5px solid #6ee7b7; border-radius:var(--radius); padding:20px; margin-bottom:18px; }
+    .ob-setup h3 { font-size:.95rem; font-weight:800; color:#065f46; margin-bottom:4px; }
+    .ob-setup p  { font-size:.78rem; color:#047857; margin-bottom:16px; }
+    .form-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+    .form-group { display:flex; flex-direction:column; gap:5px; flex:1; min-width:130px; }
+    .form-group label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+    .form-group input, .form-group select {
+      border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      padding:9px 11px; font-size:.9rem; font-family:inherit; background:#fff; transition:border-color .15s;
+    }
+    .form-group input:focus { border-color:var(--primary); outline:none; }
+    .btn-primary { background:var(--primary); color:#fff; border:none; border-radius:var(--radius-sm); padding:10px 22px; font-size:.88rem; font-weight:700; cursor:pointer; font-family:inherit; transition:filter .15s; }
+    .btn-primary:hover { filter:brightness(1.1); }
+    .btn-ghost { background:#f1f5f9; color:var(--sub); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 16px; font-size:.83rem; font-weight:600; cursor:pointer; font-family:inherit; }
+    .btn-ghost:hover { background:var(--border); }
+
+    /* ─── OPENING BALANCE DISPLAY (compact) ─── */
+    .ob-bar { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--green-soft); border-radius:var(--radius-sm); margin-bottom:18px; gap:10px; flex-wrap:wrap; }
+    .ob-bar-info { font-size:.8rem; color:var(--green-dark); font-weight:600; }
+    .ob-bar-vals { display:flex; gap:16px; font-size:.82rem; font-weight:700; color:var(--green-dark); }
+
+    /* ─── MONTH BAR ─── */
+    .month-bar { display:flex; align-items:center; gap:10px; margin-bottom:18px; background:var(--bg); border-radius:var(--radius-sm); padding:10px 14px; }
+    .month-bar label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+    .month-bar input[type=month] { flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; font-size:.88rem; font-family:inherit; background:#fff; }
+
+    /* ─── MONTHLY SUMMARY GRID ─── */
+    .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+    .sum-box { background:var(--bg); border-radius:var(--radius-sm); padding:12px 14px; }
+    .sum-box-title { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--sub); margin-bottom:8px; }
+    .sum-row { display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:4px; }
+    .sum-in   { color:var(--green-dark); font-weight:700; }
+    .sum-out  { color:var(--red); font-weight:700; }
+    .sum-net  { font-weight:800; font-size:.88rem; border-top:1px solid var(--border); padding-top:6px; margin-top:4px; }
+
+    /* ─── LEDGER ─── */
+    .ledger-wrap { border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); }
+    .date-grp-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:8px 14px; background:#f8fafc;
+      border-bottom:1px solid var(--border);
+      position:sticky; top:0; z-index:5;
+    }
+    .date-grp-label { font-size:.73rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+    .date-grp-net { font-size:.73rem; font-weight:700; }
+    .entry-row { display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); }
+    .entry-row:last-child { border-bottom:none; }
+    .entry-icon { font-size:1.1rem; flex-shrink:0; margin-top:1px; }
+    .entry-main { flex:1; min-width:0; }
+    .entry-desc { font-weight:600; font-size:.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .entry-badge { display:inline-flex; align-items:center; padding:1px 7px; border-radius:999px; font-size:.66rem; font-weight:700; margin-top:3px; }
+    .badge-revenue { background:#dcfce7; color:#166534; }
+    .badge-purchase { background:#fef3c7; color:#92400e; }
+    .badge-vendor  { background:#ede9fe; color:#5b21b6; }
+    .badge-wages   { background:#e0f2fe; color:#075985; }
+    .badge-chit { background:#eef2ff; color:#3730a3; }
+    .badge-expense { background:#fee2e2; color:#991b1b; }
+    .badge-fixed   { background:#f1f5f9; color:#334155; }
+    .entry-right { text-align:right; flex-shrink:0; }
+    .entry-amount { font-size:.9rem; font-weight:800; white-space:nowrap; }
+    .entry-amount.in  { color:var(--green-dark); }
+    .entry-amount.out { color:var(--red); }
+    .entry-mode { font-size:.68rem; font-weight:700; margin-top:2px; color:var(--sub); }
+    .day-balance-bar {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:8px 14px; background:#f0fdf4;
+      border-bottom:1px solid var(--border);
+    }
+    .day-balance-bar:last-child { border-bottom:none; }
+    .day-bal-lbl { font-size:.7rem; font-weight:700; color:#047857; }
+    .day-bal-vals { display:flex; gap:14px; font-size:.76rem; font-weight:800; color:#065f46; }
+
+    /* ─── EMPTY ─── */
+    .empty { text-align:center; padding:32px 16px; color:var(--sub); }
+    .empty-icon { font-size:2.2rem; margin-bottom:10px; }
+
+    /* ─── TOAST ─── */
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:#1e293b; color:#fff; padding:10px 22px; border-radius:999px; font-size:.85rem; font-weight:600; opacity:0; transition:all .3s; pointer-events:none; z-index:999; white-space:nowrap; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ─── ERROR MODAL ─── */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500; align-items:center; justify-content:center; }
+    .overlay.open { display:flex; }
+    .err-box { background:#fff; border-radius:var(--radius); padding:28px 24px; max-width:320px; text-align:center; }
+    .err-icon { font-size:2rem; margin-bottom:10px; }
+    .err-box p { color:var(--sub); font-size:.9rem; margin-bottom:16px; }
+    .err-box button { background:var(--primary); color:#fff; border:none; border-radius:var(--radius-sm); padding:9px 28px; font-size:.88rem; font-weight:700; cursor:pointer; font-family:inherit; }
+
+    @media(max-width:480px) {
+      .form-row { flex-direction:column; }
+      .form-group { min-width:unset; }
+      .balance-wrap { grid-template-columns:1fr 1fr; gap:8px; }
+      .bal-amount { font-size:1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>💰 Cash Book</h1>
+      <p>Live cash & bank position</p>
+    </div>
+    <a href="index.html" class="hbtn hbtn-ghost">🏠 Home</a>
+  </div>
+</div>
+
+<!-- BALANCE CARDS -->
+<div class="balance-wrap">
+  <div class="bal-card">
+    <div class="bal-label">💵 Cash in Hand</div>
+    <div class="bal-amount" id="bal-cash">₹0</div>
+    <div class="bal-since" id="bal-cash-since">—</div>
+  </div>
+  <div class="bal-card">
+    <div class="bal-label">💳 Bank Balance</div>
+    <div class="bal-amount" id="bal-bank">₹0</div>
+    <div class="bal-since" id="bal-bank-since">—</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" style="margin-top:20px">
+
+  <!-- Opening balance setup / display -->
+  <div id="ob-section"></div>
+
+  <!-- Month filter -->
+  <div class="month-bar">
+    <label>Month</label>
+    <input type="month" id="ledger-month" onchange="renderPage()">
+  </div>
+
+  <!-- Monthly summary -->
+  <div id="monthly-summary"></div>
+
+  <!-- Ledger -->
+  <div class="section-card">
+    <div class="section-head">
+      <h2>📒 Transaction Ledger</h2>
+      <span id="ledger-count" style="font-size:.75rem;color:var(--sub);font-weight:600"></span>
+    </div>
+    <div class="section-body" style="padding:0">
+      <div id="ledger"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ERROR MODAL -->
+<div class="overlay" id="err-modal">
+  <div class="err-box">
+    <div class="err-icon">⚠️</div>
+    <p id="err-msg"></p>
+    <button onclick="document.getElementById('err-modal').classList.remove('open')">OK</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STORAGE HELPERS
+// ══════════════════════════════════════════════
+const OB_KEY = 'fc_cashbook_opening';
+
+function ls(k)  { try { return JSON.parse(localStorage.getItem(k)||'[]'); } catch(e){ return []; } }
+function lso(k) { try { return JSON.parse(localStorage.getItem(k)||'null'); } catch(e){ return null; } }
+
+function getOpeningBal()   { return lso(OB_KEY); }
+function saveOpeningBal(o) { localStorage.setItem(OB_KEY, JSON.stringify(o)); }
+
+function getRevenue()      { return ls('fc_revenue_v2'); }
+function getPurchases()    { return ls('fc_purchases'); }
+function getVendorPmts()   { return ls('fc_vendor_payments'); }
+function getHelpers()      { return ls('fc_day_helpers'); }
+function getAdvances()     { return ls('fc_advances'); }
+function getMiscExp()      { return ls('fc_misc_expenses'); }
+function getFixedCosts()   { return ls('fc_fixed_costs'); }
+function getEmployees()    { return ls('fc_employees'); }
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function today()    { return new Date().toISOString().split('T')[0]; }
+function thisMonth(){ return today().slice(0,7); }
+
+function fmt(n) {
+  return '₹' + Number(n||0).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,dd] = d.split('-');
+  return new Date(y,m-1,dd).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+function monthLabel(ym) {
+  if (!ym) return '';
+  const [y,m] = ym.split('-');
+  return new Date(y,m-1,1).toLocaleString('en-IN', { month:'long', year:'numeric' });
+}
+
+// ══════════════════════════════════════════════
+//  BUILD CASH BOOK ENTRIES
+// ══════════════════════════════════════════════
+/*
+  Returns array of:
+  { date, desc, category, icon, cashIn, cashOut, bankIn, bankOut }
+  Sorted by date ascending.
+*/
+function buildEntries(fromDate, toDate) {
+  const entries = [];
+  const empMap  = {};
+  getEmployees().forEach(e => { empMap[e.id] = e.name || 'Employee'; });
+
+  // ── 1. Revenue (cash & bank inflows) ──
+  getRevenue().forEach(r => {
+    if (!r.date || r.date < fromDate || r.date > toDate) return;
+    const cashIn   = Number(r.dayCash   || 0);
+    const bankIn   = Number(r.dayOnline || 0);
+    const total    = Number(r.grandTotal || 0);
+    // If split is recorded use it; otherwise classify by total only (unknown split)
+    if (cashIn > 0 || bankIn > 0) {
+      if (cashIn > 0) entries.push({ date: r.date, desc: 'Customer Revenue', category: 'revenue', icon: '🍽️', cashIn, cashOut:0, bankIn:0, bankOut:0 });
+      if (bankIn > 0) entries.push({ date: r.date, desc: 'Customer Revenue', category: 'revenue', icon: '🍽️', cashIn:0, cashOut:0, bankIn, bankOut:0 });
+    } else if (total > 0) {
+      // No split recorded — show as "unclassified" cash (note in desc)
+      entries.push({ date: r.date, desc: 'Customer Revenue (split not recorded)', category: 'revenue', icon: '🍽️', cashIn: total, cashOut:0, bankIn:0, bankOut:0 });
+    }
+  });
+
+  // ── 2. Purchases (deduped by batchId) ──
+  const batches = {};
+  getPurchases().forEach(p => {
+    if (!p.date || p.date < fromDate || p.date > toDate) return;
+    if (p.type === 'opening') return; // stock opening, not a cash movement
+    const key = p.batchId || p.id;
+    if (!batches[key]) batches[key] = { ...p, batchTotal: 0 };
+    batches[key].batchTotal += Number(p.vendorTotal || p.total || 0);
+  });
+  Object.values(batches).forEach(b => {
+    const total    = b.batchTotal;
+    const cashPaid = Number(b.cashPaid || 0);
+    const vendor   = b.vendor || 'Vendor';
+    if (b.type === 'credit') {
+      if (cashPaid > 0) {
+        entries.push({ date: b.date, desc: `Purchase — ${vendor}`, category: 'purchase', icon: '🛒', cashIn:0, cashOut: cashPaid, bankIn:0, bankOut:0 });
+      }
+      // creditAmt is NOT a cash/bank movement at purchase time; handled by vendor payments
+    } else if (b.payMethod === 'cash') {
+      entries.push({ date: b.date, desc: `Purchase — ${vendor}`, category: 'purchase', icon: '🛒', cashIn:0, cashOut: total, bankIn:0, bankOut:0 });
+    } else if (b.payMethod === 'online') {
+      entries.push({ date: b.date, desc: `Purchase — ${vendor}`, category: 'purchase', icon: '🛒', cashIn:0, cashOut:0, bankIn:0, bankOut: total });
+    }
+    // else: no payment method recorded → skip
+  });
+
+  // ── 3. Vendor payments (credit purchase settlements) ──
+  getVendorPmts().forEach(vp => {
+    if (!vp.date || vp.date < fromDate || vp.date > toDate) return;
+    const amt = Number(vp.amount || 0);
+    if (amt <= 0) return;
+    const vendor = vp.vendor || 'Vendor';
+    if (vp.method === 'cash') {
+      entries.push({ date: vp.date, desc: `Vendor Payment — ${vendor}`, category: 'vendor', icon: '🏪', cashIn:0, cashOut: amt, bankIn:0, bankOut:0 });
+    } else if (vp.method === 'online') {
+      entries.push({ date: vp.date, desc: `Vendor Payment — ${vendor}`, category: 'vendor', icon: '🏪', cashIn:0, cashOut:0, bankIn:0, bankOut: amt });
+    }
+  });
+
+  // ── 4. Day helper wages (default cash — no mode tracked in payroll) ──
+  getHelpers().forEach(h => {
+    if (!h.date || h.date < fromDate || h.date > toDate) return;
+    const amt = Number(h.wage || 0);
+    if (amt <= 0) return;
+    const mode = h.payMode || 'cash'; // default cash
+    entries.push({ date: h.date, desc: `Helper Wages — ${h.section||h.note||'Helper'}`, category: 'wages', icon: '👷', cashIn:0, cashOut: mode==='cash'?amt:0, bankIn:0, bankOut: mode==='online'?amt:0 });
+  });
+
+  // ── 5. Salary advances ──
+  getAdvances().forEach(a => {
+    if (!a.date || a.date < fromDate || a.date > toDate) return;
+    const amt = Number(a.amount || 0);
+    if (amt <= 0) return;
+    const mode    = a.payMethod || 'cash';
+    const empName = empMap[a.empId] || 'Employee';
+    entries.push({ date: a.date, desc: `Salary Advance — ${empName}`, category: 'wages', icon: '💰', cashIn:0, cashOut: mode==='cash'?amt:0, bankIn:0, bankOut: mode==='online'?amt:0 });
+  });
+
+  // ── 6. Variable misc expenses (paid & advance — both move cash) ──
+  getMiscExp().forEach(e => {
+    const ps = e.payStatus || 'paid';
+    if (ps === 'unpaid') return;
+    const pm = e.payMode;
+    if (!pm) return; // old entry without mode info — skip
+    const amt = Number(e.amt || 0);
+    if (amt <= 0) return;
+    const isAdv = ps === 'chit';
+    if (e.scope === 'daily') {
+      if (!e.date || e.date < fromDate || e.date > toDate) return;
+      entries.push({ date: e.date, desc: (isAdv ? 'Chit Fund — ' : 'Expense — ') + e.desc, category: isAdv?'chit':'expense', icon: isAdv?'🏦':'💸', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
+    } else if (e.scope === 'monthly') {
+      // Place on 1st of the month
+      const firstDay = (e.month||'') + '-01';
+      if (!firstDay || firstDay < fromDate || firstDay > toDate) return;
+      entries.push({ date: firstDay, desc: (isAdv ? 'Chit Fund — ' : 'Monthly Expense — ') + e.desc, category: isAdv?'chit':'expense', icon: isAdv?'🏦':'💸', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
+    }
+  });
+
+  // ── 7. Fixed overhead payments (placed on 1st of month) ──
+  getFixedCosts().forEach(c => {
+    if (!c.monthly) return;
+    Object.entries(c.monthly).forEach(([ym, raw]) => {
+      const firstDay = ym + '-01';
+      if (firstDay < fromDate || firstDay > toDate) return;
+      const entry = typeof raw === 'number'
+        ? { amt: raw, payStatus: 'paid', payMode: null }
+        : raw;
+      if (!entry || entry.payStatus === 'unpaid') return;
+      const pm  = entry.payMode;
+      if (!pm) return; // old entry, no mode
+      const amt = Number(entry.amt || 0);
+      if (amt <= 0) return;
+      entries.push({ date: firstDay, desc: `Fixed Overhead — ${c.name}`, category: 'fixed', icon: '🏢', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
+    });
+  });
+
+  // Sort chronologically
+  entries.sort((a,b) => a.date.localeCompare(b.date));
+  return entries;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER OPENING BALANCE SECTION
+// ══════════════════════════════════════════════
+let _editingOB = false;
+
+function renderOBSection() {
+  const ob  = getOpeningBal();
+  const el  = document.getElementById('ob-section');
+  if (!ob || _editingOB) {
+    el.innerHTML = `
+    <div class="ob-setup">
+      <h3>📌 Set Opening Balance</h3>
+      <p>Enter your current cash in hand and bank balance to start tracking. You only do this once.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cash in Hand ₹</label>
+          <input type="number" id="ob-cash" placeholder="0" min="0" step="0.01" value="${ob?.cash||''}">
+        </div>
+        <div class="form-group">
+          <label>Bank Balance ₹</label>
+          <input type="number" id="ob-bank" placeholder="0" min="0" step="0.01" value="${ob?.bank||''}">
+        </div>
+        <div class="form-group">
+          <label>As of Date</label>
+          <input type="date" id="ob-date" value="${ob?.date||today()}">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="saveOB()">💾 Save Opening Balance</button>
+        ${ob ? `<button class="btn-ghost" onclick="_editingOB=false;renderOBSection()">Cancel</button>` : ''}
+      </div>
+    </div>`;
+  } else {
+    el.innerHTML = `
+    <div class="ob-bar">
+      <div class="ob-bar-info">📌 Opening balance as of ${fmtDate(ob.date)}</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div class="ob-bar-vals">
+          <span>💵 ${fmt(ob.cash)}</span>
+          <span>💳 ${fmt(ob.bank)}</span>
+        </div>
+        <button class="btn-ghost" style="padding:5px 12px;font-size:.75rem" onclick="_editingOB=true;renderOBSection()">✏️ Edit</button>
+      </div>
+    </div>`;
+  }
+}
+
+function saveOB() {
+  const cash = parseFloat(document.getElementById('ob-cash').value) || 0;
+  const bank = parseFloat(document.getElementById('ob-bank').value) || 0;
+  const date = document.getElementById('ob-date').value;
+  if (!date) { showErr('Please select a date.'); return; }
+  saveOpeningBal({ cash, bank, date });
+  _editingOB = false;
+  renderPage();
+  toast('✅ Opening balance saved');
+}
+
+// ══════════════════════════════════════════════
+//  CALCULATE CURRENT BALANCE
+// ══════════════════════════════════════════════
+function calcCurrentBalance() {
+  const ob = getOpeningBal();
+  if (!ob) return { cash: 0, bank: 0 };
+  const entries = buildEntries(ob.date, today());
+  let cash = ob.cash;
+  let bank = ob.bank;
+  entries.forEach(e => {
+    cash += e.cashIn  - e.cashOut;
+    bank += e.bankIn  - e.bankOut;
+  });
+  return { cash, bank };
+}
+
+// ══════════════════════════════════════════════
+//  RENDER BALANCE CARDS
+// ══════════════════════════════════════════════
+function renderBalanceCards() {
+  const ob = getOpeningBal();
+  const { cash, bank } = calcCurrentBalance();
+  const cashEl  = document.getElementById('bal-cash');
+  const bankEl  = document.getElementById('bal-bank');
+  const cSince  = document.getElementById('bal-cash-since');
+  const bSince  = document.getElementById('bal-bank-since');
+
+  cashEl.textContent = fmt(cash);
+  bankEl.textContent = fmt(bank);
+  cashEl.className   = 'bal-amount ' + (cash >= 0 ? 'positive' : 'negative');
+  bankEl.className   = 'bal-amount ' + (bank >= 0 ? 'positive' : 'negative');
+
+  if (ob) {
+    const since = `Since ${fmtDate(ob.date)}`;
+    cSince.textContent = since;
+    bSince.textContent = since;
+  } else {
+    cSince.textContent = 'Set opening balance below';
+    bSince.textContent = 'Set opening balance below';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RENDER MONTHLY SUMMARY
+// ══════════════════════════════════════════════
+function renderMonthlySummary(entries) {
+  const el = document.getElementById('monthly-summary');
+  if (!entries.length) { el.innerHTML = ''; return; }
+
+  let cashIn=0, cashOut=0, bankIn=0, bankOut=0;
+  entries.forEach(e => { cashIn+=e.cashIn; cashOut+=e.cashOut; bankIn+=e.bankIn; bankOut+=e.bankOut; });
+  const netCash = cashIn - cashOut;
+  const netBank = bankIn - bankOut;
+
+  el.innerHTML = `
+  <div class="summary-grid">
+    <div class="sum-box">
+      <div class="sum-box-title">💵 Cash Movement</div>
+      <div class="sum-row"><span>Inflow</span><span class="sum-in">+${fmt(cashIn)}</span></div>
+      <div class="sum-row"><span>Outflow</span><span class="sum-out">−${fmt(cashOut)}</span></div>
+      <div class="sum-row sum-net"><span>Net</span><span style="color:${netCash>=0?'var(--green-dark)':'var(--red)';}">${netCash>=0?'+':''}${fmt(netCash)}</span></div>
+    </div>
+    <div class="sum-box">
+      <div class="sum-box-title">💳 Bank Movement</div>
+      <div class="sum-row"><span>Inflow</span><span class="sum-in">+${fmt(bankIn)}</span></div>
+      <div class="sum-row"><span>Outflow</span><span class="sum-out">−${fmt(bankOut)}</span></div>
+      <div class="sum-row sum-net"><span>Net</span><span style="color:${netBank>=0?'var(--green-dark)':'var(--red)';}">${netBank>=0?'+':''}${fmt(netBank)}</span></div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER LEDGER
+// ══════════════════════════════════════════════
+const CAT_CFG = {
+  revenue:  { label:'Revenue',        cls:'badge-revenue'  },
+  purchase: { label:'Purchase',       cls:'badge-purchase' },
+  vendor:   { label:'Vendor Payment', cls:'badge-vendor'   },
+  wages:    { label:'Helper Wages',   cls:'badge-wages'    },
+  chit:     { label:'Chit Fund',      cls:'badge-chit'     },
+  expense:  { label:'Expense',        cls:'badge-expense'  },
+  fixed:    { label:'Fixed Cost',     cls:'badge-fixed'    },
+};
+
+function renderLedger(monthEntries) {
+  const ob = getOpeningBal();
+  const el = document.getElementById('ledger');
+  const cnt = document.getElementById('ledger-count');
+  const ym  = document.getElementById('ledger-month').value;
+
+  cnt.textContent = monthEntries.length + ' transaction' + (monthEntries.length!==1?'s':'');
+
+  if (!monthEntries.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No transactions recorded for ${monthLabel(ym)||'this period'}.</p></div>`;
+    return;
+  }
+
+  // Calculate running balance up to start of selected month
+  let runCash = ob ? ob.cash : 0;
+  let runBank = ob ? ob.bank : 0;
+  if (ob) {
+    const allBefore = buildEntries(ob.date, (ym+'-00')); // entries strictly before this month
+    allBefore.forEach(e => {
+      runCash += e.cashIn - e.cashOut;
+      runBank += e.bankIn - e.bankOut;
+    });
+  }
+
+  // Group by date
+  const groups = {};
+  monthEntries.forEach(e => {
+    if (!groups[e.date]) groups[e.date] = [];
+    groups[e.date].push(e);
+  });
+
+  let html = '<div class="ledger-wrap">';
+  Object.keys(groups).sort().forEach(date => {
+    const dayEntries = groups[date];
+    let dayCashIn=0, dayCashOut=0, dayBankIn=0, dayBankOut=0;
+    dayEntries.forEach(e => { dayCashIn+=e.cashIn; dayCashOut+=e.cashOut; dayBankIn+=e.bankIn; dayBankOut+=e.bankOut; });
+    const dayCashNet = dayCashIn - dayCashOut;
+    const dayBankNet = dayBankIn - dayBankOut;
+
+    html += `<div class="date-grp-head">
+      <span class="date-grp-label">${fmtDate(date)}</span>
+      <span class="date-grp-net" style="font-size:.71rem;color:var(--sub)">
+        ${dayCashNet!==0?`💵 <span style="color:${dayCashNet>0?'var(--green-dark)':'var(--red)'}">${dayCashNet>0?'+':''}${fmt(dayCashNet)}</span>`:''}
+        ${dayBankNet!==0?`💳 <span style="color:${dayBankNet>0?'var(--green-dark)':'var(--red)'}">${dayBankNet>0?'+':''}${fmt(dayBankNet)}</span>`:''}
+      </span>
+    </div>`;
+
+    dayEntries.forEach(e => {
+      const cfg  = CAT_CFG[e.category] || { label: e.category, cls: 'badge-expense' };
+      const isIn = e.cashIn > 0 || e.bankIn > 0;
+      const amt  = e.cashIn || e.cashOut || e.bankIn || e.bankOut;
+      const mode = (e.cashIn > 0 || e.cashOut > 0) ? '💵 Cash' : '💳 Bank';
+
+      html += `<div class="entry-row">
+        <div class="entry-icon">${e.icon}</div>
+        <div class="entry-main">
+          <div class="entry-desc">${e.desc}</div>
+          <span class="entry-badge ${cfg.cls}">${cfg.label}</span>
+        </div>
+        <div class="entry-right">
+          <div class="entry-amount ${isIn?'in':'out'}">${isIn?'+':'−'}${fmt(amt)}</div>
+          <div class="entry-mode">${mode}</div>
+        </div>
+      </div>`;
+    });
+
+    // Update running balance after day's entries
+    runCash += dayCashIn - dayCashOut;
+    runBank += dayBankIn - dayBankOut;
+
+    html += `<div class="day-balance-bar">
+      <span class="day-bal-lbl">End of day</span>
+      <div class="day-bal-vals">
+        <span>💵 ${fmt(runCash)}</span>
+        <span>💳 ${fmt(runBank)}</span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  MAIN RENDER
+// ══════════════════════════════════════════════
+function renderPage() {
+  const ob = getOpeningBal();
+  const ym = document.getElementById('ledger-month').value;
+
+  renderBalanceCards();
+  renderOBSection();
+
+  if (!ob) {
+    document.getElementById('monthly-summary').innerHTML = '';
+    document.getElementById('ledger').innerHTML = `<div class="empty"><div class="empty-icon">📌</div><p>Set your opening balance above to start tracking.</p></div>`;
+    document.getElementById('ledger-count').textContent = '';
+    return;
+  }
+
+  // Build entries for selected month only
+  const monthStart = ym + '-01';
+  const monthEnd   = ym + '-31'; // safe upper bound (no month has >31 days)
+  const monthEntries = buildEntries(monthStart, monthEnd);
+
+  renderMonthlySummary(monthEntries);
+  renderLedger(monthEntries);
+}
+
+// ══════════════════════════════════════════════
+//  ERROR / TOAST
+// ══════════════════════════════════════════════
+function showErr(msg) { document.getElementById('err-msg').textContent=msg; document.getElementById('err-modal').classList.add('open'); }
+let _t;
+function toast(msg) { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_t); _t=setTimeout(()=>el.classList.remove('show'),2800); }
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+fcInit(function() {
+  document.getElementById('ledger-month').value = thisMonth();
+  renderPage();
+  document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('err-modal').classList.remove('open'); });
+});
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body>
+</html>

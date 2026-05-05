@@ -483,12 +483,16 @@ const MODULES = [
     metaFn:()=>{ const fx=JSON.parse(localStorage.getItem('fc_fixed_costs')||'[]'); const misc=JSON.parse(localStorage.getItem('fc_misc_expenses')||'[]'); return `${fx.length} fixed · ${misc.length} variable entries`; },
     badgeFn:()=>({text:'Expenses',bg:'#fef3c7',color:'#92400e'})
   },
+  { cfgId:'cashbook', file:'cashbook.html',   icon:'💰', iconBg:'#dcfce7', name:'Cash Book',
+    metaFn:()=>{ const ob=JSON.parse(localStorage.getItem('fc_cashbook_opening')||'null'); return ob?`Since ${ob.date}`:'Opening balance not set'; },
+    badgeFn:()=>({text:'Cash & Bank',bg:'#dcfce7',color:'#065f46'})
+  },
 ];
 
 const DEFAULT_CONFIG = {
-  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit' },
-  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit' },
-  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none', expenses:'none' },
+  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit', cashbook:'edit' },
+  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit', cashbook:'none' },
+  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none', expenses:'none', cashbook:'none' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -519,12 +523,18 @@ function monthPnl() {
   const revAll=getRevenue(), usageAll=getDailyUsage();
   const helpers=ls('fc_day_helpers'), emps=getEmployees(), attAll=getAttendance();
   const purAll=getPurchases();
-  // Fixed costs — honour per-month overrides
-  const fixedMonthly=getFixedCosts().reduce((s,c)=>s+((c.monthly&&c.monthly[ym]!=null)?c.monthly[ym]:(c.amount||0)),0);
-  // Misc expenses for month
+  // Fixed costs — honour per-month overrides; handle new object format {amt,payStatus,payMode}; exclude advances
+  const fixedMonthly=getFixedCosts().reduce((s,c)=>{
+    const raw=c.monthly&&c.monthly[ym]!=null?c.monthly[ym]:null;
+    if(raw===null) return s+(c.amount||0); // no override → use default
+    if(typeof raw==='number') return s+raw; // old plain-number format
+    if(raw.payStatus==='chit') return s; // advance doesn't hit P&L
+    return s+(raw.amt||0);
+  },0);
+  // Misc expenses for month — exclude advances from P&L
   const miscAll=getMiscExp();
-  const miscMonthly=miscAll.filter(e=>e.scope==='daily'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0)
-                  +miscAll.filter(e=>e.scope==='monthly'&&e.month===ym).reduce((s,e)=>s+(e.amt||0),0);
+  const miscMonthly=miscAll.filter(e=>e.scope==='daily'&&e.month===ym&&(e.payStatus||'paid')!=='chit').reduce((s,e)=>s+(e.amt||0),0)
+                  +miscAll.filter(e=>e.scope==='monthly'&&e.month===ym&&(e.payStatus||'paid')!=='chit').reduce((s,e)=>s+(e.amt||0),0);
   // Transport from purchases (deduplicated by batchId)
   const seenBatch=new Set();
   let transportMonthly=0;

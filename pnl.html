@@ -577,23 +577,26 @@ function salaryForDates(dates) {
 }
 
 /* Fixed costs — prorated for a single date */
+/* Resolve fixed cost amount for a month, handling old (number) and new (object) formats.
+   Advances are excluded from P&L. */
+function _fcAmt(c, ym) {
+  const raw = c.monthly && c.monthly[ym] != null ? c.monthly[ym] : null;
+  if (raw === null) return c.amount || 0;           // no override → default
+  if (typeof raw === 'number') return raw;           // old plain-number format
+  if (raw.payStatus === 'chit') return 0;         // advance → not a P&L expense
+  return raw.amt || 0;
+}
+
 function fixedCostForDate(date) {
   const ym = date.substring(0,7);
   const dim = daysInMonth(ym);
   const costs = getFixedCosts();
-  const monthly = costs.reduce((s,c) => {
-    const amt = (c.monthly && c.monthly[ym] != null) ? c.monthly[ym] : (c.amount || 0);
-    return s + amt;
-  }, 0);
+  const monthly = costs.reduce((s,c) => s + _fcAmt(c, ym), 0);
   return { total: monthly / dim, monthly, items: costs };
 }
 
 function fixedCostForMonth(ym) {
-  const costs = getFixedCosts();
-  return costs.reduce((s,c) => {
-    const amt = (c.monthly && c.monthly[ym] != null) ? c.monthly[ym] : (c.amount || 0);
-    return s + amt;
-  }, 0);
+  return getFixedCosts().reduce((s,c) => s + _fcAmt(c, ym), 0);
 }
 
 /* Transport costs from purchases on a given date */
@@ -657,12 +660,13 @@ function miscExpForDate(date) {
   const all = getMiscExp();
   let total = 0;
   const detail = [];
-  all.filter(e => e.scope === 'daily' && e.date === date).forEach(e => {
+  // Exclude advances — they are not P&L expenses
+  all.filter(e => e.scope === 'daily' && e.date === date && (e.payStatus||'paid') !== 'chit').forEach(e => {
     const amt = Number(e.amt||0);
     total += amt;
     detail.push({ desc: e.desc || '—', amt, scope: 'Daily' });
   });
-  all.filter(e => e.scope === 'monthly' && e.month === ym).forEach(e => {
+  all.filter(e => e.scope === 'monthly' && e.month === ym && (e.payStatus||'paid') !== 'chit').forEach(e => {
     const amt = Number(e.amt||0) / dim;
     total += amt;
     detail.push({ desc: e.desc || '—', amt, scope: 'Monthly (prorated)' });
@@ -676,13 +680,13 @@ function miscExpForDates(dates) {
   const months = [...new Set(dates.map(d=>d.slice(0,7)))];
   let total = 0;
   const descMap = {};
-  all.filter(e => e.scope === 'daily' && e.date && dateSet.has(e.date)).forEach(e => {
+  all.filter(e => e.scope === 'daily' && e.date && dateSet.has(e.date) && (e.payStatus||'paid') !== 'chit').forEach(e => {
     const amt = Number(e.amt||0);
     total += amt;
     descMap[e.desc] = (descMap[e.desc]||0) + amt;
   });
   for (const ym of months) {
-    all.filter(e => e.scope === 'monthly' && e.month === ym).forEach(e => {
+    all.filter(e => e.scope === 'monthly' && e.month === ym && (e.payStatus||'paid') !== 'chit').forEach(e => {
       const amt = Number(e.amt||0);
       total += amt;
       descMap[e.desc] = (descMap[e.desc]||0) + amt;
@@ -692,12 +696,12 @@ function miscExpForDates(dates) {
   return { total, detail };
 }
 
-/* Misc expenses total for a full month */
+/* Misc expenses total for a full month — advances excluded */
 function miscExpForMonth(ym) {
   const all = getMiscExp();
   let total = 0;
-  all.filter(e => e.scope === 'daily'   && e.month === ym).forEach(e => total += Number(e.amt||0));
-  all.filter(e => e.scope === 'monthly' && e.month === ym).forEach(e => total += Number(e.amt||0));
+  all.filter(e => e.scope === 'daily'   && e.month === ym && (e.payStatus||'paid') !== 'chit').forEach(e => total += Number(e.amt||0));
+  all.filter(e => e.scope === 'monthly' && e.month === ym && (e.payStatus||'paid') !== 'chit').forEach(e => total += Number(e.amt||0));
   return total;
 }
 
@@ -887,10 +891,13 @@ function ddSalary(detail, isAgg) {
 function ddFixed(costs, ym) {
   if (!costs || !costs.length) return `<div class="drill-empty">No fixed costs configured</div>`;
   return `<table>
-    <tr class="dd-header"><td>Item</td><td>Monthly</td><td>This Period</td></tr>
+    <tr class="dd-header"><td>Item</td><td>Monthly</td><td>Status</td></tr>
     ${costs.map(c=>{
-      const monthly = (c.monthly&&c.monthly[ym]!=null)?c.monthly[ym]:(c.amount||0);
-      return `<tr><td>${c.name||'—'}</td><td>${fmt(monthly)}</td><td>${fmt(monthly)}</td></tr>`;
+      const monthly = _fcAmt(c, ym);
+      const raw = c.monthly && c.monthly[ym] != null ? c.monthly[ym] : null;
+      const ps = (raw && typeof raw === 'object') ? raw.payStatus : (monthly > 0 ? 'paid' : '—');
+      const psLabel = {paid:'✅ Paid',unpaid:'⏳ Unpaid',advance:'↗️ Advance'}[ps] || ps;
+      return `<tr><td>${c.name||'—'}</td><td>${fmt(monthly)}</td><td style="text-align:right;font-size:11px">${psLabel}</td></tr>`;
     }).join('')}
   </table>`;
 }

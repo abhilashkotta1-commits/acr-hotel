@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="db.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset App Data</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .card{background:#1e293b;border-radius:16px;padding:28px 24px;max-width:420px;width:100%;border:1px solid #334155;}
+    h1{font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;}
+    .subtitle{font-size:13px;color:#64748b;margin-bottom:24px;}
+    .section{margin-bottom:18px;}
+    .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
+    .section-title.red{color:#f87171;}
+    .section-title.green{color:#4ade80;}
+    .item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;font-size:12px;margin-bottom:4px;}
+    .item.clear{background:#7f1d1d22;color:#fca5a5;border:1px solid #7f1d1d55;}
+    .item.keep{background:#14532d22;color:#86efac;border:1px solid #14532d55;}
+    .item-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+    .item-dot.red{background:#f87171;}
+    .item-dot.green{background:#4ade80;}
+    .warning{background:#78350f22;border:1px solid #92400e;border-radius:10px;padding:12px 14px;font-size:12px;color:#fbbf24;margin-bottom:20px;line-height:1.5;}
+    .confirm-section{margin-bottom:20px;}
+    label{font-size:12px;color:#94a3b8;display:block;margin-bottom:6px;}
+    input{width:100%;background:#0f172a;border:1.5px solid #334155;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none;letter-spacing:2px;}
+    input:focus{border-color:#3b82f6;}
+    input.error{border-color:#ef4444;}
+    .btn{width:100%;padding:14px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border:none;transition:background .15s;}
+    .btn-reset{background:#ef4444;color:#fff;}
+    .btn-reset:hover{background:#dc2626;}
+    .btn-reset:disabled{background:#374151;color:#6b7280;cursor:not-allowed;}
+    .btn-back{background:#1e293b;color:#94a3b8;border:1px solid #334155;margin-top:10px;}
+    .btn-back:hover{background:#334155;}
+    .error-msg{font-size:12px;color:#f87171;margin-top:6px;min-height:18px;}
+    .success{display:none;text-align:center;padding:20px 0;}
+    .success-icon{font-size:48px;margin-bottom:12px;}
+    .success h2{font-size:18px;font-weight:800;color:#4ade80;margin-bottom:6px;}
+    .success p{font-size:13px;color:#64748b;}
+    #progress{display:none;margin-bottom:16px;}
+    .prog-bar{height:6px;background:#334155;border-radius:99px;overflow:hidden;margin-top:6px;}
+    .prog-fill{height:100%;background:#3b82f6;border-radius:99px;width:0;transition:width .3s;}
+    .prog-label{font-size:11px;color:#64748b;margin-top:4px;}
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <!-- Main view -->
+  <div id="mainView">
+    <h1>🗑️ Reset App Data</h1>
+    <p class="subtitle">Clear all test data and start fresh. Your configuration is kept safely.</p>
+
+    <div class="section">
+      <div class="section-title red">❌ Will be cleared</div>
+      <div class="item clear"><div class="item-dot red"></div>All purchases & opening balances</div>
+      <div class="item clear"><div class="item-dot red"></div>All daily usage records</div>
+      <div class="item clear"><div class="item-dot red"></div>All revenue entries</div>
+      <div class="item clear"><div class="item-dot red"></div>All attendance records</div>
+      <div class="item clear"><div class="item-dot red"></div>All vendor payments</div>
+      <div class="item clear"><div class="item-dot red"></div>All day helper wages</div>
+      <div class="item clear"><div class="item-dot red"></div>All misc expenses</div>
+      <div class="item clear"><div class="item-dot red"></div>All salary advances</div>
+      <div class="item clear"><div class="item-dot red"></div>Item stock quantities → reset to 0</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title green">✅ Will be kept</div>
+      <div class="item keep"><div class="item-dot green"></div>Item catalog (names, prices, units)</div>
+      <div class="item keep"><div class="item-dot green"></div>Vendor list</div>
+      <div class="item keep"><div class="item-dot green"></div>Employee list & salaries</div>
+      <div class="item keep"><div class="item-dot green"></div>Fixed costs configuration</div>
+      <div class="item keep"><div class="item-dot green"></div>Role PINs & permissions</div>
+    </div>
+
+    <div class="warning">
+      ⚠️ <strong>This cannot be undone.</strong> Once reset, all historical data will be permanently deleted from both the app and the cloud database. Make sure you have exported any reports you need before proceeding.
+    </div>
+
+    <div class="confirm-section">
+      <label>Type <strong style="color:#fff;letter-spacing:1px">RESET</strong> to confirm</label>
+      <input type="text" id="confirmInput" placeholder="Type RESET here" oninput="onConfirmInput()" autocomplete="off">
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div id="progress">
+      <div class="prog-label" id="progLabel">Clearing data…</div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <button class="btn btn-reset" id="resetBtn" disabled onclick="doReset()">🗑️ Reset All Data</button>
+    <button class="btn btn-back" onclick="window.location.href='index.html'">← Back to App</button>
+  </div>
+
+  <!-- Success view -->
+  <div class="success" id="successView">
+    <div class="success-icon">✅</div>
+    <h2>Reset Complete</h2>
+    <p>All transactional data has been cleared.<br>Your configuration is intact and ready to use.</p>
+    <br>
+    <button class="btn btn-reset" style="background:#10b981" onclick="window.location.href='index.html'">Open App →</button>
+  </div>
+
+</div>
+
+<script>
+function onConfirmInput() {
+  const val = document.getElementById('confirmInput').value;
+  const btn = document.getElementById('resetBtn');
+  const err = document.getElementById('errorMsg');
+  if (val === 'RESET') {
+    btn.disabled = false;
+    err.textContent = '';
+    document.getElementById('confirmInput').classList.remove('error');
+  } else {
+    btn.disabled = true;
+    if (val.length > 0 && val !== 'RESET'.slice(0, val.length)) {
+      err.textContent = 'Type exactly: RESET';
+      document.getElementById('confirmInput').classList.add('error');
+    } else {
+      err.textContent = '';
+    }
+  }
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progLabel').textContent = label;
+}
+
+async function doReset() {
+  if (document.getElementById('confirmInput').value !== 'RESET') return;
+
+  // Disable button, show progress
+  document.getElementById('resetBtn').disabled = true;
+  document.getElementById('confirmInput').disabled = true;
+  document.getElementById('progress').style.display = 'block';
+
+  // Keys to clear completely
+  const clearKeys = [
+    'fc_purchases',
+    'fc_daily_usage',
+    'fc_revenue_v2',
+    'fc_attendance',
+    'fc_vendor_payments',
+    'fc_day_helpers',
+    'fc_misc_expenses',
+    'fc_advances',
+  ];
+
+  const total = clearKeys.length + 1; // +1 for items qty reset
+  let done = 0;
+
+  for (const key of clearKeys) {
+    setProgress(Math.round((done / total) * 100), `Clearing ${key}…`);
+    localStorage.setItem(key, JSON.stringify([]));
+    done++;
+    await sleep(120); // small delay so Supabase sync can keep up
+  }
+
+  // Reset item stock quantities to 0 (keep the catalog)
+  setProgress(Math.round((done / total) * 100), 'Resetting stock quantities…');
+  try {
+    const items = JSON.parse(localStorage.getItem('fc_items_v2') || '[]');
+    const reset = items.map(it => ({ ...it, qty: 0 }));
+    localStorage.setItem('fc_items_v2', JSON.stringify(reset));
+  } catch(e) { console.warn('Could not reset item quantities', e); }
+  done++;
+
+  setProgress(100, 'Finalising…');
+  await sleep(600);
+
+  // Show success
+  document.getElementById('mainView').style.display = 'none';
+  document.getElementById('successView').style.display = 'block';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>

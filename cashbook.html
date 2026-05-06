@@ -552,13 +552,13 @@ function renderMonthlySummary(entries) {
       <div class="sum-box-title">💵 Cash Movement</div>
       <div class="sum-row"><span>Inflow</span><span class="sum-in">+${fmt(cashIn)}</span></div>
       <div class="sum-row"><span>Outflow</span><span class="sum-out">−${fmt(cashOut)}</span></div>
-      <div class="sum-row sum-net"><span>Net</span><span style="color:${netCash>=0?'var(--green-dark)':'var(--red)';}">${netCash>=0?'+':''}${fmt(netCash)}</span></div>
+      <div class="sum-row sum-net"><span>Net</span><span style="color:${netCash>=0?'var(--green-dark)':'var(--red)'}">${netCash>=0?'+':''}${fmt(netCash)}</span></div>
     </div>
     <div class="sum-box">
       <div class="sum-box-title">💳 Bank Movement</div>
       <div class="sum-row"><span>Inflow</span><span class="sum-in">+${fmt(bankIn)}</span></div>
       <div class="sum-row"><span>Outflow</span><span class="sum-out">−${fmt(bankOut)}</span></div>
-      <div class="sum-row sum-net"><span>Net</span><span style="color:${netBank>=0?'var(--green-dark)':'var(--red)';}">${netBank>=0?'+':''}${fmt(netBank)}</span></div>
+      <div class="sum-row sum-net"><span>Net</span><span style="color:${netBank>=0?'var(--green-dark)':'var(--red)'}">${netBank>=0?'+':''}${fmt(netBank)}</span></div>
     </div>
   </div>`;
 }

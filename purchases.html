@@ -1685,7 +1685,10 @@ function populateVobVendorDropdown(){
   if(!sel) return;
   const vendors = getVendors();
   sel.innerHTML = '<option value="">— Select vendor —</option>' +
-    vendors.map(v=>`<option value="${v}">${v}</option>`).join('');
+    vendors.map(v=>{
+      const name = typeof v === 'string' ? v : (v.name || v.id || '');
+      return `<option value="${name}">${name}</option>`;
+    }).join('');
 }
 
 function renderVobList(){

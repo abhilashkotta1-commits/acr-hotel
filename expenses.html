@@ -174,7 +174,8 @@
     .badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; font-size:.68rem; font-weight:700; }
     .badge-unpaid  { background:var(--orange-soft); color:#92400e; }
     .badge-paid    { background:var(--green-soft);  color:#065f46; }
-    .badge-chit { background:#eef2ff; color:#3730a3; }
+    .badge-chit    { background:#eef2ff; color:#3730a3; }
+    .badge-partial { background:#fff7ed; color:#92400e; border:1px solid #fed7aa; }
     .badge-cash    { background:#fef9c3; color:#854d0e; }
     .badge-online  { background:#e0f2fe; color:#075985; }
 
@@ -754,20 +755,36 @@ function deleteVarExpense(id) {
 // ══════════════════════════════════════════════
 //  VARIABLE EXPENSES — RENDER
 // ══════════════════════════════════════════════
-function payStatusBadge(payStatus, payMode) {
+function payStatusBadge(payStatus, payMode, remainingAmt) {
   const ps = payStatus || 'paid';
   const pm = payMode || null;
   const cfg = {
-    paid:    { cls:'badge-paid',    label:'✅ Paid'    },
-    unpaid:  { cls:'badge-unpaid',  label:'⏳ Unpaid'  },
-    chit: { cls:'badge-chit', label:'🏦 Chit Fund' }
+    paid:    { cls:'badge-paid',    label:'✅ Paid'      },
+    unpaid:  { cls:'badge-unpaid',  label:'⏳ Unpaid'    },
+    partial: { cls:'badge-partial', label:'🔸 Partial'   },
+    chit:    { cls:'badge-chit',    label:'🏦 Chit Fund' }
   };
   const { cls, label } = cfg[ps] || cfg.paid;
-  let html = `<span class="badge ${cls}">${label}</span>`;
-  if (pm) {
+  const extra = (ps === 'partial' && remainingAmt != null) ? ` · ${fmt(remainingAmt)} due` : '';
+  let html = `<span class="badge ${cls}">${label}${extra}</span>`;
+  if (pm && ps !== 'unpaid') {
     html += ` <span class="badge ${pm==='cash'?'badge-cash':'badge-online'}">${pm==='cash'?'💵 Cash':'💳 Online'}</span>`;
   }
   return html;
+}
+
+// Total paid so far on a variable expense record
+function varRemaining(e) {
+  const paid = (e.payments||[]).reduce((s,p) => s + Number(p.amount||0), 0);
+  return Math.max(0, (e.amt||0) - paid);
+}
+
+// Remaining balance on a fixed cost monthly entry
+function fcEntryRemaining(cost, ym) {
+  const entry   = getMonthlyEntry(cost, ym);
+  const fullAmt = entry._isDefault ? (cost.amount||0) : (entry.amt||0);
+  const paid    = (entry.payments||[]).reduce((s,p) => s + Number(p.amount||0), 0);
+  return Math.max(0, fullAmt - paid);
 }
 
 function renderVarList() {
@@ -805,21 +822,25 @@ function renderVarList() {
         <span style="font-size:.8rem;font-weight:800;color:var(--red)">${fmt(total)}</span>
       </div>
       <div class="exp-list">
-        ${items.map(e => `
+        ${items.map(e => {
+          const ps  = e.payStatus || 'paid';
+          const rem = ps === 'partial' ? varRemaining(e) : null;
+          return `
         <div class="exp-item">
           <div class="exp-item-info">
             <div class="exp-item-desc">${e.desc}</div>
             <div class="exp-item-meta">
               <span class="tag-scope ${e.scope==='daily'?'tag-daily':'tag-monthly'}">${e.scope==='daily'?'📅 Daily':'🗓️ Monthly'}</span>
               <span>${e.scope==='daily' ? e.date : monthLabel(e.month)}</span>
-              ${payStatusBadge(e.payStatus, e.payMode)}
+              ${payStatusBadge(e.payStatus, e.payMode, rem)}
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="exp-item-amt">${fmt(e.amt)}</span>
             <button class="btn-del" onclick="deleteVarExpense('${e.id}')">🗑</button>
           </div>
-        </div>`).join('')}
+        </div>`;
+        }).join('')}
       </div>
     </div>`;
   });
@@ -838,41 +859,43 @@ function renderBillsPay() {
   const el = document.getElementById('bills-list');
   const ym = document.getElementById('bills-month').value;
 
-  // ── Unpaid variable expenses ──
-  let unpaidVar = getVar().filter(e => (e.payStatus||'paid') === 'unpaid');
+  // ── Unpaid & partially-paid variable expenses ──
+  let unpaidVar = getVar().filter(e => { const ps = e.payStatus||'paid'; return ps === 'unpaid' || ps === 'partial'; });
   if (ym) unpaidVar = unpaidVar.filter(e => e.month === ym);
 
   // ── Chit Fund payments (variable) ──
   let advances = getVar().filter(e => e.payStatus === 'chit');
   if (ym) advances = advances.filter(e => e.month === ym);
 
-  // ── Unpaid fixed costs ──
+  // ── Unpaid / partial fixed costs ──
   const unpaidFixed = [];
   getFixed().forEach(c => {
-    if (!ym) return; // fixed costs need a month context
+    if (!ym) return;
     const entry = getMonthlyEntry(c, ym);
     if (entry.payStatus === 'paid') return;
     if (entry.payStatus === 'chit') {
-      // collect advances separately
       const amt = entry._isDefault ? (c.amount||0) : (entry.amt||0);
-      if (amt > 0) advances.push({ id: null, desc: c.name+' (fixed)', amt, payMode: entry.payMode, month: ym, scope: 'monthly', _fixedId: c.id, _fixedYm: ym });
+      if (amt > 0) advances.push({ id: null, desc: c.name+' (fixed)', amt, payMode: entry.payMode, month: ym, scope: 'monthly' });
       return;
     }
-    // unpaid
-    const amt = entry._isDefault ? (c.amount||0) : (entry.amt||0);
-    if (amt > 0) unpaidFixed.push({ costId: c.id, name: c.name, ym, amt });
+    if (entry.payStatus === 'unpaid' || entry.payStatus === 'partial') {
+      const fullAmt = entry._isDefault ? (c.amount||0) : (entry.amt||0);
+      const rem     = fcEntryRemaining(c, ym);
+      if (fullAmt > 0) unpaidFixed.push({ costId: c.id, name: c.name, ym, fullAmt, remaining: rem, payments: entry.payments||[] });
+    }
   });
 
-  const totalUnpaid = unpaidVar.reduce((s,e)=>s+e.amt,0) + unpaidFixed.reduce((s,e)=>s+e.amt,0);
-  const totalAdv    = advances.reduce((s,e)=>s+e.amt,0);
+  // Total = sum of REMAINING balances (not original amounts)
+  const totalOutstanding = unpaidVar.reduce((s,e) => s + varRemaining(e), 0)
+                         + unpaidFixed.reduce((s,e) => s + e.remaining, 0);
+  const totalAdv = advances.reduce((s,e) => s + e.amt, 0);
 
   let html = '';
 
-  // Outstanding total banner
-  if (totalUnpaid > 0) {
+  if (totalOutstanding > 0) {
     html += `<div class="outstanding-total">
       <span>⏳ Total Outstanding</span>
-      <span>${fmt(totalUnpaid)}</span>
+      <span>${fmt(totalOutstanding)}</span>
     </div>`;
   }
 
@@ -880,14 +903,34 @@ function renderBillsPay() {
   if (unpaidVar.length) {
     html += `<div class="section-label" style="margin-bottom:8px">📋 Pending Bills</div>`;
     [...unpaidVar].sort((a,b)=>(b.date||b.month).localeCompare(a.date||a.month)).forEach(e => {
+      const rem  = varRemaining(e);
+      const paid = (e.payments||[]).reduce((s,p)=>s+Number(p.amount||0),0);
+      const isPartial = (e.payStatus||'paid') === 'partial';
+      const pmtHistory = (e.payments||[]).length
+        ? `<div style="margin-top:6px;border-top:1px dashed var(--border);padding-top:6px">
+            ${[...e.payments].reverse().map(p=>`
+            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--sub);margin-bottom:2px">
+              <span>${p.date} · ${p.mode==='cash'?'💵 Cash':'💳 Online'}</span>
+              <span style="font-weight:700;color:var(--green-dark)">−${fmt(p.amount)}</span>
+            </div>`).join('')}
+          </div>`
+        : '';
       html += `
       <div class="bill-item" id="bill-var-${e.id}">
-        <div class="bill-item-info">
+        <div class="bill-item-info" style="flex:1">
           <div class="bill-item-name">${e.desc}</div>
           <div class="bill-item-meta">${e.scope==='daily'?e.date:monthLabel(e.month)}</div>
+          ${isPartial ? `<div style="display:flex;gap:12px;margin-top:6px;font-size:.74rem">
+            <span style="color:var(--sub)">Total: ${fmt(e.amt)}</span>
+            <span style="color:var(--green-dark);font-weight:700">Paid: ${fmt(paid)}</span>
+          </div>` : ''}
+          ${pmtHistory}
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-          <span class="bill-item-amt">${fmt(e.amt)}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <div>
+            ${isPartial ? `<div style="font-size:.68rem;color:var(--sub);text-align:right;margin-bottom:2px">Remaining</div>` : ''}
+            <span class="bill-item-amt">${fmt(rem)}</span>
+          </div>
           <div id="bill-var-action-${e.id}">
             <button class="btn-pay" onclick="showPayInline('var','${e.id}')">✓ Pay</button>
           </div>
@@ -896,18 +939,37 @@ function renderBillsPay() {
     });
   }
 
-  // ── Unpaid fixed overheads ──
+  // ── Unpaid / partial fixed overheads ──
   if (unpaidFixed.length) {
     html += `<div class="section-label" style="margin:${unpaidVar.length?'18px':'0'} 0 8px">🏢 Fixed Overheads Due</div>`;
     [...unpaidFixed].sort((a,b)=>b.ym.localeCompare(a.ym)).forEach(e => {
+      const isPartial = e.payments.length > 0;
+      const paid = e.payments.reduce((s,p)=>s+Number(p.amount||0),0);
+      const pmtHistory = isPartial
+        ? `<div style="margin-top:6px;border-top:1px dashed var(--border);padding-top:6px">
+            ${[...e.payments].reverse().map(p=>`
+            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--sub);margin-bottom:2px">
+              <span>${p.date} · ${p.mode==='cash'?'💵 Cash':'💳 Online'}</span>
+              <span style="font-weight:700;color:var(--green-dark)">−${fmt(p.amount)}</span>
+            </div>`).join('')}
+          </div>`
+        : '';
       html += `
       <div class="bill-item" id="bill-fc-${e.costId}-${e.ym}">
-        <div class="bill-item-info">
+        <div class="bill-item-info" style="flex:1">
           <div class="bill-item-name">${e.name}</div>
           <div class="bill-item-meta">${monthLabel(e.ym)}</div>
+          ${isPartial ? `<div style="display:flex;gap:12px;margin-top:6px;font-size:.74rem">
+            <span style="color:var(--sub)">Total: ${fmt(e.fullAmt)}</span>
+            <span style="color:var(--green-dark);font-weight:700">Paid: ${fmt(paid)}</span>
+          </div>` : ''}
+          ${pmtHistory}
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-          <span class="bill-item-amt">${fmt(e.amt)}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <div>
+            ${isPartial ? `<div style="font-size:.68rem;color:var(--sub);text-align:right;margin-bottom:2px">Remaining</div>` : ''}
+            <span class="bill-item-amt">${fmt(e.remaining)}</span>
+          </div>
           <div id="bill-fc-action-${e.costId}-${e.ym}">
             <button class="btn-pay" onclick="showPayInline('fc','${e.costId}','${e.ym}')">✓ Pay</button>
           </div>
@@ -922,7 +984,7 @@ function renderBillsPay() {
     <div style="margin-top:${(unpaidVar.length||unpaidFixed.length)?'24px':'0'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="section-label" style="margin:0">🏦 Chit Fund Payments</div>
-        <span style="font-size:.82rem;font-weight:800;color:var(--primary-dark)">${fmt(totalAdv)}</span>
+        <span style="font-size:.82rem;font-weight:800;color:#3730a3">${fmt(totalAdv)}</span>
       </div>`;
     [...advances].sort((a,b)=>(b.date||b.month).localeCompare(a.date||a.month)).forEach(e => {
       html += `
@@ -934,13 +996,12 @@ function renderBillsPay() {
             ${e.payMode ? `· ${e.payMode==='cash'?'💵 Cash':'💳 Online'}` : ''}
           </div>
         </div>
-        <span style="font-weight:800;font-size:.92rem;color:var(--primary-dark);white-space:nowrap">${fmt(e.amt)}</span>
+        <span style="font-weight:800;font-size:.92rem;color:#3730a3;white-space:nowrap">${fmt(e.amt)}</span>
       </div>`;
     });
     html += `</div>`;
   }
 
-  // Empty state
   if (!unpaidVar.length && !unpaidFixed.length && !advances.length) {
     const hint = !ym ? '<br><span style="font-size:.78rem">Select a month above to also see fixed overhead status</span>' : '';
     html = `<div class="empty"><div class="empty-icon">🎉</div><p>All clear!${hint}</p></div>`;
@@ -949,46 +1010,99 @@ function renderBillsPay() {
   el.innerHTML = html;
 }
 
-// Inline pay flow: replace "Pay" button with cash/online choice
+// Inline partial payment form
 function showPayInline(type, id1, id2) {
   const key = type === 'var'
     ? 'bill-var-action-'+id1
     : 'bill-fc-action-'+id1+'-'+id2;
   const el = document.getElementById(key);
   if (!el) return;
+
+  // Calculate current remaining
+  let remaining = 0;
+  if (type === 'var') {
+    const item = getVar().find(e => e.id === id1);
+    if (item) remaining = varRemaining(item);
+  } else {
+    const cost = getFixed().find(c => c.id === id1);
+    if (cost) remaining = fcEntryRemaining(cost, id2);
+  }
+
+  const amtId  = `pi-amt-${id1}${id2?'-'+id2:''}`;
+  const dateId = `pi-dt-${id1}${id2?'-'+id2:''}`;
+  const esc2   = (id2||'').replace(/'/g,"\\'");
+
   el.innerHTML = `
-    <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-      <button onclick="confirmPay('${type}','${id1}','${id2||''}','cash')"
-        style="background:var(--orange-soft);color:#92400e;border:1.5px solid #f97316;border-radius:6px;padding:5px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">💵 Cash</button>
-      <button onclick="confirmPay('${type}','${id1}','${id2||''}','online')"
-        style="background:var(--primary-soft);color:var(--primary-dark);border:1.5px solid var(--primary);border-radius:6px;padding:5px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">💳 Online</button>
-      <button onclick="renderBillsPay()"
-        style="background:#f1f5f9;color:var(--sub);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.74rem;cursor:pointer;font-family:inherit">✕</button>
+    <div style="display:flex;flex-direction:column;gap:7px;min-width:170px">
+      <div style="font-size:.7rem;color:var(--sub)">Remaining: <strong style="color:var(--orange)">${fmt(remaining)}</strong></div>
+      <input type="number" id="${amtId}" value="${remaining.toFixed(2)}"
+        min="0.01" max="${remaining.toFixed(2)}" step="0.01"
+        style="border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.84rem;font-family:inherit;text-align:right;width:100%"
+        placeholder="Amount to pay">
+      <input type="date" id="${dateId}" value="${today()}"
+        style="border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.84rem;font-family:inherit;width:100%">
+      <div style="display:flex;gap:5px">
+        <button onclick="confirmPay('${type}','${id1}','${esc2}','cash','${amtId}','${dateId}')"
+          style="flex:1;background:var(--orange-soft);color:#92400e;border:1.5px solid #f97316;border-radius:6px;padding:6px 4px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">💵 Cash</button>
+        <button onclick="confirmPay('${type}','${id1}','${esc2}','online','${amtId}','${dateId}')"
+          style="flex:1;background:var(--primary-soft);color:var(--primary-dark);border:1.5px solid var(--primary);border-radius:6px;padding:6px 4px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">💳 Online</button>
+        <button onclick="renderBillsPay()"
+          style="background:#f1f5f9;color:var(--sub);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.74rem;cursor:pointer;font-family:inherit">✕</button>
+      </div>
     </div>`;
 }
 
-function confirmPay(type, id1, id2, mode) {
+function confirmPay(type, id1, id2, mode, amtId, dateId) {
+  const payAmt  = parseFloat(document.getElementById(amtId)?.value || '0');
+  const payDate = document.getElementById(dateId)?.value;
+
+  if (!payAmt || payAmt <= 0) { showErr('Please enter a valid amount.'); return; }
+  if (!payDate) { showErr('Please select a date.'); return; }
+
+  const payRec = { date: payDate, amount: payAmt, mode, at: Date.now() };
+
   if (type === 'var') {
     const arr  = getVar();
     const item = arr.find(e => e.id === id1);
-    if (item) { item.payStatus = 'paid'; item.payMode = mode; }
+    if (!item) return;
+    if (!item.payments) item.payments = [];
+    item.payments.push(payRec);
+    const totalPaid = item.payments.reduce((s,p) => s + Number(p.amount||0), 0);
+    item.payStatus  = totalPaid >= item.amt - 0.01 ? 'paid' : 'partial';
+    item.payMode    = mode;
     saveVar(arr);
   } else {
-    // fixed cost
     const costs = getFixed();
     const cost  = costs.find(c => c.id === id1);
-    if (cost) {
-      const existing = getMonthlyEntry(cost, id2);
-      if (!cost.monthly) cost.monthly = {};
-      cost.monthly[id2] = {
-        amt:       existing._isDefault ? (cost.amount||0) : (existing.amt||0),
-        payStatus: 'paid',
-        payMode:   mode
-      };
+    if (!cost) return;
+    const existing = getMonthlyEntry(cost, id2);
+    const fullAmt  = existing._isDefault ? (cost.amount||0) : (existing.amt||0);
+    if (!cost.monthly) cost.monthly = {};
+    // Migrate to object format if needed
+    if (!cost.monthly[id2] || typeof cost.monthly[id2] === 'number') {
+      cost.monthly[id2] = { amt: fullAmt, payStatus: 'unpaid', payMode: null, payments: [] };
     }
+    if (!cost.monthly[id2].payments) cost.monthly[id2].payments = [];
+    cost.monthly[id2].payments.push(payRec);
+    const totalPaid = cost.monthly[id2].payments.reduce((s,p) => s + Number(p.amount||0), 0);
+    cost.monthly[id2].payStatus = totalPaid >= fullAmt - 0.01 ? 'paid' : 'partial';
+    cost.monthly[id2].payMode   = mode;
     saveFixed(costs);
   }
-  toast(`✅ Marked paid · ${mode === 'cash' ? '💵 Cash' : '💳 Online'}`);
+
+  const isPartial = (() => {
+    if (type === 'var') {
+      const item = getVar().find(e => e.id === id1);
+      return item && item.payStatus === 'partial';
+    } else {
+      const cost = getFixed().find(c => c.id === id1);
+      return cost && cost.monthly && cost.monthly[id2] && cost.monthly[id2].payStatus === 'partial';
+    }
+  })();
+
+  toast(isPartial
+    ? `✅ ₹${payAmt.toLocaleString('en-IN')} paid · ${mode==='cash'?'💵 Cash':'💳 Online'} · Balance remaining`
+    : `✅ Fully paid · ${mode==='cash'?'💵 Cash':'💳 Online'}`);
   renderBillsPay();
   renderVarList();
   renderFixedList();

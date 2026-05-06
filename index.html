@@ -487,12 +487,16 @@ const MODULES = [
     metaFn:()=>{ const ob=JSON.parse(localStorage.getItem('fc_cashbook_opening')||'null'); return ob?`Since ${ob.date}`:'Opening balance not set'; },
     badgeFn:()=>({text:'Cash & Bank',bg:'#dcfce7',color:'#065f46'})
   },
+  { cfgId:'audit', file:'audit.html', icon:'🔍', iconBg:'#f1f5f9', name:'Data Audit',
+    metaFn:()=>'Health check & data verification',
+    badgeFn:()=>({text:'Admin Only',bg:'#f1f5f9',color:'#475569'})
+  },
 ];
 
 const DEFAULT_CONFIG = {
-  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit', cashbook:'edit' },
-  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit', cashbook:'none' },
-  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none', expenses:'none', cashbook:'none' },
+  manager:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit', cashbook:'edit',  audit:'none' },
+  partner:     { revenue:'edit', pnl:'edit', store:'edit', purchases:'edit', usage:'edit', payroll:'edit', expenses:'edit', cashbook:'none', audit:'none' },
+  storekeeper: { revenue:'edit', pnl:'none', store:'edit', purchases:'none', usage:'none', payroll:'none', expenses:'none', cashbook:'none', audit:'none' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────

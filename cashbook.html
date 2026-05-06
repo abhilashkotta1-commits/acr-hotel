@@ -360,41 +360,72 @@ function buildEntries(fromDate, toDate) {
     entries.push({ date: a.date, desc: `Salary Advance — ${empName}`, category: 'wages', icon: '💰', cashIn:0, cashOut: mode==='cash'?amt:0, bankIn:0, bankOut: mode==='online'?amt:0 });
   });
 
-  // ── 6. Variable misc expenses (paid & advance — both move cash) ──
+  // ── 6. Variable misc expenses (paid & chit — both move cash) ──
   getMiscExp().forEach(e => {
     const ps = e.payStatus || 'paid';
     if (ps === 'unpaid') return;
-    const pm = e.payMode;
-    if (!pm) return; // old entry without mode info — skip
-    const amt = Number(e.amt || 0);
-    if (amt <= 0) return;
     const isAdv = ps === 'chit';
-    if (e.scope === 'daily') {
-      if (!e.date || e.date < fromDate || e.date > toDate) return;
-      entries.push({ date: e.date, desc: (isAdv ? 'Chit Fund — ' : 'Expense — ') + e.desc, category: isAdv?'chit':'expense', icon: isAdv?'🏦':'💸', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
-    } else if (e.scope === 'monthly') {
-      // Place on 1st of the month
-      const firstDay = (e.month||'') + '-01';
-      if (!firstDay || firstDay < fromDate || firstDay > toDate) return;
-      entries.push({ date: firstDay, desc: (isAdv ? 'Chit Fund — ' : 'Monthly Expense — ') + e.desc, category: isAdv?'chit':'expense', icon: isAdv?'🏦':'💸', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
+    const label = (isAdv ? 'Chit Fund — ' : 'Expense — ') + e.desc;
+    const cat   = isAdv ? 'chit' : 'expense';
+    const icon  = isAdv ? '🏦' : '💸';
+
+    // Default date for scope
+    const defaultDate = e.scope === 'monthly' ? ((e.month||'') + '-01') : e.date;
+
+    if (Array.isArray(e.payments) && e.payments.length > 0) {
+      // Use individual payment records (supports partial payments)
+      e.payments.forEach(pmt => {
+        const pmtDate = pmt.date || defaultDate;
+        if (!pmtDate || pmtDate < fromDate || pmtDate > toDate) return;
+        const pmtAmt = Number(pmt.amount || 0);
+        if (pmtAmt <= 0) return;
+        const pm = pmt.mode;
+        if (!pm) return;
+        entries.push({ date: pmtDate, desc: label, category: cat, icon, cashIn:0, cashOut: pm==='cash'?pmtAmt:0, bankIn:0, bankOut: pm==='online'?pmtAmt:0 });
+      });
+    } else {
+      // Legacy / direct-paid entry: use payMode on the expense record
+      const pm  = e.payMode;
+      if (!pm) return;
+      const amt = Number(e.amt || 0);
+      if (amt <= 0) return;
+      if (!defaultDate || defaultDate < fromDate || defaultDate > toDate) return;
+      entries.push({ date: defaultDate, desc: label, category: cat, icon, cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
     }
   });
 
-  // ── 7. Fixed overhead payments (placed on 1st of month) ──
+  // ── 7. Fixed overhead payments ──
   getFixedCosts().forEach(c => {
     if (!c.monthly) return;
     Object.entries(c.monthly).forEach(([ym, raw]) => {
       const firstDay = ym + '-01';
-      if (firstDay < fromDate || firstDay > toDate) return;
       const entry = typeof raw === 'number'
         ? { amt: raw, payStatus: 'paid', payMode: null }
         : raw;
       if (!entry || entry.payStatus === 'unpaid') return;
-      const pm  = entry.payMode;
-      if (!pm) return; // old entry, no mode
-      const amt = Number(entry.amt || 0);
-      if (amt <= 0) return;
-      entries.push({ date: firstDay, desc: `Fixed Overhead — ${c.name}`, category: 'fixed', icon: '🏢', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
+
+      const label = `Fixed Overhead — ${c.name}`;
+
+      if (Array.isArray(entry.payments) && entry.payments.length > 0) {
+        // Use individual payment records (supports partial payments)
+        entry.payments.forEach(pmt => {
+          const pmtDate = pmt.date || firstDay;
+          if (!pmtDate || pmtDate < fromDate || pmtDate > toDate) return;
+          const pmtAmt = Number(pmt.amount || 0);
+          if (pmtAmt <= 0) return;
+          const pm = pmt.mode;
+          if (!pm) return;
+          entries.push({ date: pmtDate, desc: label, category: 'fixed', icon: '🏢', cashIn:0, cashOut: pm==='cash'?pmtAmt:0, bankIn:0, bankOut: pm==='online'?pmtAmt:0 });
+        });
+      } else {
+        // Legacy / direct-paid entry
+        if (firstDay < fromDate || firstDay > toDate) return;
+        const pm  = entry.payMode;
+        if (!pm) return;
+        const amt = Number(entry.amt || 0);
+        if (amt <= 0) return;
+        entries.push({ date: firstDay, desc: label, category: 'fixed', icon: '🏢', cashIn:0, cashOut: pm==='cash'?amt:0, bankIn:0, bankOut: pm==='online'?amt:0 });
+      }
     });
   });
 

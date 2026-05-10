@@ -434,6 +434,16 @@
   .inv-filter-label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
   .inv-date-input { width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:.92rem; font-weight:700; font-family:inherit; outline:none; color:var(--text); background:#f8fafc; margin-bottom:14px; }
   .inv-date-input:focus { border-color:var(--primary); background:#fff; }
+
+  /* ─── HISTORY FILTER MODE TOGGLE ─── */
+  .hf-mode-row { display:flex; align-items:center; gap:7px; margin-bottom:12px; flex-wrap:wrap; }
+  .hf-mode-row span { font-size:.7rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; margin-right:2px; }
+  .hfmode-btn { padding:5px 13px; border-radius:999px; font-size:.76rem; font-weight:700; border:1.5px solid var(--border); background:#fff; color:var(--sub); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; }
+  .hfmode-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .hf-inputs { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .hf-inputs label { font-size:.7rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+  .hf-inputs input { flex:1; min-width:130px; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:8px 11px; font-size:.88rem; font-family:inherit; background:#f8fafc; outline:none; color:var(--text); }
+  .hf-inputs input:focus { border-color:var(--primary); background:#fff; }
   .inv-sec-btns { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
   .inv-sec-btn { padding:10px 4px; border-radius:var(--radius-sm); text-align:center; cursor:pointer; border:2px solid transparent; background:var(--bg); font-size:.74rem; font-weight:700; color:var(--sub); font-family:inherit; transition:all .15s; line-height:1.5; }
   .inv-sec-btn.active-tiffin { background:#fff7ed; border-color:var(--tiffin); color:var(--tiffin); }
@@ -773,10 +783,15 @@ const VENDORS_KEY  = 'fc_vendors';
 function getVendors(){ return JSON.parse(localStorage.getItem(VENDORS_KEY)||'[]'); }
 
 // History invoice state
-let histDateFrom      = '';        // synced with top date bar
-let histDateTo        = '';        // end of range (defaults to same as from)
+let histDateFrom      = '';        // resolved from date for renderHistoryInvoice
+let histDateTo        = '';        // resolved to date for renderHistoryInvoice
 let histSections      = new Set(); // supports multiple selections
 let hideInternalCols  = false;     // hides Buy Rate & Markup for hotel invoice
+let _histFilterMode   = 'day';     // 'day' | 'range' | 'month'
+let _histMonth        = '';        // for month mode
+let _histRangeFrom    = '';        // for range mode
+let _histRangeTo      = '';        // for range mode
+let _histSingleDate   = '';        // for single-date mode
 
 // ══════════════════════════════════════════════════
 //  FIFO HELPERS
@@ -838,17 +853,16 @@ function formatDate(d){
   return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
 }
 function onDateChange(){
-  const d = document.getElementById('date-input').value;
-  histDateFrom = d;
-  // If "To" is before "From", snap it forward
-  if(histDateTo && histDateTo < histDateFrom) histDateTo = histDateFrom;
-  const toEl = document.getElementById('hist-date-to');
-  if(toEl){ toEl.value = histDateTo || histDateFrom; toEl.min = histDateFrom; }
-  if(activeTab === 'history') renderHistoryInvoice();
+  // Keep new-entry date in sync; history filter is now independent
+  if(activeTab === 'history') applyHistFilter();
 }
 document.getElementById('date-input').value = today();
-histDateFrom = today();
-histDateTo   = today();
+_histSingleDate = today();
+_histRangeFrom  = today().slice(0,7) + '-01';
+_histRangeTo    = today();
+_histMonth      = today().slice(0,7);
+histDateFrom    = today();
+histDateTo      = today();
 
 // ══════════════════════════════════════════════════
 //  TABS
@@ -863,10 +877,6 @@ function switchTab(tab){
   // Only show sticky footer on record tab when a section is already selected
   document.querySelector('.sticky-footer').style.display = (tab==='record' && !!selectedSection) ? '' : 'none';
   if(tab==='history'){
-    // Sync from top date bar
-    const d = document.getElementById('date-input').value || today();
-    histDateFrom = d;
-    if(!histDateTo || histDateTo < histDateFrom) histDateTo = histDateFrom;
     renderHistory();
   }
 }
@@ -880,19 +890,39 @@ function renderHistory(){
   const wrap = document.getElementById('history-wrap');
   wrap.innerHTML = `
     <div class="inv-filter">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div>
-          <div class="inv-filter-label">📅 From (top bar)</div>
-          <div style="padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-weight:700;background:#f8fafc;color:var(--text)">${histDateFrom ? formatDate(histDateFrom) : '—'}</div>
-        </div>
-        <div>
-          <div class="inv-filter-label">📅 To</div>
-          <input type="date" class="inv-date-input" id="hist-date-to"
-            value="${histDateTo || histDateFrom}" min="${histDateFrom}"
-            onchange="histDateTo=this.value; renderHistoryInvoice()"
-            style="margin-bottom:0">
-        </div>
+
+      <!-- Mode toggle -->
+      <div class="hf-mode-row">
+        <span>View by</span>
+        <button class="hfmode-btn${_histFilterMode==='day'?' active':''}"   onclick="setHistFilterMode('day')">📋 Single Date</button>
+        <button class="hfmode-btn${_histFilterMode==='range'?' active':''}" onclick="setHistFilterMode('range')">📆 Date Range</button>
+        <button class="hfmode-btn${_histFilterMode==='month'?' active':''}" onclick="setHistFilterMode('month')">📅 Month</button>
       </div>
+
+      <!-- Single date row -->
+      <div class="hf-inputs" id="hf-day-row" style="${_histFilterMode==='day'?'':'display:none'}">
+        <label>Date</label>
+        <input type="date" id="hf-single-date" value="${_histSingleDate}"
+          onchange="_histSingleDate=this.value; applyHistFilter()">
+      </div>
+
+      <!-- Date range row -->
+      <div class="hf-inputs" id="hf-range-row" style="${_histFilterMode==='range'?'':'display:none'}">
+        <label>From</label>
+        <input type="date" id="hf-range-from" value="${_histRangeFrom}"
+          onchange="_histRangeFrom=this.value; applyHistFilter()">
+        <label>To</label>
+        <input type="date" id="hf-range-to" value="${_histRangeTo}"
+          onchange="_histRangeTo=this.value; applyHistFilter()">
+      </div>
+
+      <!-- Month row -->
+      <div class="hf-inputs" id="hf-month-row" style="${_histFilterMode==='month'?'':'display:none'}">
+        <label>Month</label>
+        <input type="month" id="hf-month" value="${_histMonth}"
+          onchange="_histMonth=this.value; applyHistFilter()">
+      </div>
+
       <div class="inv-filter-label" style="margin-bottom:4px">🏷 Section <span style="font-size:.68rem;font-weight:500;color:var(--sub);text-transform:none;letter-spacing:0">(tap to select one or more)</span></div>
       <div class="inv-sec-btns">
         <button class="inv-sec-btn ${histSections.has('tiffin')?'active-tiffin':''}" onclick="setHistSection('tiffin')">🍳<br>Tiffin</button>
@@ -902,6 +932,35 @@ function renderHistory(){
       </div>
     </div>
     <div class="inv-area" id="hist-invoice"></div>`;
+
+  applyHistFilter();
+}
+
+function setHistFilterMode(mode){
+  _histFilterMode = mode;
+  // Update button active states
+  document.querySelectorAll('.hfmode-btn').forEach(b => b.classList.remove('active'));
+  const modeMap = { day: 0, range: 1, month: 2 };
+  document.querySelectorAll('.hfmode-btn')[modeMap[mode]].classList.add('active');
+  // Show/hide input rows
+  document.getElementById('hf-day-row').style.display   = mode==='day'   ? '' : 'none';
+  document.getElementById('hf-range-row').style.display = mode==='range' ? '' : 'none';
+  document.getElementById('hf-month-row').style.display = mode==='month' ? '' : 'none';
+  applyHistFilter();
+}
+
+function applyHistFilter(){
+  if(_histFilterMode === 'day'){
+    if(!_histSingleDate){ histDateFrom = today(); histDateTo = today(); }
+    else { histDateFrom = _histSingleDate; histDateTo = _histSingleDate; }
+  } else if(_histFilterMode === 'range'){
+    histDateFrom = _histRangeFrom || today().slice(0,7) + '-01';
+    histDateTo   = _histRangeTo   || today();
+  } else {
+    const ym = _histMonth || today().slice(0,7);
+    histDateFrom = ym + '-01';
+    histDateTo   = ym + '-31';
+  }
   renderHistoryInvoice();
 }
 

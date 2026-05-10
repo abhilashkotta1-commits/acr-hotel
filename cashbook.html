@@ -326,10 +326,27 @@ function buildEntries(fromDate, toDate) {
   });
 
   // ── 2. Purchases (deduped by batchId) ──
+  // For direct-buy purchases, cross-check against current usage entries so that
+  // any usage entry deleted in the past doesn't leave a ghost cash outflow here.
+  const allUsage = ls('fc_daily_usage');
+  const activeDirectBatchIds = new Set();  // post-fix records: matched by batchId
+  const activeDirectDayItems = new Set();  // pre-fix records: matched by date|itemId
+  allUsage.forEach(u => {
+    if (!u.directBuy) return;
+    if (u.directBuyBatchId) activeDirectBatchIds.add(u.directBuyBatchId);
+    if (u.date && u.itemId)  activeDirectDayItems.add(u.date + '|' + u.itemId);
+  });
+
   const batches = {};
   getPurchases().forEach(p => {
     if (!p.date || p.date < fromDate || p.date > toDate) return;
     if (p.type === 'opening') return; // stock opening, not a cash movement
+    // Skip direct-buy purchase if its usage entry no longer exists
+    if (p.directBuy) {
+      const batchOk = p.batchId && activeDirectBatchIds.has(p.batchId);
+      const dayOk   = p.date && p.itemId && activeDirectDayItems.has(p.date + '|' + p.itemId);
+      if (!batchOk && !dayOk) return;
+    }
     const key = p.batchId || p.id;
     if (!batches[key]) batches[key] = { ...p, batchTotal: 0 };
     batches[key].batchTotal += Number(p.vendorTotal || p.total || 0);

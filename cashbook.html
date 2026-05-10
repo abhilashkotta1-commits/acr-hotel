@@ -90,10 +90,15 @@
     .ob-bar-info { font-size:.8rem; color:var(--green-dark); font-weight:600; }
     .ob-bar-vals { display:flex; gap:16px; font-size:.82rem; font-weight:700; color:var(--green-dark); }
 
-    /* ─── MONTH BAR ─── */
-    .month-bar { display:flex; align-items:center; gap:10px; margin-bottom:18px; background:var(--bg); border-radius:var(--radius-sm); padding:10px 14px; }
-    .month-bar label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
-    .month-bar input[type=month] { flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; font-size:.88rem; font-family:inherit; background:#fff; }
+    /* ─── FILTER BAR ─── */
+    .filter-bar { margin-bottom:18px; background:var(--bg); border-radius:var(--radius-sm); padding:10px 14px; }
+    .filter-mode-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+    .filter-mode-row span { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; margin-right:4px; }
+    .fmode-btn { padding:5px 14px; border-radius:999px; font-size:.78rem; font-weight:700; border:1.5px solid var(--border); background:#fff; color:var(--sub); cursor:pointer; transition:all .15s; font-family:inherit; }
+    .fmode-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .filter-inputs { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .filter-inputs label { font-size:.72rem; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+    .filter-inputs input { border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; font-size:.88rem; font-family:inherit; background:#fff; flex:1; min-width:130px; }
 
     /* ─── MONTHLY SUMMARY GRID ─── */
     .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
@@ -198,10 +203,28 @@
   <!-- Opening balance setup / display -->
   <div id="ob-section"></div>
 
-  <!-- Month filter -->
-  <div class="month-bar">
-    <label>Month</label>
-    <input type="month" id="ledger-month" onchange="renderPage()">
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-mode-row">
+      <span>View by</span>
+      <button class="fmode-btn active" id="fmode-month" onclick="setFilterMode('month')">📅 Month</button>
+      <button class="fmode-btn" id="fmode-range" onclick="setFilterMode('range')">📆 Date Range</button>
+      <button class="fmode-btn" id="fmode-day" onclick="setFilterMode('day')">📋 Single Date</button>
+    </div>
+    <div class="filter-inputs" id="filter-month-row">
+      <label>Month</label>
+      <input type="month" id="ledger-month" onchange="renderPage()">
+    </div>
+    <div class="filter-inputs" id="filter-day-row" style="display:none">
+      <label>Date</label>
+      <input type="date" id="single-date" onchange="renderPage()">
+    </div>
+    <div class="filter-inputs" id="filter-range-row" style="display:none">
+      <label>From</label>
+      <input type="date" id="range-from" onchange="renderPage()">
+      <label>To</label>
+      <input type="date" id="range-to" onchange="renderPage()">
+    </div>
   </div>
 
   <!-- Monthly summary -->
@@ -537,7 +560,7 @@ function renderBalanceCards() {
 // ══════════════════════════════════════════════
 //  RENDER MONTHLY SUMMARY
 // ══════════════════════════════════════════════
-function renderMonthlySummary(entries) {
+function renderMonthlySummary(entries, periodLabel) {
   const el = document.getElementById('monthly-summary');
   if (!entries.length) { el.innerHTML = ''; return; }
 
@@ -576,29 +599,32 @@ const CAT_CFG = {
   fixed:    { label:'Fixed Cost',     cls:'badge-fixed'    },
 };
 
-function renderLedger(monthEntries) {
-  const ob = getOpeningBal();
-  const el = document.getElementById('ledger');
+function renderLedger(entries, fromDate) {
+  const ob  = getOpeningBal();
+  const el  = document.getElementById('ledger');
   const cnt = document.getElementById('ledger-count');
-  const ym  = document.getElementById('ledger-month').value;
 
-  cnt.textContent = monthEntries.length + ' transaction' + (monthEntries.length!==1?'s':'');
+  cnt.textContent = entries.length + ' transaction' + (entries.length!==1?'s':'');
 
-  if (!monthEntries.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No transactions recorded for ${monthLabel(ym)||'this period'}.</p></div>`;
+  if (!entries.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No transactions recorded for this period.</p></div>`;
     return;
   }
 
-  // Calculate running balance up to start of selected month
+  // Calculate running balance up to start of selected period
   let runCash = ob ? ob.cash : 0;
   let runBank = ob ? ob.bank : 0;
-  if (ob) {
-    const allBefore = buildEntries(ob.date, (ym+'-00')); // entries strictly before this month
+  if (ob && fromDate) {
+    // Get all entries from opening date up to (but not including) the fromDate
+    const dayBefore = fromDate <= ob.date ? ob.date : fromDate;
+    const allBefore = buildEntries(ob.date, fromDate).filter(e => e.date < fromDate);
     allBefore.forEach(e => {
       runCash += e.cashIn - e.cashOut;
       runBank += e.bankIn - e.bankOut;
     });
   }
+
+  const monthEntries = entries;
 
   // Group by date
   const groups = {};
@@ -661,9 +687,21 @@ function renderLedger(monthEntries) {
 // ══════════════════════════════════════════════
 //  MAIN RENDER
 // ══════════════════════════════════════════════
+let _filterMode = 'month';
+
+function setFilterMode(mode) {
+  _filterMode = mode;
+  document.getElementById('fmode-month').className = 'fmode-btn' + (mode==='month'?' active':'');
+  document.getElementById('fmode-range').className = 'fmode-btn' + (mode==='range'?' active':'');
+  document.getElementById('fmode-day').className   = 'fmode-btn' + (mode==='day'  ?' active':'');
+  document.getElementById('filter-month-row').style.display = mode==='month' ? '' : 'none';
+  document.getElementById('filter-range-row').style.display = mode==='range' ? '' : 'none';
+  document.getElementById('filter-day-row').style.display   = mode==='day'   ? '' : 'none';
+  renderPage();
+}
+
 function renderPage() {
   const ob = getOpeningBal();
-  const ym = document.getElementById('ledger-month').value;
 
   renderBalanceCards();
   renderOBSection();
@@ -675,13 +713,43 @@ function renderPage() {
     return;
   }
 
-  // Build entries for selected month only
-  const monthStart = ym + '-01';
-  const monthEnd   = ym + '-31'; // safe upper bound (no month has >31 days)
-  const monthEntries = buildEntries(monthStart, monthEnd);
+  let fromDate, toDate, periodLabel;
 
-  renderMonthlySummary(monthEntries);
-  renderLedger(monthEntries);
+  if (_filterMode === 'range') {
+    fromDate = document.getElementById('range-from').value;
+    toDate   = document.getElementById('range-to').value;
+    if (!fromDate || !toDate) {
+      document.getElementById('monthly-summary').innerHTML = '';
+      document.getElementById('ledger').innerHTML = `<div class="empty"><div class="empty-icon">📆</div><p>Select a from and to date to view transactions.</p></div>`;
+      document.getElementById('ledger-count').textContent = '';
+      return;
+    }
+    if (fromDate > toDate) {
+      document.getElementById('ledger').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>"From" date cannot be after "To" date.</p></div>`;
+      return;
+    }
+    periodLabel = `${fmtDate(fromDate)} → ${fmtDate(toDate)}`;
+  } else if (_filterMode === 'day') {
+    const sd = document.getElementById('single-date').value;
+    if (!sd) {
+      document.getElementById('monthly-summary').innerHTML = '';
+      document.getElementById('ledger').innerHTML = `<div class="empty"><div class="empty-icon">📋</div><p>Pick a date to view transactions for that day.</p></div>`;
+      document.getElementById('ledger-count').textContent = '';
+      return;
+    }
+    fromDate    = sd;
+    toDate      = sd;
+    periodLabel = fmtDate(sd);
+  } else {
+    const ym = document.getElementById('ledger-month').value;
+    fromDate = ym + '-01';
+    toDate   = ym + '-31';
+    periodLabel = monthLabel(ym);
+  }
+
+  const entries = buildEntries(fromDate, toDate);
+  renderMonthlySummary(entries, periodLabel);
+  renderLedger(entries, fromDate);
 }
 
 // ══════════════════════════════════════════════
@@ -696,6 +764,10 @@ function toast(msg) { const el=document.getElementById('toast'); el.textContent=
 // ══════════════════════════════════════════════
 fcInit(function() {
   document.getElementById('ledger-month').value = thisMonth();
+  // Default date range: first of this month → today
+  const t = today();
+  document.getElementById('range-from').value = t.slice(0,7) + '-01';
+  document.getElementById('range-to').value   = t;
   renderPage();
   document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('err-modal').classList.remove('open'); });
 });

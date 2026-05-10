@@ -1216,6 +1216,20 @@ function confirmDeleteSession(){
   });
   localStorage.setItem(ITEMS_KEY, JSON.stringify(storeItems));
 
+  // Remove auto-created purchase records for direct-buy items
+  let purchases = JSON.parse(localStorage.getItem(PUR_KEY)||'[]');
+  toDelete.forEach(r => {
+    if(!r.directBuy) return;
+    if(r.directBuyBatchId) {
+      // Remove by batchId (reliable — new records)
+      purchases = purchases.filter(p => p.batchId !== r.directBuyBatchId);
+    } else {
+      // Fallback: match by directBuy flag + date + itemId (old records)
+      purchases = purchases.filter(p => !(p.directBuy && p.date === r.date && p.itemId === r.itemId));
+    }
+  });
+  localStorage.setItem(PUR_KEY, JSON.stringify(purchases));
+
   // Remove from log
   log = log.filter(r=> (r.sessionId||r.date+'__'+r.section) !== sid);
   localStorage.setItem(USAGE_KEY, JSON.stringify(log));
@@ -1307,6 +1321,18 @@ function confirmDeleteUsageRow() {
 
   // Restore FIFO purchase qty
   fifoRestore([r]);
+
+  // Remove auto-created purchase record if this was a direct-buy item
+  if (r.directBuy) {
+    let purchases = JSON.parse(localStorage.getItem(PUR_KEY)||'[]');
+    if (r.directBuyBatchId) {
+      purchases = purchases.filter(p => p.batchId !== r.directBuyBatchId);
+    } else {
+      // Fallback for old records without batchId stored
+      purchases = purchases.filter(p => !(p.directBuy && p.date === r.date && p.itemId === r.itemId));
+    }
+    localStorage.setItem(PUR_KEY, JSON.stringify(purchases));
+  }
 
   // Remove from log
   log.splice(_deleteUsageIdx, 1);
@@ -1676,6 +1702,10 @@ function submitUsage(){
   localStorage.setItem(PUR_KEY, JSON.stringify(purchases));
 
   // Step 2: FIFO consume + usage records
+  // Build a map of itemId → batchId for direct-buy items (set in Step 1)
+  const directBuyBatchMap = {};
+  purchases.forEach(p => { if(p.directBuy && p.date === date) directBuyBatchMap[p.itemId] = p.batchId; });
+
   keys.forEach(id=>{
     const itemId = parseInt(id);
     const qty    = usage[id];
@@ -1684,7 +1714,8 @@ function submitUsage(){
     // FIFO cost calculation (now includes direct-buy batch if applicable)
     const { totalCost, fifoBreakdown } = fifoConsume(itemId, qty);
 
-    records.push({ id: Date.now()+Math.random(), sessionId, date, section: selectedSection, itemId, itemName: item?.en, itemTel: item?.tel, unit: item?.unit, qty, cost: totalCost, fifoBreakdown, directBuy: directBuy[itemId] !== undefined });
+    const isDirectBuy = directBuy[itemId] !== undefined;
+    records.push({ id: Date.now()+Math.random(), sessionId, date, section: selectedSection, itemId, itemName: item?.en, itemTel: item?.tel, unit: item?.unit, qty, cost: totalCost, fifoBreakdown, directBuy: isDirectBuy, directBuyBatchId: isDirectBuy ? directBuyBatchMap[itemId] : undefined });
 
     // Deduct from store
     const si = storeItems.find(i=>i.id===itemId);

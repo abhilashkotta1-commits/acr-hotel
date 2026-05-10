@@ -22,10 +22,11 @@
 
     .header {
       background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
-      color: white; padding: 16px 18px;
+      color: white; padding: 16px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px;
     }
     .header h1 { font-size: 17px; font-weight: 700; }
     .header p  { font-size: 12px; opacity: .75; margin-top: 3px; }
+    .hbtn-home { background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:999px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
 
     .content { padding: 16px; max-width: 560px; margin: 0 auto; }
 
@@ -106,8 +107,11 @@
 <body>
 
 <div class="header">
-  <h1>🥙 Chat Menu — Bulk Import</h1>
-  <p>36 items ready to load into your revenue module</p>
+  <div>
+    <h1>🥙 Chat Menu — Bulk Import</h1>
+    <p>36 items ready to load into your revenue module</p>
+  </div>
+  <a href="index.html" class="hbtn-home">🏠 Home</a>
 </div>
 
 <div class="content">
